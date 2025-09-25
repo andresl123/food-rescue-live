@@ -1,0 +1,6 @@
+MongoDB Atlas -
+username - mosaic_admin
+password - mosaic_admin
+
+mongo_db - connection string
+mongodb+srv://mosaic_admin:<db_password>@cluster0.hoadqxc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
