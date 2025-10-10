@@ -5,7 +5,8 @@ import viteLogo from '/vite.svg';
 import './App.css';
 import ResetPassword from './ResetPassword';
 import ChangePassword from './ChangePassword';
-import EnterCode from './EnterCode'; // 1. Import the new component
+import EnterCode from './EnterCode';
+import SetNewPassword from './SetNewPassword'; // 1. Import the new component
 
 function Home() {
   const [count, setCount] = useState(0);
@@ -32,10 +33,13 @@ function Home() {
       <p className="read-the-docs">
         Click on the Vite and React logos to learn more
       </p>
-      <nav className="flex justify-center gap-4 mt-4">
-        <Link to="/reset-password">Reset Password</Link>
-        <Link to="/change-password">Change Password</Link>
-        <Link to="/verify-code">Enter Code</Link>
+      <nav className="flex flex-col items-center gap-2 mt-4">
+        <p>Password Management Pages:</p>
+        <div className="flex justify-center gap-4">
+            <Link to="/reset-password">Reset Password</Link>
+            <Link to="/change-password">Change Password</Link>
+            <Link to="/verify-code">Enter Code</Link>
+        </div>
       </nav>
     </>
   );
@@ -47,7 +51,8 @@ function App() {
       <Route path="/" element={<Home />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/change-password" element={<ChangePassword />} />
-      <Route path="/verify-code" element={<EnterCode />} /> {/* 2. Add the new route */}
+      <Route path="/verify-code" element={<EnterCode />} />
+      <Route path="/set-new-password" element={<SetNewPassword />} /> {/* 2. Add the new route */}
     </Routes>
   );
 }

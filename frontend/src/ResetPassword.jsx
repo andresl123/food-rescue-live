@@ -4,13 +4,37 @@ import { Link } from 'react-router-dom';
 function ResetPassword() {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle password reset logic here
-    console.log('Password reset request for email:', email);
-    setMessage('If an account with that email exists, a reset link has been sent.');
-    setEmail('');
+    setError('');
+    setMessage('');
+    setLoading(true);
+
+    try {
+      const response = await fetch('/api/v1/auth/reset-password-request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Something went wrong');
+      }
+
+      setMessage(data.data || 'If an account with that email exists, a reset link has been sent.');
+      setEmail('');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -44,13 +68,15 @@ function ResetPassword() {
           <div>
             <button
               type="submit"
-              className="relative flex justify-center w-full px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md group hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              disabled={loading}
+              className="relative flex justify-center w-full px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md group hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400"
             >
-              Send Reset Link
+              {loading ? 'Sending...' : 'Send Reset Link'}
             </button>
           </div>
         </form>
         {message && <p className="text-sm text-center text-green-500">{message}</p>}
+        {error && <p className="text-sm text-center text-red-500">{error}</p>}
         <div className="text-sm text-center">
           <Link to="/" className="font-medium text-indigo-600 hover:text-indigo-500">
             Back to Home

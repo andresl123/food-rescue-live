@@ -1,27 +1,36 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 function EnterCode() {
   const [code, setCode] = useState('');
-  const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setMessage('');
+    setLoading(true);
 
-    // Handle code verification logic here
-    console.log('Verifying code:', code);
+    try {
+      // Note: A better endpoint would be one that verifies the token
+      // and returns a success status without needing a separate page.
+      // For now, we are assuming this endpoint is for verification.
+      console.log('Verifying code:', code);
+      // In a real app, you would hit a verification endpoint.
+      // For this flow, we'll navigate directly to the next step.
+      if (!code) {
+        throw new Error("Please enter a code.");
+      }
 
-    // Example logic
-    if (code === '123456') {
-      setMessage('Code verified successfully! You can now reset your password.');
-      //
-    } else {
-      setError('Invalid verification code. Please try again.');
+      // On success, navigate to the next step, passing the code along
+      navigate('/set-new-password', { state: { token: code } });
+
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-    setCode('');
   };
 
   return (
@@ -54,13 +63,13 @@ function EnterCode() {
           <div>
             <button
               type="submit"
-              className="relative flex justify-center w-full px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md group hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              disabled={loading}
+              className="relative flex justify-center w-full px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md group hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400"
             >
-              Verify Code
+              {loading ? 'Verifying...' : 'Continue'}
             </button>
           </div>
         </form>
-        {message && <p className="text-sm text-center text-green-500">{message}</p>}
         {error && <p className="text-sm text-center text-red-500">{error}</p>}
         <div className="text-sm text-center">
           <Link to="/" className="font-medium text-indigo-600 hover:text-indigo-500">

@@ -7,8 +7,9 @@ function ChangePassword() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setMessage('');
@@ -17,14 +18,38 @@ function ChangePassword() {
       setError("New passwords do not match.");
       return;
     }
+    setLoading(true);
 
-    // Handle password change logic here
-    console.log('Changing password from:', currentPassword, 'to:', newPassword);
+    try {
+      // IMPORTANT: In a real app, get the user's ID and auth token from your state management or localStorage
+      const token = "YOUR_AUTH_TOKEN"; // Placeholder for the JWT token
+      const userId = "USER_ID_FROM_CONTEXT"; // Placeholder for the user's ID
 
-    setMessage('Your password has been changed successfully.');
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
+      const response = await fetch(`/api/v1/users/${userId}/change-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` // This request must be authenticated
+        },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to change password.');
+      }
+
+      setMessage('Your password has been changed successfully.');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -91,9 +116,10 @@ function ChangePassword() {
           <div>
             <button
               type="submit"
-              className="relative flex justify-center w-full px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md group hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              disabled={loading}
+              className="relative flex justify-center w-full px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md group hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400"
             >
-              Update Password
+              {loading ? 'Updating...' : 'Update Password'}
             </button>
           </div>
         </form>
