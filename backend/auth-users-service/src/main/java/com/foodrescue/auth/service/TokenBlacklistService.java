@@ -1,45 +1,52 @@
 package com.foodrescue.auth.service;
 
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/** In-memory blacklist: jti -> expEpochSeconds */
 @Service
 public class TokenBlacklistService {
 
-    // jti -> expirationEpochSeconds
-    private final Map<String, Long> revoked = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Long> revoked = new ConcurrentHashMap<>();
 
-    public void revoke(String jti, long expiresAtEpochSeconds) {
-        if (jti != null) {
-            revoked.put(jti, expiresAtEpochSeconds);
+    /** Mark a token id as revoked until its natural exp time. */
+    public void revoke(String jti, long expEpochSeconds) {
+        if (jti != null && expEpochSeconds > 0) {
+            revoked.put(jti, expEpochSeconds);
         }
     }
 
-    /** Returns true if the jti is currently revoked (and not past exp). */
+    /** True if JTI is in blacklist and not yet purged. Never throws. */
     public boolean isRevoked(String jti) {
-        Long exp = revoked.get(jti);
-        if (exp == null) return false;
-        long now = Instant.now().getEpochSecond();
-        if (now > exp) {
-            revoked.remove(jti); // expired -> clean it up eagerly
+        try {
+            if (jti == null) return false;
+            Long exp = revoked.get(jti);
+            if (exp == null) return false;
+
+            long now = Instant.now().getEpochSecond();
+
+            // If already beyond exp, delete the entry (best-effort) and still treat as revoked
+            if (now >= exp) {
+                revoked.remove(jti);
+                return true; // still reject this token; it is expired anyway
+            }
+            return true; // present in blacklist → revoked
+        } catch (Throwable ignored) {
+            // Defensive: never let callers blow up → default to NOT revoked
             return false;
         }
-        return true;
     }
 
-    /** DEV ONLY: peek the stored expiry for a jti (may be null if not present). */
-    public Long getExpiryEpoch(String jti) {
-        return revoked.get(jti);
-    }
-
-    // Periodic cleanup
-    @Scheduled(fixedDelay = 60_000)
-    public void cleanup() {
+    /** Optional: scheduled cleanup elsewhere; safe to remove here too. */
+    public void purgeExpired() {
         long now = Instant.now().getEpochSecond();
         revoked.entrySet().removeIf(e -> e.getValue() <= now);
+    }
+
+    /** Dev/debug helper */
+    public Long getExpiryEpoch(String jti) {
+        return revoked.get(jti);
     }
 }

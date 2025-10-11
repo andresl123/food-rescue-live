@@ -1,7 +1,6 @@
 package com.foodrescue.auth.config;
 
-import com.foodrescue.auth.crypto.KeyProvider;
-import com.nimbusds.jose.JOSEException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
@@ -13,7 +12,9 @@ import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
 import org.springframework.security.oauth2.jwt.*;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverterAdapter;
@@ -21,7 +22,6 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
-import java.security.interfaces.RSAPublicKey;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -35,14 +35,35 @@ public class SecurityConfig {
         this.revokedValidator = revokedValidator;
     }
 
+    // ===== JWT Decoder via JWKS + issuer/audience validation =====
     @Bean
-    public ReactiveJwtDecoder jwtDecoder(KeyProvider keyProvider) throws JOSEException {
-        RSAPublicKey publicKey = keyProvider.rsaJwk().toRSAPublicKey();
-        NimbusReactiveJwtDecoder decoder = NimbusReactiveJwtDecoder.withPublicKey(publicKey).build();
+    public ReactiveJwtDecoder jwtDecoder(
+            @Value("${jwt.jwks-uri}") String jwksUri,
+            @Value("${jwt.issuer}") String issuer,
+            @Value("${jwt.audience}") String expectedAudience
+    ) {
+        // Fetch keys from JWKS; the 'kid' in the token header will be matched automatically.
+        NimbusReactiveJwtDecoder decoder = NimbusReactiveJwtDecoder.withJwkSetUri(jwksUri).build();
 
-        // Default validators (exp, nbf, etc.) + our revoked-token validator
+        // Default validations (exp, nbf)
         OAuth2TokenValidator<Jwt> defaults = JwtValidators.createDefault();
-        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(defaults, revokedValidator));
+
+        // Issuer validation
+        OAuth2TokenValidator<Jwt> withIssuer = JwtValidators.createDefaultWithIssuer(issuer);
+
+        // Audience validation
+        OAuth2TokenValidator<Jwt> withAudience = jwt -> {
+            List<String> aud = jwt.getAudience();
+            boolean ok = aud != null && aud.contains(expectedAudience);
+            return ok
+                    ? OAuth2TokenValidatorResult.success()
+                    : OAuth2TokenValidatorResult.failure(
+                    new OAuth2Error("invalid_token", "invalid audience", null)
+            );
+        };
+
+        // Compose: defaults (exp/nbf) + issuer + audience + revoked-token check
+        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(defaults, withIssuer, withAudience, revokedValidator));
         return decoder;
     }
 
@@ -85,6 +106,7 @@ public class SecurityConfig {
                 )
                 .oauth2ResourceServer(oauth -> oauth
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(authConverter))
+                        // Ensure auth failures are 401/403 JSON, not 500s
                         .authenticationEntryPoint((exchange, ex) ->
                                 writeJson(exchange.getResponse(), HttpStatus.UNAUTHORIZED,
                                         "{\"success\":false,\"message\":\"unauthorized\"}"))
