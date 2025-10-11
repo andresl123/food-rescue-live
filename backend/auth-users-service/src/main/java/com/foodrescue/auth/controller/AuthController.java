@@ -159,4 +159,7 @@ public class AuthController {
         body.put("deltaSeconds", storedExp == null ? null : (storedExp - now));
         return Mono.just(ResponseEntity.ok(body));
     }
+
+    @GetMapping("/secure/ping")
+    public Map<String, String> ping() { return Map.of("ok","true"); }
 }
