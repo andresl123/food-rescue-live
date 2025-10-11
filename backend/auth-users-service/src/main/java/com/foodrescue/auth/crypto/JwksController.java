@@ -3,6 +3,7 @@ package com.foodrescue.auth.crypto;
 import com.nimbusds.jose.jwk.JWKSet;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.foodrescue.auth.crypto.KeyProvider;
 
 import java.util.Map;
 
