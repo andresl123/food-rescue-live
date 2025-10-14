@@ -1,4 +1,6 @@
-const OAuthButton = React.memo(({ provider, icon, onClick }) => {
+import React from 'react';
+
+const OAuthButton = React.memo(({ provider, onClick }) => {
   const isGoogle = provider === 'Google';
   const color = isGoogle ? 'bg-red-500 hover:bg-red-600 focus:ring-red-500/50' : 'bg-gray-700 hover:bg-gray-800 focus:ring-gray-700/50';
 
@@ -26,3 +28,5 @@ const OAuthButton = React.memo(({ provider, icon, onClick }) => {
     </button>
   );
 });
+
+export default OAuthButton;

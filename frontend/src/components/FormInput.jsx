@@ -1,3 +1,5 @@
+import React from 'react';
+
 const FormInput = React.memo(({ id, label, type = 'text', value, onChange, placeholder, icon, disabled }) => (
   <div className="mb-6">
     <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">
@@ -28,3 +30,5 @@ const FormInput = React.memo(({ id, label, type = 'text', value, onChange, place
     </div>
   </div>
 ));
+
+export default FormInput;

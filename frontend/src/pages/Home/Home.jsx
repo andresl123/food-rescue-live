@@ -1,3 +1,6 @@
+import React from 'react';
+import PrimaryButton from '../../components/PrimaryButton.jsx';
+
 const HomePage = React.memo(({ username, onLogout }) => (
   <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
     <div className="w-full max-w-lg bg-white rounded-3xl shadow-xl p-10 text-center">
@@ -16,3 +19,5 @@ const HomePage = React.memo(({ username, onLogout }) => (
     </div>
   </div>
 ));
+
+export default HomePage;

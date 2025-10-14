@@ -1,3 +1,5 @@
+import React from 'react';
+
 const PrimaryButton = React.memo(({ children, onClick, disabled, type = 'button' }) => (
   <button
     type={type}
@@ -12,3 +14,5 @@ const PrimaryButton = React.memo(({ children, onClick, disabled, type = 'button'
     {children}
   </button>
 ));
+
+export default PrimaryButton;

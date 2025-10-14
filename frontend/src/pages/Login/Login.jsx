@@ -1,3 +1,9 @@
+import React from 'react';
+import useLogin from './useLogin.js';
+import FormInput from '../../components/FormInput.jsx';
+import PrimaryButton from '../../components/PrimaryButton.jsx';
+import OAuthButton from '../../components/OAuthButton.jsx';
+
 function LoginPage({ onLoginSuccess, navigate }) {
   const {
     username,
@@ -8,7 +14,7 @@ function LoginPage({ onLoginSuccess, navigate }) {
     error,
     successMessage,
     handleLogin,
-    handleOAuthLogin // Use the new OAuth handler
+    handleOAuthLogin
   } = useLogin({ onLoginSuccess });
 
   return (
@@ -113,3 +119,5 @@ function LoginPage({ onLoginSuccess, navigate }) {
     </div>
   );
 }
+
+export default LoginPage;
