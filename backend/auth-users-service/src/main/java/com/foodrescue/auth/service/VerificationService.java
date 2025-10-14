@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono; 
 import reactor.core.scheduler.Schedulers;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.io.IOException;
 import java.security.SecureRandom;
@@ -29,20 +30,23 @@ public class VerificationService {
     private final Map<String, CodeDetails> codeStore = new ConcurrentHashMap<>();
     private static final long EXPIRATION_MINUTES = 5;
     private final Courier courierClient;
-    private final UserRepository userRepository; //  
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     private record CodeDetails(String code, Instant expiryTime) {}
 
     public VerificationService(@Value("${courier.api.key}") String apiKey,
-                               UserRepository userRepository) { //  
-        this.courierClient = Courier.builder() 
+                               UserRepository userRepository,
+                               PasswordEncoder passwordEncoder) {
+        this.courierClient = Courier.builder()
                 .authorizationToken(apiKey)
                 .build();
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public Mono<Void> generateAndSendCode(String email) {
-        return userRepository.existsByEmail(email) //
+        return userRepository.existsByEmail(email)
                 .flatMap(userExists -> {
                     if (!userExists) {
                         return Mono.error(new UserNotFoundException("User with email " + email + " not found."));
@@ -66,37 +70,47 @@ public class VerificationService {
                 });
     }
 
+    public boolean validateCode(String identifier, String code) {
+        CodeDetails storedDetails = codeStore.get(identifier);
+        if (storedDetails == null || !storedDetails.code().equals(code) || Instant.now().isAfter(storedDetails.expiryTime())) {
+            return false;
+        }
+        // Important: In a real password reset, you might remove the code in the final step, not here.
+        // For simple validation, removing it after one use is correct.
+        codeStore.remove(identifier);
+        return true;
+    }
+
+    public Mono<Void> resetPassword(String email, String code, String newPassword) {
+        // First, validate the code from our in-memory store
+        boolean isCodeValid = this.validateCode(email, code);
+
+        if (!isCodeValid) {
+            return Mono.error(new RuntimeException("Invalid or expired verification code."));
+        }
+
+        return userRepository.findByEmail(email)
+                .switchIfEmpty(Mono.error(new UserNotFoundException("User not found.")))
+                .flatMap(user -> {
+                user.setPassword(passwordEncoder.encode(newPassword));
+                    return userRepository.save(user);
+                })
+                .then();
+    }
+
     private void sendEmailWithCourier(String email, String code) throws IOException {
-        this.courierClient.send(SendMessageRequest.builder() 
-                .message(Message.of(ContentMessage.builder() 
-                        .content(Content.of(ElementalContentSugar.builder() 
+        this.courierClient.send(SendMessageRequest.builder()
+                .message(Message.of(ContentMessage.builder()
+                        .content(Content.of(ElementalContentSugar.builder()
                         .title("Your Verification Code")
                         .body("Your 6-digit verification code is: {{code}}")
                         .build()))
-                        .to(MessageRecipient.of(Recipient.of(UserRecipient.builder() 
+                        .to(MessageRecipient.of(Recipient.of(UserRecipient.builder()
                                 .email(email)
                                 .build())))
                         .data(Map.of("code", code))
                         .build()))
                 .build());
-
         System.out.println("Verification code sent successfully to " + email);
-    }
-
-    public boolean validateCode(String identifier, String code) {
-        CodeDetails storedDetails = codeStore.get(identifier);
-
-        if (storedDetails == null) {
-            return false;
-        }
-        if (Instant.now().isAfter(storedDetails.expiryTime())) {
-            codeStore.remove(identifier);
-            return false;
-        }
-        if (storedDetails.code().equals(code)) {
-            codeStore.remove(identifier);
-            return true;
-        }
-        return false;
     }
 }
