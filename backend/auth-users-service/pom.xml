@@ -79,6 +79,11 @@
 			<artifactId>spring-security-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+        <dependency>
+            <groupId>com.courier</groupId>
+            <artifactId>courier-java</artifactId>
+            <version>3.3.0</version>
+        </dependency>
 	</dependencies>
 
 	<build>

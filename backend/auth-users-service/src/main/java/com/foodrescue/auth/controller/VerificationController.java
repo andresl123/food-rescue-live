@@ -24,19 +24,16 @@ public class VerificationController {
     @PostMapping("/generate")
     public ResponseEntity<?> generateCode(@RequestBody GenerateCodeRequest request) {
         if (request.getIdentifier() == null || request.getIdentifier().isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Identifier cannot be empty."));
+            return ResponseEntity.badRequest().body(Map.of("message", "Identifier (email) cannot be empty."));
         }
 
-        String code = verificationService.generateCode(request.getIdentifier());
+        // --- THIS IS THE CORRECTED LINE ---
+        // Call the new method, which does not return the code
+        verificationService.generateAndSendCode(request.getIdentifier());
+        // ------------------------------------
 
-        // IMPORTANT: In a real-world scenario, you would NOT return the code here.
-        // This response is for demonstration purposes only.
-        // A real response would be something like:
-        // return ResponseEntity.ok(Map.of("message", "A verification code has been sent to " + request.getIdentifier()));
-        return ResponseEntity.ok(Map.of(
-                "message", "Code generated successfully (for demo only).",
-                "code", code
-        ));
+        // Return a generic success message to the user
+        return ResponseEntity.ok(Map.of("message", "A verification code has been sent to your email."));
     }
 
     @PostMapping("/validate")
