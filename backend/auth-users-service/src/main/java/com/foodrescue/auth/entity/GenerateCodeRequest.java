@@ -1,9 +1,13 @@
-// src/main/java/com/example/codeverification/dto/GenerateCodeRequest.java
 package com.foodrescue.auth.entity;
 
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
 public class GenerateCodeRequest {
-    private String identifier; // e.g., email, username, or phone number
+
+    @NotBlank(message = "Identifier must not be blank.")
+    @Email(message = "Identifier must be a valid email address.")
+    private String identifier;
 }
