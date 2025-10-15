@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { Button, Form, Spinner, Alert, Image } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom'; // Don't forget this import
+import { Button, Form, Spinner, Alert } from 'react-bootstrap';
 
-// --- IMPORTANT: Update this path to your actual image! ---
+// --- Your corrected import block ---
 import yourImage from '../../assets/food-rescue-image.png';
-import "./RequestCodeForm.css"
+import "./ResetPasswordForm.css"; // Assuming you want to use the same CSS for consistency
+// ------------------------------------
 
-function RequestCodeForm({ onEmailSubmitted }) {
+function RequestCodeForm() { // Removed onEmailSubmitted prop as per router setup
+  const navigate = useNavigate(); // For navigating to the next page
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -18,7 +21,7 @@ function RequestCodeForm({ onEmailSubmitted }) {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:8080/api/code/generate', {
+      const response = await fetch('http://localhost:8080/api/code/generate', { // Use relative path if backend is on same origin
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -31,8 +34,8 @@ function RequestCodeForm({ onEmailSubmitted }) {
         throw new Error(data.message || 'An error occurred.');
       }
 
-      setMessage('Success! A verification code has been sent to your email.');
-      onEmailSubmitted(email);
+      // --- NAVIGATE ON SUCCESS ---
+      navigate('/createnewpassword', { state: { email: email } });
 
     } catch (err) {
       setError(err.message);
@@ -48,11 +51,7 @@ function RequestCodeForm({ onEmailSubmitted }) {
 
         {/* Left section with the form */}
         <div className="col-lg-6 d-flex align-items-center justify-content-center bg-white rounded-start-5">
-
-          {/* --- THIS IS THE CHANGED LINE --- */}
-          {/* Replaced mx-3 (margin) with px-3 (padding) */}
           <div className="w-100 px-3" style={{ maxWidth: "470px" }}>
-
             <h2 className="text-center fw-bold mb-4" style={{ color: "#000" }}>
               Reset Your Password
             </h2>
@@ -65,14 +64,13 @@ function RequestCodeForm({ onEmailSubmitted }) {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter your email address"
                   required
-                  style={{ borderRadius: "15px", padding: "10px" }}
+                  className="form-input-field" // Using custom class
                 />
               </Form.Group>
 
               <Button
                 type="submit"
-                className="btn btn-dark w-100 py-2 fw-semibold"
-                style={{ borderRadius: "15px" }}
+                className="btn btn-dark w-100 py-2 fw-semibold form-submit-button" // Using custom class
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -91,13 +89,23 @@ function RequestCodeForm({ onEmailSubmitted }) {
           </div>
         </div>
 
-        {/* Right section with image */}
+        {/* Right section with image and text overlay */}
         <div className="col-lg-6 d-none d-lg-flex p-0">
+          <div className="position-relative w-100 h-100">
             <img
               src={yourImage}
               alt="Food Rescue"
-              className="w-100 h-100 object-fit-cover"
+              className="w-100 h-100 object-fit-cover rounded-end-5"
             />
+            {/* --- ADDED TEXT OVERLAY --- */}
+            <div className="position-absolute top-50 start-50 translate-middle text-center text-white px-4">
+              <h1 className="fw-bold display-4">FoodRescue</h1>
+              <p className="fs-5">
+                Connecting surplus food with those in need.
+              </p>
+            </div>
+            {/* --- END ADDED TEXT OVERLAY --- */}
+          </div>
         </div>
 
       </div>
