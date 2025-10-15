@@ -1,18 +1,29 @@
 import React, { useState } from 'react';
 
-// This component would receive the user's email from the parent component
+// This component receives the user's email from the parent component
 function ResetPasswordForm({ email }) {
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  // --- 1. ADD NEW STATE ---
+  // State to hold the value of the "repeat password" field
+  const [repeatPassword, setRepeatPassword] = useState('');
+
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    setIsLoading(true);
-    setMessage('');
+    setMessage(''); // Clear any previous messages
 
-    // Construct the URL with the email and code as path variables
+    // --- 2. ADD VALIDATION LOGIC ---
+    // Check if the passwords match before doing anything else
+    if (newPassword !== repeatPassword) {
+      setMessage('Error: Passwords do not match. Please try again.');
+      return; // Stop the function here
+    }
+
+    setIsLoading(true);
+
     const url = `http://localhost:8080/api/password/reset/${email}/${code}`;
 
     try {
@@ -27,12 +38,11 @@ function ResetPasswordForm({ email }) {
       const data = await response.json();
 
       if (!response.ok) {
-        // Handle errors (e.g., 400 Invalid Code)
         throw new Error(data.message || 'An error occurred.');
       }
 
       setMessage('Success! Your password has been reset. You can now log in.');
-      // Here you would typically redirect the user to the login page.
+      // You can also add a redirect to the login page here.
 
     } catch (error) {
       setMessage(`Error: ${error.message}`);
@@ -60,10 +70,19 @@ function ResetPasswordForm({ email }) {
           placeholder="Enter your new password"
           required
         />
+        {/* --- 3. ADD NEW INPUT FIELD --- */}
+        <input
+          type="password"
+          value={repeatPassword}
+          onChange={(e) => setRepeatPassword(e.target.value)}
+          placeholder="Repeat your new password"
+          required
+        />
         <button type="submit" disabled={isLoading}>
           {isLoading ? 'Resetting...' : 'Reset Password'}
         </button>
       </form>
+      {/* This paragraph will now show both API errors and the "passwords don't match" error */}
       {message && <p>{message}</p>}
     </div>
   );
