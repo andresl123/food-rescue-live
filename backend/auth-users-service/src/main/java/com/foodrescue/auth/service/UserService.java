@@ -4,7 +4,7 @@ import com.foodrescue.auth.entity.User;
 import com.foodrescue.auth.repository.UserRepository;
 import com.foodrescue.auth.web.request.UserCreateRequest;
 import com.foodrescue.auth.web.response.UserResponse;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -13,10 +13,12 @@ import reactor.core.scheduler.Schedulers;
 public class UserService {
 
     private final UserRepository repo;
-    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository repo) {
+    public UserService(UserRepository repo, PasswordEncoder passwordEncoder) {
+
         this.repo = repo;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public Mono<UserResponse> create(UserCreateRequest req) {
@@ -32,7 +34,7 @@ public class UserService {
                         );
 
         Mono<String> hashed =
-                Mono.fromCallable(() -> encoder.encode(req.password()))
+                Mono.fromCallable(() -> passwordEncoder.encode(req.password()))
                         .subscribeOn(Schedulers.boundedElastic());
 
         return uniquenessChecks
