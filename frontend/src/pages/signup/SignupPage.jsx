@@ -1,9 +1,10 @@
 import { useState } from "react";
-import signupImage from "./signup.png";
-import "./SignupPage.css";
+import { useNavigate } from "react-router-dom";
+import signupImage from "./img.png";
 import { createUser } from "../../services/signupServices";
 
 export default function SignupPage() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -14,6 +15,7 @@ export default function SignupPage() {
   });
   const [message, setMessage] = useState("");
   const [responseData, setResponseData] = useState(null);
+  const [selectedTab, setSelectedTab] = useState("signup");
 
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -31,76 +33,268 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="signup-layout">
-      {/* Left: full-bleed image/GIF */}
-      <div className="signup-left">
-        {/* Prefer local asset for reliability: place a file at /public/food.gif or /public/food.jpg */}
-        <img src={signupImage} alt="Fresh food" className="signup-left-img" />
-        <div className="signup-left-overlay" />
-        <div className="signup-left-text">
-          <h2>Join FoodRescue</h2>
-          <p>Connect donors and recipients with speed and transparency.</p>
+    <div className="container-fluid vh-100 px-5">
+
+      <div className="row h-100 g-0">
+
+        {/* Left section with image */}
+
+        <div className="col-lg-6 d-none d-lg-flex align-items-center justify-content-center p-4">
+          <div className="position-relative w-100 h-100">
+            <img
+              src={signupImage}
+              alt="Food Rescue"
+              className="w-100 h-100 object-fit-cover"
+              style={{ borderRadius: "30px" }}
+            />
+            <div className="position-absolute top-50 start-50 translate-middle text-center text-white px-4">
+              <h1 className="fw-bold display-4">Join FoodRescue</h1>
+              <p className="fs-5">
+                Connect donors and recipients with speed and transparency.
+              </p>
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* Right: form */}
-      <div className="signup-right">
-        <div className="signup-container">
-            <h1 className="signup-title">FOOD RESCUE LIVE</h1>
-          <h2>Sign Up</h2>
-          <form onSubmit={handleSubmit}>
-            <input
-              type="text"
-              name="name"
-              placeholder="Full Name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-            />
-            <input
-              type="email"
-              name="email"
-              placeholder="Email Address"
-              value={formData.email}
-              onChange={handleChange}
-              required
-            />
-            <input
-              type="password"
-              name="password"
-              placeholder="Password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-            />
-            <input
-              type="text"
-              name="categoryId"
-              placeholder="Category (e.g. donor)"
-              value={formData.categoryId}
-              onChange={handleChange}
-              required
-            />
-            <input
-              type="text"
-              name="phoneNumber"
-              placeholder="Phone Number"
-              value={formData.phoneNumber}
-              onChange={handleChange}
-              required
-            />
-            <input
-              type="text"
-              name="defaultAddressId"
-              placeholder="Default Address ID"
-              value={formData.defaultAddressId}
-              onChange={handleChange}
-              required
-            />
-            <button type="submit">Sign Up</button>
-          </form>
+        {/* Right section with form */}
 
-          {message && <p className="message">{message}</p>}
+        <div className="col-lg-6 d-flex align-items-center justify-content-center bg-light form-section">
+          <div className="w-100 mx-3" style={{ maxWidth: "470px" }}>
+              <h2 className="text-center fw-bold mb-4" style={{ color: "#000" }}>
+                Food Rescue Live
+              </h2>
+
+            {/* Signup / Login Button Group */}
+
+           <div
+             className="btn-group w-100 mb-3 border border-dark rounded"
+             role="group"
+             style={{ borderRadius: "15px" }}
+           >
+
+             {/* Sign Up Button */}
+
+             <input
+               type="radio"
+               className="btn-check"
+               name="tab"
+               id="signupTab"
+               autoComplete="off"
+               checked={selectedTab === "signup"}
+               onChange={() => {
+                 setSelectedTab("signup");
+                 navigate("/signup");
+               }}
+             />
+             <label
+               className="btn w-50 fw-semibold"
+               htmlFor="signupTab"
+               style={{
+                 backgroundColor: selectedTab === "signup" ? "#000" : "#fff",
+                 color: selectedTab === "signup" ? "#fff" : "#000",
+                 borderRight: "1px solid #212529",
+                 transition: "background-color 0.3s ease, color 0.3s ease",
+               }}
+             >
+               Sign Up
+             </label>
+
+             {/* Login Button */}
+
+             <input
+               type="radio"
+               className="btn-check"
+               name="tab"
+               id="loginTab"
+               autoComplete="off"
+               checked={selectedTab === "login"}
+               onChange={() => setSelectedTab("login")}
+             />
+             <label
+               className="btn w-50 fw-semibold"
+               htmlFor="loginTab"
+               style={{
+                 backgroundColor: selectedTab === "login" ? "#000" : "#fff",
+                 color: selectedTab === "login" ? "#fff" : "#000",
+                 transition: "background-color 0.3s ease, color 0.3s ease",
+               }}
+             >
+               Login
+             </label>
+           </div>
+
+            {/* Signup Form */}
+
+            <form onSubmit={handleSubmit}>
+              <div className="mb-3">
+                <input
+                  type="text"
+                  className="form-control"
+                  name="name"
+                  placeholder="Full Name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              <div className="mb-3">
+                <input
+                  type="email"
+                  className="form-control"
+                  name="email"
+                  placeholder="Email Address"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              <div className="mb-3">
+                <input
+                  type="password"
+                  className="form-control"
+                  name="password"
+                  placeholder="Password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              <div className="mb-3">
+                <select
+                  className="form-select"
+                  name="categoryId"
+                  value={formData.categoryId}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="">Select Category</option>
+                  <option value="Donor">Donor</option>
+                  <option value="Receiver">Receiver</option>
+                  <option value="Courier">Courier</option>
+                </select>
+              </div>
+
+              <div className="mb-3">
+                <input
+                  type="text"
+                  className="form-control"
+                  name="phoneNumber"
+                  placeholder="Phone Number"
+                  value={formData.phoneNumber}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              <div className="mb-3">
+                <input
+                  type="text"
+                  className="form-control"
+                  name="defaultAddressId"
+                  placeholder="Default Address ID"
+                  value={formData.defaultAddressId}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              {/* ✅ Password strength and rules moved here */}
+              <div className="mt-2 small mb-4">
+                {(() => {
+                  const password = formData.password;
+
+                  // Password rules
+                  const rules = [
+                    {
+                      label: "At least 8 characters",
+                      valid: password.length >= 8,
+                    },
+                    {
+                      label: "Contains a number",
+                      valid: /\d/.test(password),
+                    },
+                    {
+                      label: "Contains a special character",
+                      valid: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+                    },
+                  ];
+
+                  // Strength calculation
+                  const strengthScore = rules.filter((r) => r.valid).length;
+                  const strengthLabel =
+                    strengthScore === 0
+                      ? "Weak"
+                      : strengthScore === 1
+                      ? "Fair"
+                      : strengthScore === 2
+                      ? "Good"
+                      : "Strong";
+
+                  return (
+                    <div>
+                      <p className="mb-1" style={{ color: "#000" }}>
+                        Password Strength: {strengthLabel}
+                      </p>
+
+                      {/* Strength Bar */}
+                      <div
+                        style={{
+                          height: "6px",
+                          backgroundColor: "#e5e5e5",
+                          borderRadius: "4px",
+                          overflow: "hidden",
+                          marginBottom: "10px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            height: "100%",
+                            width: `${(strengthScore / 3) * 100}%`,
+                            backgroundColor: "#000",
+                            transition: "width 0.3s ease",
+                          }}
+                        ></div>
+                      </div>
+
+                      {/* Checklist */}
+                      {rules.map((rule, i) => (
+                        <div key={i} className="d-flex align-items-center">
+                          <span
+                            style={{
+                              color: rule.valid ? "#000" : "#ccc",
+                              fontWeight: "bold",
+                              marginRight: "6px",
+                            }}
+                          >
+                            ✓
+                          </span>
+                          <span style={{ color: rule.valid ? "#000" : "#888" }}>
+                            {rule.label}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <button
+                type="submit"
+                className="btn btn-dark w-100 py-2 fw-semibold"
+                style={{ borderRadius: "15px" }}
+              >
+                Sign Up
+              </button>
+            </form>
+
+
+            {message && (
+              <p className="text-center mt-3 text-secondary small">{message}</p>
+            )}
+          </div>
         </div>
       </div>
     </div>
