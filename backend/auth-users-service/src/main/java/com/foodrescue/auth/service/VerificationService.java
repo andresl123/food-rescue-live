@@ -75,8 +75,6 @@ public class VerificationService {
         if (storedDetails == null || !storedDetails.code().equals(code) || Instant.now().isAfter(storedDetails.expiryTime())) {
             return false;
         }
-        // Important: In a real password reset, you might remove the code in the final step, not here.
-        // For simple validation, removing it after one use is correct.
         codeStore.remove(identifier);
         return true;
     }
