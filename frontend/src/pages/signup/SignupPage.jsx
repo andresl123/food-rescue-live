@@ -3,9 +3,10 @@ import { useNavigate } from "react-router-dom";
 import signupImage from "./img.png";
 import { createUser } from "../../services/signupServices";
 import SignupForm from "../../components/SignupForm";
-import LoginForm from "../../components/LoginForm"; // <-- import your LoginForm
+import LoginForm from "../../components/LoginForm";
 import { createAddress } from "../../services/addressService";
 import "./SignupPage.css";
+import toast from "react-hot-toast";
 
 export default function SignupPage() {
   const navigate = useNavigate();
@@ -30,13 +31,12 @@ export default function SignupPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setMessage("Submitting...");
     setAddressResponse(null);
     setUserResponse(null);
 
     try {
-      // Step 1️⃣: Create address
       const addressPayload = {
         street: formData.street,
         city: formData.city,
@@ -44,13 +44,9 @@ export default function SignupPage() {
         postalCode: formData.postalCode,
         country: formData.country,
       };
-      console.log("🏠 Creating address:", addressPayload);
 
       const createdAddress = await createAddress(addressPayload);
-      console.log("✅ Address created:", createdAddress);
-      setAddressResponse(createdAddress);
 
-      // Step 2️⃣: Create user with address ID
       const userPayload = {
         name: formData.name,
         email: formData.email,
@@ -59,7 +55,6 @@ export default function SignupPage() {
         phoneNumber: formData.phoneNumber,
         defaultAddressId: createdAddress.id,
       };
-      console.log("👤 Creating user:", userPayload);
 
       const response = await fetch("http://localhost:8080/api/v1/users", {
         method: "POST",
@@ -67,26 +62,35 @@ export default function SignupPage() {
         body: JSON.stringify(userPayload),
       });
 
-      const resultText = await response.text();
-      console.log("📩 Raw user response:", resultText);
-
-      let result;
-      try {
-        result = JSON.parse(resultText);
-      } catch {
-        result = { raw: resultText };
-      }
-
+      const result = await response.json();
       setUserResponse(result);
 
       if (response.ok) {
-        setMessage("✅ Signup successful!");
+        toast.success("Signup successful! Redirecting to login...");
+
+        setFormData({
+          name: "",
+          email: "",
+          password: "",
+          categoryId: "",
+          phoneNumber: "",
+          street: "",
+          city: "",
+          state: "",
+          postalCode: "",
+          country: "",
+          defaultAddressId: "",
+        });
+
+        setTimeout(() => {
+          navigate("/authentication");
+        }, 1500);
       } else {
-        setMessage(`⚠️ Signup failed — ${response.status}`);
+        toast.error(`Signup failed — ${response.status}`);
       }
     } catch (error) {
-      console.error("❌ Error:", error);
-      setMessage("❌ Something went wrong — check console logs.");
+      console.error("Error:", error);
+      toast.error("Something went wrong — check console logs.");
     }
   };
 
@@ -131,7 +135,6 @@ export default function SignupPage() {
                 checked={selectedTab === "signup"}
                 onChange={() => {
                   setSelectedTab("signup");
-                  navigate("/signup");
                 }}
               />
               <label
@@ -167,14 +170,11 @@ export default function SignupPage() {
               </label>
             </div>
 
-            {/* Form */}
-            <SignupForm
-              formData={formData}
-              onChange={handleChange}
-              onSubmit={handleSubmit}
-            />
-
-            {selectedTab === "signup" ? <SignupForm /> : <LoginForm />}
+            {selectedTab === "signup" ? <SignupForm
+                                                      formData={formData}
+                                                      onChange={handleChange}
+                                                      onSubmit={handleSubmit}
+                                                    /> : <LoginForm />}
 
             {message && (
               <p className="text-center mt-3 text-secondary small">{message}</p>
