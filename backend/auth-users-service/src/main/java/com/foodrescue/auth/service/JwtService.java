@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import java.text.ParseException;
 import java.time.Instant;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -32,7 +33,6 @@ public class JwtService {
     private final long accessTtlSeconds;
     private final long refreshTtlSeconds;
 
-    // In-memory refresh registry: rti (refresh token jti) -> expiry epoch seconds
     private final Map<String, Long> refreshValid = new ConcurrentHashMap<>();
 
     public JwtService(
@@ -56,6 +56,12 @@ public class JwtService {
             Instant expiry = now.plusSeconds(accessTtlSeconds);
             String jti = UUID.randomUUID().toString();
 
+            // Convert enum roles -> strings for JWT claim
+            List<String> roleStrings = user.getRoles()
+                    .stream()
+                    .map(Enum::name)
+                    .toList();
+
             JWTClaimsSet claims = new JWTClaimsSet.Builder()
                     .issuer(issuer)
                     .audience(audience)
@@ -65,7 +71,7 @@ public class JwtService {
                     .jwtID(jti)
                     .claim("typ", "access")
                     .claim("email", user.getEmail())
-                    .claim("roles", user.getRoles())
+                    .claim("roles", roleStrings)
                     .claim("status", user.getStatus())
                     .build();
 

@@ -31,8 +31,9 @@ public class User extends Auditable {
 
     private String defaultAddressId;
 
+    // Configuring roles column as per the Enum Role - MTC-34
     @Builder.Default
-    private Set<String> roles = Set.of("USER");
+    private Set<Role> roles = Set.of(Role.USER);
 
     @Builder.Default
     private String status = "ACTIVE";

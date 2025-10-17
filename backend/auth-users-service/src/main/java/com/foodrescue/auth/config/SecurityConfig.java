@@ -8,6 +8,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
+import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -30,6 +31,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Configuration
+@EnableReactiveMethodSecurity
 public class SecurityConfig {
 
     private final RevokedJwtValidator revokedValidator;
@@ -62,7 +64,9 @@ public class SecurityConfig {
     @Bean
     public Converter<Jwt, Mono<AbstractAuthenticationToken>> authenticationConverter() {
         JwtAuthenticationConverter delegate = new JwtAuthenticationConverter();
+        delegate.setPrincipalClaimName("sub");
         delegate.setJwtGrantedAuthoritiesConverter(this::extractAuthorities);
+
         return new ReactiveJwtAuthenticationConverterAdapter(delegate);
     }
 
