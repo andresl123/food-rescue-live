@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import signupImage from "./img.png";
 import { createUser } from "../../services/signupServices";
 import SignupForm from "../../components/SignupForm";
+import LoginForm from "../../components/LoginForm"; // <-- import your LoginForm
 import "./SignupPage.css";
 
 export default function SignupPage() {
@@ -127,7 +128,7 @@ export default function SignupPage() {
 
             {/* Signup Form */}
 
-            <SignupForm />
+            {selectedTab === "signup" ? <SignupForm /> : <LoginForm />}
 
             {message && (
               <p className="text-center mt-3 text-secondary small">{message}</p>
