@@ -5,7 +5,7 @@ function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/authentication" element={<SignupPage />} />
       </Routes>
     </BrowserRouter>
   );
