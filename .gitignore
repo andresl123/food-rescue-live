@@ -1,4 +1,4 @@
 /.idea
-
-pass.txt
 /frontend/node_modules
+pass.txt
+/frontend/.DS_Store
