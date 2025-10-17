@@ -1,5 +1,6 @@
 package com.foodrescue.auth.controller;
 
+
 import com.foodrescue.auth.service.UserService;
 import com.foodrescue.auth.web.request.UserCreateRequest;
 import com.foodrescue.auth.web.response.ApiResponse;
@@ -8,6 +9,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
+
+@CrossOrigin(origins = "http://localhost:5173")
 
 @RestController
 @RequestMapping("/api/v1/users")
