@@ -1,22 +1,17 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import SignupPage from "../pages/signup/SignupPage"; // Assuming you have this
 
-// 1. Import the password reset components
-import RequestCodeForm from '../components/resetpassword/RequestCodeForm';
-import ResetPasswordForm from '../components/resetpassword/ResetPasswordForm';
+// --- 1. IMPORT YOUR NEW PAGES ---
+import RequestCodePage from "../pages/resetpassword/RequestCodePage";
+import ResetPasswordPage from "../pages/resetpassword/ResetPasswordPage";
 
-function AppRoutes() {
+export default function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* This path shows the form to request a verification code */}
-        <Route path="/resetpassword" element={<RequestCodeForm />} />
-
-        {/* This path shows the form to enter the code and new password */}
-        <Route path="/createnewpassword" element={<ResetPasswordForm />} />
-
+        <Route path="/resetpassword" element={<RequestCodePage />} />
+        <Route path="/createnewpassword" element={<ResetPasswordPage />} />
       </Routes>
     </BrowserRouter>
   );
 }
-
-export default AppRoutes;
