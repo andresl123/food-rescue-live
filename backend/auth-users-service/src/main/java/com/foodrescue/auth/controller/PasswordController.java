@@ -21,7 +21,7 @@ public class PasswordController {
         this.verificationService = verificationService;
     }
 
-    @PostMapping("/reset/{email}/{code}") // Endpoint now includes email and code
+    @PostMapping("/reset/{email}/{code}")
     public Mono<ResponseEntity<Map<String, String>>> resetPassword(
             @PathVariable String email,
             @PathVariable String code,

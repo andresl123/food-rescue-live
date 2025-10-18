@@ -25,7 +25,7 @@ public class VerificationController {
     }
 
     @PostMapping("/generate")
-    public Mono<ResponseEntity<?>> generateCode(@Valid @RequestBody GenerateCodeRequest request) { // @Valid is from the validation starter
+    public Mono<ResponseEntity<?>> generateCode(@Valid @RequestBody GenerateCodeRequest request) {
         return verificationService.generateAndSendCode(request.getIdentifier())
                 .then(Mono.just(
                         ResponseEntity.ok(Map.of("message", "A verification code has been sent to your email."))
