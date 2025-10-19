@@ -26,28 +26,53 @@ export default function SignupForm({ formData, onChange, onSubmit }) {
 
   // -------------------- VALIDATIONS --------------------
   const validateUserInfo = () => {
-    if (!formData.name.trim()) return toast.error("Please enter your full name");
+    if (!formData.name.trim()) {
+      toast.error("Please enter your full name");
+      return false;
+    }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!formData.email.trim()) return toast.error("Please enter your email");
-    if (!emailRegex.test(formData.email)) return toast.error("Please enter a valid email");
+    if (!formData.email.trim()) {
+      toast.error("Please enter your email");
+      return false;
+    }
+    if (!emailRegex.test(formData.email)) {
+      toast.error("Please enter a valid email");
+      return false;
+    }
 
-    if (!formData.password.trim()) return toast.error("Please enter a password");
-    if (evaluatePasswordStrength.score < 3)
-      return toast.error("Password is too weak — try mixing numbers, uppercase, and special characters");
+    if (!formData.password.trim()) {
+      toast.error("Please enter a password");
+      return false;
+    }
+    if (evaluatePasswordStrength.score < 3) {
+      toast.error("Password is too weak — try mixing numbers, uppercase, and special characters");
+      return false;
+    }
 
-    if (!formData.categoryId) return toast.error("Please select your category");
+    if (!formData.categoryId) {
+      toast.error("Please select your category");
+      return false;
+    }
 
     const phoneRegex = /^[0-9]{10,15}$/;
-    if (!formData.phoneNumber.trim()) return toast.error("Please enter your phone number");
-    if (!phoneRegex.test(formData.phoneNumber))
-      return toast.error("Phone number must contain only digits (10–15 digits)");
+    if (!formData.phoneNumber.trim()) {
+      toast.error("Please enter your phone number");
+      return false;
+    }
+    if (!phoneRegex.test(formData.phoneNumber)) {
+      toast.error("Phone number must contain only digits (10–15 digits)");
+      return false;
+    }
 
     return true;
   };
 
   const handleNext = () => {
-    if (validateUserInfo()) setStep(2);
+    const isValid = validateUserInfo();
+    if (isValid) {
+      setStep(2);
+    }
   };
 
   const handleBack = () => setStep(1);
