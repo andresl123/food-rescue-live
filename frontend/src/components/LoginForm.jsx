@@ -1,144 +1,90 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { loginUser } from "../services/loginServices";
+import React from "react";
+import { Button, Form, Spinner } from 'react-bootstrap';
 
-export default function LoginForm() {
-  const navigate = useNavigate();
+export default function LoginForm({ formData, onChange, onSubmit, onForgotPasswordClick, isLoading }) {
 
-  // Manage form input state
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
-
-  // Display feedback message and store response
-  const [message, setMessage] = useState("");
-  const [responseData, setResponseData] = useState(null);
-
-  // Update form fields
-  const handleChange = (e) =>
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-
-  // Handle form submission and login process
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setMessage("Logging in...");
-
-    const result = await loginUser(formData);
-
-    if (result.success) {
-      setResponseData(result.data);
-      setMessage("Login successful!");
-
-      // Store tokens locally
-      localStorage.setItem("accessToken", result.data.access);
-      localStorage.setItem("refreshToken", result.data.refresh);
-
-      // Redirect to dashboard after a short delay
-      setTimeout(() => navigate("/dashboard"), 1000);
-    } else {
-      setMessage("Invalid email or password.");
-    }
-  };
-
-  // Handle Google OAuth login
+  // Google OAuth handler can remain here as it's simple UI logic
   const handleGoogleLogin = () => {
+    // Replace with your backend Google OAuth endpoint if you have one
     window.location.href = "http://localhost:8080/api/auth/google";
   };
 
-  // Navigate to forgot password page
-  const handleForgotPassword = () => {
-    navigate("/forgot-password");
-  };
-
-  // -------------------- UI with Animation --------------------
   return (
-    <div className="position-relative overflow-hidden">
-      <AnimatePresence mode="wait">
-        <motion.div
-          key="login-form"
-          initial={{ x: 100, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: -100, opacity: 0 }}
-          transition={{ duration: 0.4 }}
+    <Form onSubmit={onSubmit}>
+      {/* Email Input */}
+      <Form.Group className="mb-3">
+        <Form.Control
+          type="email"
+          name="email"
+          placeholder="Email Address"
+          value={formData.email}
+          onChange={onChange}
+          required
+          style={{ borderRadius: "15px", padding: "10px" }}
+        />
+      </Form.Group>
+
+      {/* Password Input */}
+      <Form.Group className="mb-2">
+        <Form.Control
+          type="password"
+          name="password"
+          placeholder="Password"
+          value={formData.password}
+          onChange={onChange}
+          required
+          style={{ borderRadius: "15px", padding: "10px" }}
+        />
+      </Form.Group>
+
+      {/* Forgot Password Button */}
+      <div className="text-end mb-4">
+        <Button
+          type="button"
+          variant="link"
+          className="p-0 text-decoration-none small"
+          style={{ color: "#000" }}
+          onClick={onForgotPasswordClick}
         >
-          <form onSubmit={handleSubmit}>
-            {/* Email Field */}
-            <div className="mb-3">
-              <input
-                type="email"
-                className="form-control"
-                name="email"
-                placeholder="Email Address"
-                value={formData.email}
-                onChange={handleChange}
-                required
-              />
-            </div>
+          Forgot Password?
+        </Button>
+      </div>
 
-            {/* Password Field */}
-            <div className="mb-2">
-              <input
-                type="password"
-                className="form-control"
-                name="password"
-                placeholder="Password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-              />
-            </div>
+      {/* Login Submit Button */}
+      <Button
+        type="submit"
+        variant="dark"
+        className="w-100 py-2 fw-semibold mb-3"
+        style={{ borderRadius: "15px" }}
+        disabled={isLoading}
+      >
+        {isLoading ? (
+          <>
+            <Spinner as="span" animation="border" size="sm" /> Logging in...
+          </>
+        ) : (
+          "Login"
+        )}
+      </Button>
 
-            {/* Forgot Password Link */}
-            <div className="text-end mb-4">
-              <button
-                type="button"
-                className="btn btn-link p-0 text-decoration-none small"
-                style={{ color: "#000" }}
-                onClick={handleForgotPassword}
-              >
-                Forgot Password?
-              </button>
-            </div>
+      {/* OR Separator */}
+      <div className="d-flex align-items-center my-3">
+        <hr className="flex-grow-1" />
+        <span className="mx-2 text-muted small">OR</span>
+        <hr className="flex-grow-1" />
+      </div>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              className="btn btn-dark w-100 py-2 fw-semibold mb-3"
-              style={{ borderRadius: "15px" }}
-            >
-              Login
-            </button>
-
-            {/* OR Separator */}
-            <div className="d-flex align-items-center my-3">
-              <hr className="flex-grow-1" />
-              <span className="mx-2 text-muted small">OR</span>
-              <hr className="flex-grow-1" />
-            </div>
-
-            {/* Google OAuth Login */}
-            <button
-              type="button"
-              className="btn btn-light w-100 py-2 border fw-semibold d-flex align-items-center justify-content-center gap-2"
-              style={{
-                borderRadius: "15px",
-                backgroundColor: "#fff",
-                border: "1px solid #ccc",
-              }}
-              onClick={handleGoogleLogin}
-            >
-              Continue with Google
-            </button>
-
-            {/* Status Message */}
-            {message && (
-              <p className="text-center mt-3 text-secondary small">{message}</p>
-            )}
-          </form>
-        </motion.div>
-      </AnimatePresence>
-    </div>
+      {/* Google Login Button */}
+      <Button
+        type="button"
+        variant="light"
+        className="w-100 py-2 border fw-semibold d-flex align-items-center justify-content-center gap-2"
+        style={{ borderRadius: "15px", backgroundColor: "#fff", border: "1px solid #ccc" }}
+        onClick={handleGoogleLogin}
+      >
+        {/* You can add your Google icon here if you have it */}
+        Continue with Google
+      </Button>
+    </Form>
   );
 }

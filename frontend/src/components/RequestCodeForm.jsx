@@ -1,34 +1,55 @@
-import React from 'react';
-import { Button, Form, Spinner } from 'react-bootstrap';
+import React from "react";
+import { Button, Form, Spinner } from "react-bootstrap";
+import toast from "react-hot-toast";
 
 export default function RequestCodeForm({ email, onChange, onSubmit, isLoading }) {
+  // This handler validates the email before calling the parent's submit function.
+  const handleValidationAndSubmit = (e) => {
+    e.preventDefault(); // Prevent the form from reloading the page
+
+    if (!email.trim()) {
+      return toast.error("Please enter an email address.");
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return toast.error("Please enter a valid email address.");
+    }
+
+    // If validation passes, call the onSubmit function from the parent page
+    onSubmit(e);
+  };
+
   return (
-    <Form onSubmit={onSubmit}>
-      <Form.Group className="mb-3" controlId="formBasicEmail">
+    <Form onSubmit={handleValidationAndSubmit}>
+      <Form.Group className="mb-3" controlId="formRequestCodeEmail">
         <Form.Control
           type="email"
-          name="email" // Added name for consistency
+          name="email"
           value={email}
           onChange={onChange}
           placeholder="Enter your email address"
-          required
-          style={{ borderRadius: "15px", padding: "10px" }}
+          className="form-input-field" // For custom styling from your CSS
         />
       </Form.Group>
 
       <Button
         type="submit"
-        className="btn btn-dark w-100 py-2 fw-semibold"
-        style={{ borderRadius: "15px" }}
+        className="btn btn-dark w-100 py-2 fw-semibold form-submit-button" // For custom styling
         disabled={isLoading}
       >
         {isLoading ? (
           <>
-            <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
-            {' '}Sending...
+            <Spinner
+              as="span"
+              animation="border"
+              size="sm"
+              role="status"
+              aria-hidden="true"
+            />
+            &nbsp;Sending...
           </>
         ) : (
-          'Send Verification Code'
+          "Send Verification Code"
         )}
       </Button>
     </Form>
