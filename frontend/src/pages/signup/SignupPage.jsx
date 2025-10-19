@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import signupImage from "./img.png";
+import signupImage from "../../assets/signupPage.png";
 import { createUser } from "../../services/signupServices";
 import SignupForm from "../../components/SignupForm";
 import LoginForm from "../../components/LoginForm";
