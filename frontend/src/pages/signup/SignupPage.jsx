@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import signupImage from "./img.png";
+import signupImage from "../../assets/signupPage.png";
 import { createUser } from "../../services/signupServices";
 import SignupForm from "../../components/SignupForm";
 import LoginForm from "../../components/LoginForm";
@@ -22,21 +22,23 @@ export default function SignupPage() {
     postalCode: "",
     country: "",
   });
-  const [message, setMessage] = useState("");
+
   const [addressResponse, setAddressResponse] = useState(null);
   const [userResponse, setUserResponse] = useState(null);
   const [selectedTab, setSelectedTab] = useState("signup");
 
+  // Handle form field changes
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
+  // Handle signup process
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
-    setMessage("Submitting...");
     setAddressResponse(null);
     setUserResponse(null);
 
     try {
+      // Step 1: Create address first
       const addressPayload = {
         street: formData.street,
         city: formData.city,
@@ -47,27 +49,20 @@ export default function SignupPage() {
 
       const createdAddress = await createAddress(addressPayload);
 
+      // Step 2: Create user using the service
       const userPayload = {
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        categoryId: formData.categoryId,
-        phoneNumber: formData.phoneNumber,
+        ...formData,
         defaultAddressId: createdAddress.id,
       };
 
-      const response = await fetch("http://localhost:8080/api/v1/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(userPayload),
-      });
+      const result = await createUser(userPayload);
 
-      const result = await response.json();
-      setUserResponse(result);
+      // Step 3: Handle different outcomes
+      if (result.success) {
+        toast.success("User created successfully. Please log in.");
+        console.log("User created successfully:", result.data);
 
-      if (response.ok) {
-        toast.success("Signup successful! Redirecting to login...");
-
+        // Reset form fields
         setFormData({
           name: "",
           email: "",
@@ -82,21 +77,20 @@ export default function SignupPage() {
           defaultAddressId: "",
         });
 
-        setTimeout(() => {
-          navigate("/authentication");
-        }, 1500);
+        // Switch to login tab after success
+        setSelectedTab("login");
       } else {
-        toast.error(`Signup failed — ${response.status}`);
+        toast.error(`Signup failed: ${result.error}`);
+        console.error("Signup failed:", result.error);
       }
     } catch (error) {
       console.error("Error:", error);
-      toast.error("Something went wrong — check console logs.");
+      toast.error("Something went wrong. Please check console logs.");
     }
   };
 
   return (
     <div className="container-fluid vh-100 px-5">
-
       <div className="row h-100 g-0">
         {/* Left section */}
         <div className="col-lg-6 d-none d-lg-flex align-items-center justify-content-center p-4">
@@ -116,8 +110,7 @@ export default function SignupPage() {
           </div>
         </div>
 
-        {/* Right section with form */}
-
+        {/* Right section */}
         <div className="col-lg-6 d-flex align-items-center justify-content-center bg-light form-section">
           <div className="w-100 mx-3" style={{ maxWidth: "470px" }}>
             <h2 className="text-center fw-bold mb-4" style={{ color: "#000" }}>
@@ -133,9 +126,7 @@ export default function SignupPage() {
                 id="signupTab"
                 autoComplete="off"
                 checked={selectedTab === "signup"}
-                onChange={() => {
-                  setSelectedTab("signup");
-                }}
+                onChange={() => setSelectedTab("signup")}
               />
               <label
                 className="btn w-50 fw-semibold"
@@ -170,14 +161,14 @@ export default function SignupPage() {
               </label>
             </div>
 
-            {selectedTab === "signup" ? <SignupForm
-                                                      formData={formData}
-                                                      onChange={handleChange}
-                                                      onSubmit={handleSubmit}
-                                                    /> : <LoginForm />}
-
-            {message && (
-              <p className="text-center mt-3 text-secondary small">{message}</p>
+            {selectedTab === "signup" ? (
+              <SignupForm
+                formData={formData}
+                onChange={handleChange}
+                onSubmit={handleSubmit}
+              />
+            ) : (
+              <LoginForm />
             )}
           </div>
         </div>

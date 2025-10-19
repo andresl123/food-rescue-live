@@ -4,7 +4,6 @@ const BASE_URL = "http://localhost:8080/api/v1/users";
 
 export async function createUser(formData) {
   try {
-    // Construct the payload to exactly match backend format
     const payload = {
       name: formData.name,
       email: formData.email,
@@ -12,25 +11,34 @@ export async function createUser(formData) {
       categoryId: formData.categoryId,
       phoneNumber: formData.phoneNumber,
       defaultAddressId: formData.defaultAddressId,
-      roles: ["USER"], // static field
     };
 
-    console.log("➡️ Sending to backend:", payload);
+    console.log("Sending to backend:", payload);
 
-    // Actual backend POST request
     const response = await fetch(BASE_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
+    // If the response is not OK, extract readable message
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      let errorMessage = `Signup failed (HTTP ${response.status})`;
+      try {
+        const text = await response.text();
+        const maybeJson = JSON.parse(text);
+        // If backend sent JSON with a 'message' field
+        errorMessage = maybeJson.message || text;
+      } catch {
+        // If not JSON, use plain text
+        const text = await response.text();
+        errorMessage = text || errorMessage;
+      }
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();
     console.log("Backend responded:", data);
-
     return { success: true, data };
   } catch (error) {
     console.error("Signup error:", error);
