@@ -30,7 +30,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Configuration
-public class SecurityConfig {
+public class    SecurityConfig {
 
     private final RevokedJwtValidator revokedValidator;
 
@@ -95,6 +95,9 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.POST, "/api/v1/auth/refresh").permitAll()
                         .pathMatchers(HttpMethod.POST, "/api/code/generate").permitAll()
                         .pathMatchers(HttpMethod.POST, "/api/password/reset/**").permitAll()
+                        .pathMatchers("/api/v1/users/**").permitAll()
+                        .pathMatchers("/api/v1/users").permitAll()
+                        .pathMatchers("/api/v1/addresses/**").permitAll()
                         .pathMatchers("/.well-known/jwks.json").permitAll()
                         .pathMatchers("/actuator/health", "/v3/api-docs/**", "/swagger-ui/**").permitAll()
                         .anyExchange().authenticated()
