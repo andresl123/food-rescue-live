@@ -85,7 +85,7 @@ export default function SignupPage() {
       toast.success("Login successful!");
       localStorage.setItem("accessToken", result.data.access);
       localStorage.setItem("refreshToken", result.data.refresh);
-      setTimeout(() => navigate("/dashboard"), 1000);
+      setTimeout(() => navigate("/HelloWorld"), 1000);
     } else {
       toast.error(result.message || "Invalid email or password.");
     }
