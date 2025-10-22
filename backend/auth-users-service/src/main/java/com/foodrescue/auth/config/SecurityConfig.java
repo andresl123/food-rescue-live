@@ -87,7 +87,6 @@ public class    SecurityConfig {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
 
-                // --- THIS IS THE FIX: Configure CORS properly instead of disabling it ---
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
                 .authorizeExchange(ex -> ex
