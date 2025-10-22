@@ -55,6 +55,7 @@ export default function LoginForm() {
   // -------------------- UI with Animation --------------------
   return (
     <div className="position-relative overflow-hidden">
+      //--Adding Animation
       <AnimatePresence mode="wait">
         <motion.div
           key="login-form"

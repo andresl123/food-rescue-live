@@ -111,6 +111,7 @@ export default function SignupForm({ formData, onChange, onSubmit }) {
   // -------------------- UI --------------------
   return (
     <div className="position-relative overflow-hidden">
+      //Adding Animation
       <AnimatePresence mode="wait">
         {/* STEP 1 — USER DETAILS */}
         {step === 1 && (
