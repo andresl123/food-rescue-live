@@ -1,90 +1,145 @@
-import React from "react";
-import { Button, Form, Spinner } from 'react-bootstrap';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import toast from "react-hot-toast";
+import { loginUser } from "../../services/loginServices";
 
-export default function LoginForm({ formData, onChange, onSubmit, onForgotPasswordClick, isLoading }) {
+export default function LoginForm({ onForgotPasswordClick }) {
+  const navigate = useNavigate();
 
-  // Google OAuth handler can remain here as it's simple UI logic
+  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleChange = (e) =>
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    // --- toast-based validation (no browser tooltip) ---
+    if (!formData.email.trim()) {
+      return toast.error("Email is required.");
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email.trim())) {
+      return toast.error("Please enter a valid email address.");
+    }
+    if (!formData.password) {
+      return toast.error("Password is required.");
+    }
+
+    const loadingToast = toast.loading("Logging in...");
+    setIsLoading(true);
+
+    try {
+      const result = await loginUser(formData);
+
+      if (result.success) {
+        toast.success("Login successful!");
+        localStorage.setItem("accessToken", result.data.access);
+        localStorage.setItem("refreshToken", result.data.refresh);
+        setTimeout(() => navigate("/dashboard"), 800);
+      } else {
+        toast.error(result.message || "Invalid email or password.");
+      }
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
+      toast.dismiss(loadingToast);
+    }
+  };
+
   const handleGoogleLogin = () => {
-    // Replace with your backend Google OAuth endpoint if you have one
+    toast("Redirecting to Google…");
     window.location.href = "http://localhost:8080/api/auth/google";
   };
 
   return (
-    <Form onSubmit={onSubmit}>
-      {/* Email Input */}
-      <Form.Group className="mb-3">
-        <Form.Control
-          type="email"
-          name="email"
-          placeholder="Email Address"
-          value={formData.email}
-          onChange={onChange}
-          required
-          style={{ borderRadius: "15px", padding: "10px" }}
-        />
-      </Form.Group>
-
-      {/* Password Input */}
-      <Form.Group className="mb-2">
-        <Form.Control
-          type="password"
-          name="password"
-          placeholder="Password"
-          value={formData.password}
-          onChange={onChange}
-          required
-          style={{ borderRadius: "15px", padding: "10px" }}
-        />
-      </Form.Group>
-
-      {/* Forgot Password Button */}
-      <div className="text-end mb-4">
-        <Button
-          type="button"
-          variant="link"
-          className="p-0 text-decoration-none small"
-          style={{ color: "#000" }}
-          onClick={onForgotPasswordClick}
+    <div className="position-relative overflow-hidden">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key="login-form"
+          initial={{ x: 100, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: -100, opacity: 0 }}
+          transition={{ duration: 0.4 }}
         >
-          Forgot Password?
-        </Button>
-      </div>
+          {/* Disable native validation tooltips */}
+          <form noValidate onSubmit={handleSubmit}>
+            {/* Email */}
+            <div className="mb-3">
+              <input
+                type="email"
+                className="form-control"
+                name="email"
+                placeholder="Email Address"
+                value={formData.email}
+                onChange={handleChange}
+                disabled={isLoading}
+              />
+            </div>
 
-      {/* Login Submit Button */}
-      <Button
-        type="submit"
-        variant="dark"
-        className="w-100 py-2 fw-semibold mb-3"
-        style={{ borderRadius: "15px" }}
-        disabled={isLoading}
-      >
-        {isLoading ? (
-          <>
-            <Spinner as="span" animation="border" size="sm" /> Logging in...
-          </>
-        ) : (
-          "Login"
-        )}
-      </Button>
+            {/* Password */}
+            <div className="mb-2">
+              <input
+                type="password"
+                className="form-control"
+                name="password"
+                placeholder="Password"
+                value={formData.password}
+                onChange={handleChange}
+                disabled={isLoading}
+              />
+            </div>
 
-      {/* OR Separator */}
-      <div className="d-flex align-items-center my-3">
-        <hr className="flex-grow-1" />
-        <span className="mx-2 text-muted small">OR</span>
-        <hr className="flex-grow-1" />
-      </div>
+            {/* Forgot Password */}
+            <div className="text-end mb-4">
+              <button
+                type="button"
+                className="btn btn-link p-0 text-decoration-none small"
+                style={{ color: "#000" }}
+                onClick={onForgotPasswordClick}
+                disabled={isLoading}
+              >
+                Forgot Password?
+              </button>
+            </div>
 
-      {/* Google Login Button */}
-      <Button
-        type="button"
-        variant="light"
-        className="w-100 py-2 border fw-semibold d-flex align-items-center justify-content-center gap-2"
-        style={{ borderRadius: "15px", backgroundColor: "#fff", border: "1px solid #ccc" }}
-        onClick={handleGoogleLogin}
-      >
-        {/* You can add your Google icon here if you have it */}
-        Continue with Google
-      </Button>
-    </Form>
+            {/* Submit */}
+            <button
+              type="submit"
+              className="btn btn-dark w-100 py-2 fw-semibold mb-3"
+              style={{ borderRadius: "15px" }}
+              disabled={isLoading}
+            >
+              {isLoading ? "Logging in..." : "Login"}
+            </button>
+
+            {/* OR */}
+            <div className="d-flex align-items-center my-3">
+              <hr className="flex-grow-1" />
+              <span className="mx-2 text-muted small">OR</span>
+              <hr className="flex-grow-1" />
+            </div>
+
+            {/* Google OAuth */}
+            <button
+              type="button"
+              className="btn btn-light w-100 py-2 border fw-semibold d-flex align-items-center justify-content-center gap-2"
+              style={{
+                borderRadius: "15px",
+                backgroundColor: "#fff",
+                border: "1px solid #ccc",
+              }}
+              onClick={handleGoogleLogin}
+              disabled={isLoading}
+            >
+              Continue with Google
+            </button>
+          </form>
+        </motion.div>
+      </AnimatePresence>
+    </div>
   );
 }
