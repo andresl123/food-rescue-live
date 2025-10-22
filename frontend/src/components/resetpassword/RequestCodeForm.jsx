@@ -1,116 +1,57 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // Don't forget this import
-import { Button, Form, Spinner, Alert } from 'react-bootstrap';
+import React from "react";
+import { Button, Form, Spinner } from "react-bootstrap";
+import toast from "react-hot-toast";
 
-// --- Your corrected import block ---
-import yourImage from '../../assets/food-rescue-image.png';
-import "./ResetPasswordForm.css"; // Assuming you want to use the same CSS for consistency
-// ------------------------------------
+export default function RequestCodeForm({ email, onChange, onSubmit, isLoading }) {
+  // This handler validates the email before calling the parent's submit function.
+  const handleValidationAndSubmit = (e) => {
+    e.preventDefault(); // Prevent the form from reloading the page
 
-function RequestCodeForm() { // Removed onEmailSubmitted prop as per router setup
-  const navigate = useNavigate(); // For navigating to the next page
-  const [email, setEmail] = useState('');
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    setIsLoading(true);
-    setMessage('');
-    setError('');
-
-    try {
-      const response = await fetch('http://localhost:8080/api/code/generate', { // Use relative path if backend is on same origin
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ identifier: email }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || 'An error occurred.');
-      }
-
-      // --- NAVIGATE ON SUCCESS ---
-      navigate('/createnewpassword', { state: { email: email } });
-
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
+    if (!email.trim()) {
+      return toast.error("Please enter an email address.");
     }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return toast.error("Please enter a valid email address.");
+    }
+
+    // If validation passes, call the onSubmit function from the parent page
+    onSubmit(e);
   };
 
   return (
-    <div className="container-fluid vh-100 bg-light d-flex justify-content-center align-items-center">
+    <Form onSubmit={handleValidationAndSubmit}>
+      <Form.Group className="mb-3" controlId="formRequestCodeEmail">
+        <Form.Control
+          type="email"
+          name="email"
+          value={email}
+          onChange={onChange}
+          placeholder="Enter your email address"
+          className="form-input-field" // For custom styling from your CSS
+        />
+      </Form.Group>
 
-      <div className="row g-0 shadow-lg rounded-5 overflow-hidden" style={{ width: '90%', maxWidth: '1000px', height: '85%' }}>
-
-        {/* Left section with the form */}
-        <div className="col-lg-6 d-flex align-items-center justify-content-center bg-white rounded-start-5">
-          <div className="w-100 px-3" style={{ maxWidth: "470px" }}>
-            <h2 className="text-center fw-bold mb-4" style={{ color: "#000" }}>
-              Reset Your Password
-            </h2>
-
-            <Form onSubmit={handleSubmit}>
-              <Form.Group className="mb-3" controlId="formBasicEmail">
-                <Form.Control
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email address"
-                  required
-                  className="form-input-field" // Using custom class
-                />
-              </Form.Group>
-
-              <Button
-                type="submit"
-                className="btn btn-dark w-100 py-2 fw-semibold form-submit-button" // Using custom class
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
-                    {' '}Sending...
-                  </>
-                ) : (
-                  'Send Verification Code'
-                )}
-              </Button>
-            </Form>
-
-            {message && <Alert variant="success" className="text-center mt-3 small">{message}</Alert>}
-            {error && <Alert variant="danger" className="text-center mt-3 small">{error}</Alert>}
-          </div>
-        </div>
-
-        {/* Right section with image and text overlay */}
-        <div className="col-lg-6 d-none d-lg-flex p-0">
-          <div className="position-relative w-100 h-100">
-            <img
-              src={yourImage}
-              alt="Food Rescue"
-              className="w-100 h-100 object-fit-cover rounded-end-5"
+      <Button
+        type="submit"
+        className="btn btn-dark w-100 py-2 fw-semibold form-submit-button" // For custom styling
+        disabled={isLoading}
+      >
+        {isLoading ? (
+          <>
+            <Spinner
+              as="span"
+              animation="border"
+              size="sm"
+              role="status"
+              aria-hidden="true"
             />
-            {/* --- ADDED TEXT OVERLAY --- */}
-            <div className="position-absolute top-50 start-50 translate-middle text-center text-white px-4">
-              <h1 className="fw-bold display-4">FoodRescue</h1>
-              <p className="fs-5">
-                Connecting surplus food with those in need.
-              </p>
-            </div>
-            {/* --- END ADDED TEXT OVERLAY --- */}
-          </div>
-        </div>
-
-      </div>
-    </div>
+            &nbsp;Sending...
+          </>
+        ) : (
+          "Send Verification Code"
+        )}
+      </Button>
+    </Form>
   );
 }
-
-export default RequestCodeForm;

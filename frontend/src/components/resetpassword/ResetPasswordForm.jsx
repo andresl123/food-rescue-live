@@ -1,162 +1,247 @@
-import React, { useState } from 'react';
-import { useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { Button, Form, Spinner, Alert } from 'react-bootstrap';
+import React, { useMemo, useState } from "react";
+import { Button, Form, Spinner, ProgressBar } from "react-bootstrap";
+import { AnimatePresence, motion } from "framer-motion";
+import toast from "react-hot-toast";
 
-// IMPORTANT: Update this path to your actual image!
-import yourImage from '../../assets/food-rescue-image.png';
-// IMPORTANT: Update this to your CSS file if you have one
-import "./ResetPasswordForm.css";
+import { generateResetCode, resetPassword } from "../../services/passwordResetService";
 
-function ResetPasswordForm() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const email = location.state?.email; // Read the email from the previous route
+const fadeSlide = {
+  initial: { opacity: 0, y: 12 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -12 },
+  transition: { duration: 0.25 },
+};
 
-  // State management from your functionality example
-  const [code, setCode] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [repeatPassword, setRepeatPassword] = useState('');
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+export default function ResetPasswordForm({ onBack }) {
+  const [step, setStep] = useState("email"); // "email" | "verify"
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [repeatPassword, setRepeatPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [emailLocked, setEmailLocked] = useState(false);
+  const [showPasswords, setShowPasswords] = useState(false);
 
-  // handleSubmit logic adapted from your functionality example
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  // strength: 0..4
+  const strength = useMemo(() => {
+    const pwd = newPassword || "";
+    let score = 0;
+    if (pwd.length >= 8) score++;
+    if (/[A-Z]/.test(pwd)) score++;
+    if (/[0-9]/.test(pwd)) score++;
+    if (/[^A-Za-z0-9]/.test(pwd)) score++;
+    return score;
+  }, [newPassword]);
+
+  const strengthLabel = ["Very weak", "Weak", "Fair", "Good", "Strong"][strength] || "Very weak";
+  const strengthPct = [5, 25, 50, 75, 100][strength] || 5;
+  const strengthVariant = ["danger", "danger", "warning", "success", "success"][strength] || "danger";
+
+  const handleSendCode = async (e) => {
+    e.preventDefault();
+    if (!email.trim()) return toast.error("Please enter an email address.");
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return toast.error("Please enter a valid email address.");
+
     setIsLoading(true);
-    setMessage('');
-    setError('');
-
-    // Check if passwords match before making the API call
-    if (newPassword !== repeatPassword) {
-      setError('Error: Passwords do not match. Please try again.');
-      setIsLoading(false);
-      return; // Stop the function here
-    }
-
-    const url = `http://localhost:8080/api/password/reset/${email}/${code}`;
-
+    const loadingToast = toast.loading("Sending code...");
     try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ newPassword: newPassword }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || 'An error occurred.');
+      const result = await generateResetCode(email);
+      if (result?.success) {
+        toast.success("Verification code sent!");
+        setEmailLocked(true);
+        setStep("verify");
+      } else {
+        toast.error(result?.message || "Could not send code.");
       }
-
-      setMessage('Success! Your password has been reset.');
-      // After a short delay, redirect to the login page
-      setTimeout(() => {
-        navigate('/login'); // Assuming you have a /login route
-      }, 2000);
-
     } catch (err) {
-      setError(err.message);
+      toast.error(err?.message || "Something went wrong.");
     } finally {
       setIsLoading(false);
+      toast.dismiss(loadingToast);
     }
   };
 
-  // If someone lands on this page without an email, redirect them
-  if (!email) {
-    return <Navigate to="/resetpassword" />;
-  }
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    if (!code.trim()) return toast.error("Please enter the 6-digit code.");
+    if (!newPassword) return toast.error("Please enter your new password.");
+    if (newPassword !== repeatPassword) return toast.error("Passwords do not match.");
 
-  // The JSX structure and styling is from your design template
+    setIsLoading(true);
+    const loadingToast = toast.loading("Resetting password...");
+    try {
+      const result = await resetPassword(email, code, newPassword);
+      if (result?.success) {
+        toast.success("Password reset successfully! Please log in.");
+        if (onBack) onBack();
+      } else {
+        toast.error(result?.message || "Failed to reset password.");
+      }
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong.");
+    } finally {
+      setIsLoading(false);
+      toast.dismiss(loadingToast);
+    }
+  };
+
   return (
-    <div className="container-fluid vh-100 px-5">
-      <div className="row h-100 g-0">
+    <div>
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h4 className="m-0">Reset Password</h4>
+        <Button variant="link" className="text-decoration-none text-dark p-0" onClick={onBack}>
+          ← Back
+        </Button>
+      </div>
 
-        {/* --- Left section with the new form --- */}
-        <div className="col-lg-6 d-flex align-items-center justify-content-center bg-light">
-          <div className="w-100 mx-3" style={{ maxWidth: "470px" }}>
-            <h2 className="text-center fw-bold mb-4" style={{ color: "#000" }}>
-              Create New Password
-            </h2>
-            <p className="text-center text-muted mb-4">
-              A verification code was sent to {email}.
-            </p>
-
-            <Form onSubmit={handleSubmit}>
-              <Form.Group className="mb-3">
+      {/* Email step */}
+      <AnimatePresence mode="wait">
+        {step === "email" && (
+          <motion.div key="email-step" {...fadeSlide}>
+            <Form onSubmit={handleSendCode}>
+              <Form.Group className="mb-3" controlId="resetEmail">
                 <Form.Control
-                  type="text"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  placeholder="6-digit code from email"
-                  required
-                  style={{ borderRadius: "15px", padding: "10px" }}
-                />
-              </Form.Group>
-
-              <Form.Group className="mb-3">
-                <Form.Control
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Enter your new password"
-                  required
-                  style={{ borderRadius: "15px", padding: "10px" }}
-                />
-              </Form.Group>
-
-              <Form.Group className="mb-3">
-                <Form.Control
-                  type="password"
-                  value={repeatPassword}
-                  onChange={(e) => setRepeatPassword(e.target.value)}
-                  placeholder="Repeat your new password"
-                  required
-                  style={{ borderRadius: "15px", padding: "10px" }}
+                  type="email"
+                  placeholder="Enter your email address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  style={{ borderRadius: 15, padding: 10 }}
+                  disabled={emailLocked || isLoading}
                 />
               </Form.Group>
 
               <Button
                 type="submit"
                 className="btn btn-dark w-100 py-2 fw-semibold"
-                style={{ borderRadius: "15px" }}
+                style={{ borderRadius: 15 }}
                 disabled={isLoading}
               >
                 {isLoading ? (
                   <>
-                    <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
-                    {' '}Resetting...
+                    <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />{" "}
+                    Sending...
                   </>
                 ) : (
-                  'Set New Password'
+                  "Next"
                 )}
               </Button>
             </Form>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-            {message && <Alert variant="success" className="text-center mt-3 small">{message}</Alert>}
-            {error && <Alert variant="danger" className="text-center mt-3 small">{error}</Alert>}
-          </div>
-        </div>
+      {/* Verify (OTP + Passwords) */}
+      <AnimatePresence mode="wait">
+        {step === "verify" && (
+          <motion.div key="verify-step" {...fadeSlide}>
+            <Form onSubmit={handleResetPassword}>
+              <Form.Group className="mb-3" controlId="resetEmailLocked">
+                <Form.Control
+                  type="email"
+                  value={email}
+                  disabled
+                  style={{ borderRadius: 15, padding: 10, background: "#f2f2f2", color: "#555" }}
+                />
+              </Form.Group>
 
-        {/* --- Right section with image --- */}
-        <div className="col-lg-6 d-none d-lg-flex align-items-center justify-content-center p-4">
-          <div className="position-relative w-100 h-100">
-            <img
-              src={yourImage}
-              alt="Food Rescue"
-              className="w-100 h-100 object-fit-cover"
-              style={{ borderRadius: "30px" }}
-            />
-            <div className="position-absolute top-50 start-50 translate-middle text-center text-white px-4">
-              <h1 className="fw-bold display-4">FoodRescue</h1>
-            </div>
-          </div>
-        </div>
+              <Form.Group className="mb-3" controlId="resetCode">
+                <Form.Control
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="6-digit code from email"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  style={{ borderRadius: 15, padding: 10 }}
+                  required
+                />
+              </Form.Group>
 
-      </div>
+              {/* New password with inline Show/Hide */}
+              <Form.Group className="mb-2" controlId="resetNewPassword">
+                <div className="position-relative">
+                  <Form.Control
+                    type={showPasswords ? "text" : "password"}
+                    placeholder="New password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    style={{
+                      borderRadius: 15,
+                      padding: "10px 70px 10px 10px", // right padding to make room for the toggle
+                    }}
+                    required
+                  />
+                  {/* inline toggle inside the input (no border) */}
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setShowPasswords((s) => !s)}
+                    onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setShowPasswords((s) => !s)}
+                    className="position-absolute top-50 translate-middle-y"
+                    style={{
+                      right: 12,
+                      userSelect: "none",
+                      cursor: "pointer",
+                      padding: "4px 8px",
+                      borderRadius: 12,
+                      color: "#6c757d",
+                      background: "transparent",
+                    }}
+                  >
+                    {showPasswords ? "Hide" : "Show"}
+                  </span>
+                </div>
+
+                {/* Strength meter: thin bar + centered label below */}
+                <div className="mt-2">
+                  <ProgressBar
+                    now={strengthPct}
+                    variant={strengthVariant}
+                    style={{ height: 6, borderRadius: 6 }}
+                  />
+                </div>
+                <div className="text-center mt-1" style={{ fontSize: 13, color: "#6c757d" }}>
+                  Strength: {strengthLabel}
+                </div>
+                <small className="text-muted">
+                  Use at least 8 characters with a mix of upper-case, numbers, and symbols.
+                </small>
+              </Form.Group>
+
+              <Form.Group className="mb-3" controlId="resetRepeatPassword">
+                <Form.Control
+                  type={showPasswords ? "text" : "password"}
+                  placeholder="Repeat new password"
+                  value={repeatPassword}
+                  onChange={(e) => setRepeatPassword(e.target.value)}
+                  style={{ borderRadius: 15, padding: 10 }}
+                  required
+                  isInvalid={repeatPassword.length > 0 && repeatPassword !== newPassword}
+                />
+                <Form.Control.Feedback type="invalid">
+                  Passwords do not match.
+                </Form.Control.Feedback>
+              </Form.Group>
+
+              <Button
+                type="submit"
+                className="btn btn-dark w-100 py-2 fw-semibold"
+                style={{ borderRadius: 15 }}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />{" "}
+                    Resetting...
+                  </>
+                ) : (
+                  "Set New Password"
+                )}
+              </Button>
+            </Form>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
-
-export default ResetPasswordForm;
