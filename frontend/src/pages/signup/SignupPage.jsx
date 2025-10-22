@@ -4,10 +4,10 @@ import { Alert } from "react-bootstrap";
 import toast from "react-hot-toast";
 
 // Import all the "dumb" form components
-import SignupForm from "../../components/SignupForm";
-import LoginForm from "../../components/LoginForm";
-import RequestCodeForm from "../../components/RequestCodeForm";
-import ResetPasswordForm from "../../components/ResetPasswordForm";
+import SignupForm from "../../components/login-signup/SignupForm";
+import LoginForm from "../../components/login-signup/LoginForm";
+import RequestCodeForm from "../../components/resetpassword/RequestCodeForm";
+import ResetPasswordForm from "../../components/resetpassword/ResetPasswordForm";
 
 // Import all necessary service functions
 import { createUser } from "../../services/signupServices";

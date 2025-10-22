@@ -10,13 +10,31 @@ export default function SignupForm({ formData, onChange, onSubmit }) {
   const evaluatePasswordStrength = useMemo(() => {
     const password = formData.password || "";
     let score = 0;
-    if (password.length >= 8) score++;
-    if (/[A-Z]/.test(password)) score++;
-    if (/[0-9]/.test(password)) score++;
-    if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) score++;
 
-    const labels = ["Weak", "Fair", "Good", "Strong"];
-    const colors = ["#dc3545", "#ffc107", "#0d6efd", "#198754"];
+    const hasLower = /[a-z]/.test(password);
+    const hasUpper = /[A-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    const lengthOK = password.length >= 8;
+    const minLength = password.length >= 6;
+
+    // Length-based gating
+    if (!minLength) {
+      score = 1; // Very Weak if less than 6 chars
+    } else {
+      // Normal scoring for longer passwords
+      if (lengthOK) score++;
+      if (hasLower) score++;
+      if (hasUpper) score++;
+      if (hasNumber) score++;
+      if (hasSpecial) score++;
+    }
+
+    score = Math.min(score, 5); // Cap between 1–5
+
+    const labels = ["Very Weak", "Weak", "Fair", "Good", "Strong"];
+    const colors = ["#dc3545", "#fd7e14", "#ffc107", "#0d6efd", "#198754"];
+
     return {
       score,
       label: labels[score - 1] || "",
@@ -45,6 +63,10 @@ export default function SignupForm({ formData, onChange, onSubmit }) {
       toast.error("Please enter a password");
       return false;
     }
+    if (formData.password.length < 6) {
+      toast.error("Password must be at least 6 characters long");
+      return false;
+    }
     if (evaluatePasswordStrength.score < 3) {
       toast.error("Password is too weak — try mixing numbers, uppercase, and special characters");
       return false;
@@ -70,9 +92,7 @@ export default function SignupForm({ formData, onChange, onSubmit }) {
 
   const handleNext = () => {
     const isValid = validateUserInfo();
-    if (isValid) {
-      setStep(2);
-    }
+    if (isValid) setStep(2);
   };
 
   const handleBack = () => setStep(1);
@@ -143,7 +163,7 @@ export default function SignupForm({ formData, onChange, onSubmit }) {
                 initial={{ opacity: 0, width: 0 }}
                 animate={{
                   opacity: 1,
-                  width: `${(evaluatePasswordStrength.score / 4) * 100}%`,
+                  width: `${(evaluatePasswordStrength.score / 5) * 100}%`,
                   backgroundColor: evaluatePasswordStrength.color,
                 }}
                 transition={{ duration: 0.4 }}
