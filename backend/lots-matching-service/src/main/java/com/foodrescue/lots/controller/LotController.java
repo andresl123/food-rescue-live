@@ -2,6 +2,7 @@ package com.foodrescue.lots.controller;
 
 import com.foodrescue.lots.dto.LotCreateRequest;
 import com.foodrescue.lots.entity.Lot;
+import com.foodrescue.lots.repository.LotRepository;
 import com.foodrescue.lots.service.LotService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -12,15 +13,29 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
+import org.springframework.web.bind.annotation.GetMapping;
+import reactor.core.publisher.Flux;
 
 @RestController
 @RequestMapping("/api/v1/lots")
 public class LotController {
 
     private final LotService lotService;
+    private final LotRepository lotRepository; // Inject LotRepository
 
-    public LotController(LotService lotService) {
+    // Update constructor to inject LotRepository
+    public LotController(LotService lotService, LotRepository lotRepository) {
         this.lotService = lotService;
+        this.lotRepository = lotRepository;
+    }
+
+    // --- NEW METHOD TO GET LOTS FOR THE LOGGED-IN DONOR ---
+    @GetMapping
+    public Flux<Lot> getLotsForDonor(Mono<Authentication> authenticationMono) {
+        // Flux is for a stream of 0 to many items (a list)
+        return authenticationMono
+                .map(Authentication::getName) // Get the logged-in user's ID
+                .flatMapMany(lotRepository::findByUserId); // Find all lots for this user
     }
 
     @PostMapping
