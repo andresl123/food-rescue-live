@@ -1,0 +1,10 @@
+const userToken = "eyJraWQiOiJCR3FMdC1pa0RCTXBMSmdHN1QtSFA1cGN4cVFFejBjNlcxZGNfLXlFSHY0IiwidHlwIjoiSldUIiwiYWxnIjoiUlMyNTYifQ.eyJhdWQiOiJ5b3VyLWF1ZGllbmNlIiwic3ViIjoiNjhmYTc0ZWIzZThiNzQzZDc1ZWMyMWYzIiwicm9sZXMiOlsiRE9OT1IiXSwiaXNzIjoieW91ci1pc3N1ZXIiLCJ0eXAiOiJhY2Nlc3MiLCJleHAiOjE3NjEzMDU1MjQsImlhdCI6MTc2MTI2MDUyNCwianRpIjoiOTBhNDVjOWYtOTI1OS00MjZlLThiMGUtNjllZTdjMTBkNDNhIiwiZW1haWwiOiJiaHVsbGFyNTU1NTdAeWFob28uY29tIiwic3RhdHVzIjoiQUNUSVZFIn0.MkeX6wle3M274zXYGWCd7aY3V0TtJV7jkE6wcJsRVOfIqef_NiCjgjhPhyVU7w09iAAcYe3R93D2WZL3Q4AUIhK1rXQbGx01SW2R5cYkT61r6mcjMqmDV6ZWzZ9mCkQpObQ2nhG0m_Qd7-p1YX25pmatQ7Y_5rWtctDf_fzO9ka5N-JSlPOGbH_3PN-Pcci9tSuzTDCE4kladfKzAWHzWHHhgmcv7eOaU19SbU-qrgwCgmZBpsEyqCRwonEca3no39R381Dir9UukAtQqqqMxo6Ck1IfmnzpLVFpzIkMs9kzTfhPl2N5KMoY0Qh-8AhrWiys2poSi179AZVcNTID-A";
+
+export const mockSession = {
+  userId: "68fa74eb3e8b743d75ec21f3",
+  name: "bhullar",
+  email: "bhullar55557@yahoo.com",
+  roles: ["DONOR"],       // switch to RECEIVER/COURIER later to test
+  token: userToken,
+  isAuthenticated: true,
+};
