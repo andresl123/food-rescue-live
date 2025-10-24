@@ -21,8 +21,6 @@ public class RefreshController {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     /** Must match the cookie name you set on login */
-    public static final String COOKIE_NAME = Cookies.REFRESH_COOKIE; // "refresh_token"
-
     private final WebClient authClient;
 
     public RefreshController(@Qualifier("authClient") WebClient authClient) {
@@ -37,7 +35,7 @@ public class RefreshController {
      */
     @PostMapping(path = "/api/auth/refresh", consumes = MediaType.ALL_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public Mono<String> refresh(ServerWebExchange exchange) {
-        String rt = readRefreshCookie(exchange);
+        String rt = readCookie(exchange, Cookies.REFRESH_COOKIE);
         if (rt == null || rt.isBlank()) {
             // Keep method signature Mono<String> like login; surface 400 via exception
             throw new ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "missing refresh token");
@@ -61,8 +59,8 @@ public class RefreshController {
 
     // ---- helpers ------------------------------------------------------------
 
-    private String readRefreshCookie(ServerWebExchange exchange) {
-        var c = exchange.getRequest().getCookies().getFirst(COOKIE_NAME);
+    private String readCookie(ServerWebExchange exchange, String Cookie_name) {
+        var c = exchange.getRequest().getCookies().getFirst(Cookie_name);
         return (c == null) ? null : c.getValue();
     }
 
@@ -75,7 +73,7 @@ public class RefreshController {
             long ttlSec = data.path("refreshExpiresIn").asLong(0);
             if (newRt != null && ttlSec > 0) {
                 exchange.getResponse().addCookie(
-                        ResponseCookie.from(COOKIE_NAME, newRt)
+                        ResponseCookie.from(Cookies.REFRESH_COOKIE, newRt)
                                 .httpOnly(true)
                                 .secure(false)        // set true behind HTTPS in prod
                                 .sameSite("Lax")

@@ -8,6 +8,7 @@ import org.springframework.http.*;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
@@ -64,6 +65,8 @@ public class AuthProxyController {
                                     // Tell the browser to delete the refresh cookie(s)
                                     exchange.getResponse().addCookie(Cookies.clearRefresh());
                                     exchange.getResponse().addCookie(Cookies.clearRefreshAtRoot());
+                                    exchange.getResponse().addCookie(Cookies.clearAccess());
+                                    exchange.getResponse().addCookie(Cookies.clearAccessAtRoot());
 
                                     // Pass through auth's status & body
                                     return ResponseEntity.status(resp.statusCode().value())
@@ -93,15 +96,26 @@ public class AuthProxyController {
     }
 
     @GetMapping("/demoendpoint")
-    public Mono<String> demoGet(ServerWebExchange exchange) {
-        return proxy.forward(
-                authClient,                          // WebClient with baseUrl = services.auth.base-url
-                HttpMethod.GET,                      // upstream method
-                "/demoendpoint",                     // upstream path
-                exchange.getRequest().getQueryParams(),
-                null,                                // no body for GET
-                null,                                // let ProxySupport set default content-type
-                exchange
-        );
+    public Mono<String> demoEndpoint(ServerWebExchange exchange) {
+        // Read Authorization header from the caller
+        String auth = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+
+        // Require a Bearer token in the header
+        if (auth == null || auth.isBlank() || !auth.toLowerCase().startsWith("bearer ")) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "missing/invalid Authorization header");
+        }
+
+        // Forward to the auth service with the same Authorization header
+        return authClient
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/demoendpoint")
+                        .queryParams(exchange.getRequest().getQueryParams())
+                        .build())
+                .headers(h -> h.set(HttpHeaders.AUTHORIZATION, auth))
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .bodyToMono(String.class)
+                .contextWrite(ctx -> ctx.put(ServerWebExchange.class, exchange));
     }
 }
