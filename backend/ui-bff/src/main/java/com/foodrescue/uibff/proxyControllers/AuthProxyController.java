@@ -1,5 +1,6 @@
 package com.foodrescue.uibff.proxyControllers;
 
+import com.foodrescue.uibff.auth.AuthSessionService;
 import com.foodrescue.uibff.auth.Cookies;
 import com.foodrescue.uibff.proxy.ProxySupport;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -24,16 +25,25 @@ public class AuthProxyController {
 
     /** JSON login → forwards to Auth: POST http://localhost:8080/api/v1/auth/login */
     @PostMapping(path = "/login", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<String> login(@RequestBody String body, ServerWebExchange exchange) {
-        return proxy.forward(
-                authClient,
-                HttpMethod.POST,
-                "/api/v1/auth/login",
-                exchange.getRequest().getQueryParams(),
-                body,
-                MediaType.APPLICATION_JSON,
-                exchange
-        );
+    public Mono<ResponseEntity<String>> login(@RequestBody String body, ServerWebExchange exchange) {
+
+        // Make request to Auth
+        return authClient.post()
+                .uri("/api/v1/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(body)
+                .exchangeToMono(resp ->
+                        resp.bodyToMono(String.class).defaultIfEmpty("")
+                                .map(respBody -> {
+                                    // Set cookies from Auth JSON (safe – errors swallowed)
+                                    AuthSessionService.setFromAuthBody(exchange, respBody);
+
+                                    // Pass Auth's status and body through
+                                    return ResponseEntity.status(resp.statusCode().value())
+                                            .contentType(MediaType.APPLICATION_JSON)
+                                            .body(respBody);
+                                })
+                );
     }
 
     /** Logout → forward to auth; cookie clearing is handled by your auth if needed */
@@ -78,6 +88,19 @@ public class AuthProxyController {
                 exchange.getRequest().getQueryParams(),
                 null,
                 null,
+                exchange
+        );
+    }
+
+    @GetMapping("/demoendpoint")
+    public Mono<String> demoGet(ServerWebExchange exchange) {
+        return proxy.forward(
+                authClient,                          // WebClient with baseUrl = services.auth.base-url
+                HttpMethod.GET,                      // upstream method
+                "/demoendpoint",                     // upstream path
+                exchange.getRequest().getQueryParams(),
+                null,                                // no body for GET
+                null,                                // let ProxySupport set default content-type
                 exchange
         );
     }

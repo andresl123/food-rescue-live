@@ -34,7 +34,6 @@ public class ProxySupport {
                         : BodyInserters.fromValue(body))
                 .retrieve()
                 .bodyToMono(String.class)
-                // Put exchange into Reactor Context so your WebClient filter can relay Authorization
                 .contextWrite(ctx -> ctx.put(ServerWebExchange.class, exchange));
     }
 
@@ -42,17 +41,12 @@ public class ProxySupport {
             WebClient client,
             HttpMethod method,
             String path,
-            MultiValueMap<String, String> query,
             MultiValueMap<String, String> form,
             ServerWebExchange exchange
     ) {
         return client
                 .method(method)
-                .uri(uriBuilder -> {
-                    var b = uriBuilder.path(path);
-                    if (query != null) b.queryParams(query);
-                    return b.build();
-                })
+                .uri(path)
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .body(BodyInserters.fromFormData(form))
                 .retrieve()
