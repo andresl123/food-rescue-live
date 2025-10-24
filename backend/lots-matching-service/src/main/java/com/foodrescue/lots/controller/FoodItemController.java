@@ -1,6 +1,7 @@
 package com.foodrescue.lots.controller;
 
 import com.foodrescue.lots.dto.FoodItemCreateRequest;
+import com.foodrescue.lots.dto.FoodItemUpdateRequest;
 import com.foodrescue.lots.entity.FoodItem;
 import com.foodrescue.lots.service.FoodItemService;
 import jakarta.validation.Valid;
@@ -30,5 +31,28 @@ public class FoodItemController {
         return foodItemService.addItemToLot(request, lotId, authenticationMono)
                 .map(createdItem -> ResponseEntity.status(HttpStatus.CREATED).body(createdItem));
         // Add .onErrorResume() here if you want specific handling for 404/403
+    }
+    // UPDATE ITEM ENDPOINT
+    @PutMapping("/{itemId}")
+    public Mono<ResponseEntity<FoodItem>> updateItem(
+            @PathVariable String lotId,
+            @PathVariable String itemId,
+            @Valid @RequestBody FoodItemUpdateRequest request,
+            Mono<Authentication> authenticationMono) {
+        return foodItemService.updateFoodItem(lotId, itemId, request, authenticationMono)
+                .map(ResponseEntity::ok) // Return 200 OK with the updated item
+                // Add .onErrorResume() here for specific 400/403/404 handling
+                ;
+    }
+
+    // NEW: DELETE ITEM ENDPOINT
+    @DeleteMapping("/{itemId}")
+    public Mono<ResponseEntity<Void>> deleteItem(
+            @PathVariable String lotId,
+            @PathVariable String itemId,
+            Mono<Authentication> authenticationMono) {
+
+        return foodItemService.deleteFoodItem(lotId, itemId, authenticationMono)
+                .then(Mono.just(ResponseEntity.noContent().build()));
     }
 }
