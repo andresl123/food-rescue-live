@@ -7,8 +7,8 @@ export default function FoodItemModal({ show, onClose, lotId, onItemAdded }) {
     itemName: "",
     category: "",
     expiryDate: "",
-    quantity: 1,
-    unitOfMeasure: "unit",
+    quantity: "",
+    unitOfMeasure: "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -37,12 +37,17 @@ export default function FoodItemModal({ show, onClose, lotId, onItemAdded }) {
   };
 
   return (
-    <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-      <div className="modal-dialog">
+    <div
+      className="modal show d-block"
+      tabIndex="-1"
+      style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+    >
+      <div className="modal-dialog modal-dialog-centered">
         <div className="modal-content p-3">
           <h5 className="fw-bold mb-3">Add Food Item</h5>
 
           <form onSubmit={handleSubmit}>
+            {/* Item Name */}
             <div className="mb-3">
               <input
                 name="itemName"
@@ -53,26 +58,43 @@ export default function FoodItemModal({ show, onClose, lotId, onItemAdded }) {
                 required
               />
             </div>
+
+            {/* Category Dropdown */}
             <div className="mb-3">
-              <input
+              <select
                 name="category"
-                placeholder="Category"
                 value={formData.category}
                 onChange={handleChange}
-                className="form-control"
+                className="form-select"
                 required
-              />
+              >
+                <option value="">Select Category</option>
+                <option value="Fruits & Vegetables">Fruits & Vegetables</option>
+                <option value="Dairy & Eggs">Dairy & Eggs</option>
+                <option value="Grains & Bakery">Grains & Bakery</option>
+                <option value="Packaged Foods">Packaged Foods</option>
+                <option value="Beverages">Beverages</option>
+                <option value="Other">Other</option>
+              </select>
             </div>
-            <div className="mb-3">
+
+            {/* Expiry Date */}
+            <div className="form-floating mb-3">
               <input
                 type="date"
                 name="expiryDate"
+                id="expiryDate"
                 value={formData.expiryDate}
                 onChange={handleChange}
                 className="form-control"
+                placeholder="Expiry Date"
                 required
               />
+              <label htmlFor="expiryDate">Expiry Date</label>
             </div>
+
+
+            {/* Quantity and Unit */}
             <div className="mb-3 d-flex gap-3">
               <input
                 type="number"
@@ -84,16 +106,21 @@ export default function FoodItemModal({ show, onClose, lotId, onItemAdded }) {
                 min="1"
                 required
               />
-              <input
+              <select
                 name="unitOfMeasure"
-                placeholder="Unit"
                 value={formData.unitOfMeasure}
                 onChange={handleChange}
-                className="form-control"
+                className="form-select"
                 required
-              />
+              >
+                <option value="">Select Unit</option>
+                <option value="kg">KG</option>
+                <option value="pcs">PCS</option>
+                <option value="litre">Litre</option>
+              </select>
             </div>
 
+            {/* Buttons */}
             <div className="d-flex justify-content-end gap-2">
               <button
                 type="button"
