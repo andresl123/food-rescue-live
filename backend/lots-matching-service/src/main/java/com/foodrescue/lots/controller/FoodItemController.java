@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Flux;
 
 @RestController
 @RequestMapping("/api/v1/lots/{lotId}/items")
@@ -19,6 +20,15 @@ public class FoodItemController {
 
     public FoodItemController(FoodItemService foodItemService) {
         this.foodItemService = foodItemService;
+    }
+
+    // GET ENDPOINT for food items by lotid
+    @GetMapping
+    public Flux<FoodItem> getItemsForLot(
+            @PathVariable String lotId,
+            Mono<Authentication> authenticationMono) {
+
+        return foodItemService.getItemsForLot(lotId, authenticationMono);
     }
 
     @PostMapping

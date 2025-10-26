@@ -14,6 +14,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Flux;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -39,6 +42,18 @@ public class FoodItemService {
                     }
                     return Mono.just(lot); // Return the lot if ownership is verified
                 });
+    }
+
+    // METHOD TO GET ITEMS FOR A LOT
+    public Flux<FoodItem> getItemsForLot(String lotId, Mono<Authentication> authMono) {
+        // First, get the authenticated user's ID
+        return authMono.map(Authentication::getName)
+                .flatMapMany(userId ->
+                        // Then, verify that this user owns the lot
+                        checkLotOwnership(lotId, userId)
+                                // If ownership is verified, switch to fetching the food items
+                                .thenMany(foodItemRepository.findByLotId(lotId))
+                );
     }
 
     public Mono<FoodItem> addItemToLot(FoodItemCreateRequest request, String lotId, Mono<Authentication> authMono) {
@@ -109,6 +124,26 @@ public class FoodItemService {
                                                     return foodItemRepository.deleteById(itemId);
                                                 })
                                 )
+                );
+    }
+    // GET ALL ITEMS FOR A USER BASED IN LOTID
+    public Flux<FoodItem> getAllItemsForUser(Mono<Authentication> authMono) {
+        // 1. Get the authenticated user's ID
+        return authMono.map(Authentication::getName)
+                .flatMapMany(userId ->
+                        // 2. Find all lots owned by this user
+                        lotRepository.findByUserId(userId)
+                                // 3. Extract the lot IDs from the found lots
+                                .map(Lot::getLotId) // Get the ID string from each Lot object
+                                .collectList() // Collect all the lot IDs into a List<String>
+                                .flatMapMany(lotIds -> {
+                                    // 4. Handle the case where the user has no lots
+                                    if (lotIds.isEmpty()) {
+                                        return Flux.empty(); // Return an empty stream if no lots found
+                                    }
+                                    // 5. Find all food items whose lotId is in the collected list
+                                    return foodItemRepository.findByLotIdIn(lotIds);
+                                })
                 );
     }
 }
