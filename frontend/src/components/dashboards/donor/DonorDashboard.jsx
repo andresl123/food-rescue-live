@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { getLots } from "../../../services/lotService";
-import { mockSession } from "../../../mock/mockSession";
+import { jwtDecode } from "jwt-decode";
 import DonorStatsCards from "./DonorStatsCards";
 import DonationList from "./DonationList";
 import CreateLotModal from "./CreateLotModal";
+import FoodItemModal from "./FoodItemModal";
 
 export default function DonorDashboard() {
   const [lots, setLots] = useState([]);
@@ -11,10 +12,38 @@ export default function DonorDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [user, setUser] = useState({ name: "User" });
+  const [selectedLotId, setSelectedLotId] = useState(null);
+  const [showFoodModal, setShowFoodModal] = useState(false);
+
+  const handleAddItem = (lotId) => {
+    setSelectedLotId(lotId);
+    setShowFoodModal(true);
+  };
+
+  // Decode user info from JWT
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        setUser({
+          name: decoded.email?.split("@")[0] || "User",
+          role: decoded.roles?.[0] || "",
+        });
+      } catch (err) {
+        console.error("Invalid token:", err);
+      }
+    }
+  }, []);
+
 
   const fetchLots = async () => {
     setLoading(true);
-    const response = await getLots();
+    const token = localStorage.getItem("accessToken");
+
+    const response = await getLots(token); // pass token to your service
+
     if (response.success && response.data) {
       setLots(response.data);
       setStats({
@@ -26,6 +55,7 @@ export default function DonorDashboard() {
     } else {
       setError(response.message || "Failed to load donor dashboard.");
     }
+
     setLoading(false);
   };
 
@@ -49,11 +79,10 @@ export default function DonorDashboard() {
           <p className="text-secondary mb-0">Overview of your donation activity</p>
         </div>
         <div className="d-flex align-items-center gap-3">
-          <span className="text-secondary">Welcome, <strong>{mockSession.name}</strong></span>
-          <button
-            className="btn btn-success btn-sm"
-            onClick={() => setShowModal(true)}
-          >
+          <span className="text-secondary">
+            Welcome, <strong>{user.name}</strong>
+          </span>
+          <button className="btn btn-success btn-sm" onClick={() => setShowModal(true)}>
             + Create Lot
           </button>
         </div>
@@ -61,13 +90,20 @@ export default function DonorDashboard() {
 
       <DonorStatsCards stats={stats} />
       <div className="mt-4">
-        <DonationList donations={lots} />
+        <DonationList donations={lots} onAddItem={handleAddItem} />
       </div>
 
       <CreateLotModal
         show={showModal}
         onClose={() => setShowModal(false)}
         onLotCreated={fetchLots}
+      />
+
+      <FoodItemModal
+        show={showFoodModal}
+        lotId={selectedLotId}
+        onClose={() => setShowFoodModal(false)}
+        onItemAdded={fetchLots}
       />
     </div>
   );

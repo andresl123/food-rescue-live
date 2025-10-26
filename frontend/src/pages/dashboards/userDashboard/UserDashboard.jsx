@@ -1,13 +1,23 @@
 // src/pages/dashboards/userDashboard/UserDashboard.jsx
 import React from "react";
-import { mockSession } from "../../../mock/mockSession";
+import { jwtDecode } from "jwt-decode";
 import UserLayout from "../../../layout/UserLayout";
 
 // role components
 import DonorDashboard from "../../../components/dashboards/donor/DonorDashboard";
 
 export default function UserDashboard() {
-  const role = mockSession.roles[0];
+  const token = localStorage.getItem("accessToken");
+
+  let role = null;
+  try {
+    if (token) {
+      const decoded = jwtDecode(token);
+      role = decoded.roles?.[0]; // Get the first role from array
+    }
+  } catch (err) {
+    console.error("Invalid token:", err);
+  }
 
   const renderByRole = () => {
     switch (role) {
@@ -18,7 +28,7 @@ export default function UserDashboard() {
       case "COURIER":
         return <div className="text-center text-secondary mt-5">Courier Dashboard coming soon…</div>;
       default:
-        return <div className="text-center text-danger mt-5">Invalid role</div>;
+        return <div className="text-center text-danger mt-5">Invalid or missing role</div>;
     }
   };
 

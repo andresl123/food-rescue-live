@@ -1,5 +1,3 @@
-import { mockSession } from "../mock/mockSession";
-
 const BASE_URL = "http://localhost:8081/api/v1"; // Using relative path for the proxy
 
 /**
@@ -10,8 +8,7 @@ export async function getLots() {
   try {
 
     const token =
-        sessionStorage.getItem("accessToken") ||
-        mockSession?.token ||
+        localStorage.getItem("accessToken") ||
     "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU3Zjk3MGU0MGE5OGFiZWRhZDJmYTEiLCJyb2xlcyI6WyJVU0VSIiwiRE9OT1IiXSwiaXNzIjoieW91ci1pc3N1ZXIiLCJhdWQiOiJ5b3VyLWF1ZGllbmNlIiwiZXhwIjoxNzkyMzk5MjAwfQ.Lynh0kCCV-aotUhGAP-rfrEw7pGyaLRqGIlkGogtJ6SYHrHlQpDivQZ0nugM37GVQkwGGKx_ocyie7kIQs9gEBEWQjaVjNQVg-bxVHCVMtG5bubPjvGW2SY36uPtlevyoBJBa20MKhAOyzBSLF9r_NQ-2C9HM5pgrio8PB27mMnHF0bsB9VTD2EAJfwK1yzbwlckq3HwKeOlK-O6qDTgGzHk7xRkLZbS9P6_bwmhwCI-GRhgqFFVA-qMd8Jmu3sgqg40tQdZ6pXJg2tGCYpMHZwEZgeE-nRrg7OPetWsp1egnciR3Nw4r3M46vNWqUy-gNyP2o5brRLTvKCjGHInSA";
     // ---------------------------------------------
 
@@ -52,8 +49,7 @@ export async function getLots() {
 export async function createLot(lotData) { // Removed token parameter
   try {
     const token =
-        sessionStorage.getItem("accessToken") ||
-        mockSession?.token ||
+        localStorage.getItem("accessToken") ||
     "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU3Zjk3MGU0MGE5OGFiZWRhZDJmYTEiLCJyb2xlcyI6WyJVU0VSIiwiRE9OT1IiXSwiaXNzIjoieW91ci1pc3N1ZXIiLCJhdWQiOiJ5b3VyLWF1ZGllbmNlIiwiZXhwIjoxNzkyMzk5MjAwfQ.Lynh0kCCV-aotUhGAP-rfrEw7pGyaLRqGIlkGogtJ6SYHrHlQpDivQZ0nugM37GVQkwGGKx_ocyie7kIQs9gEBEWQjaVjNQVg-bxVHCVMtG5bubPjvGW2SY36uPtlevyoBJBa20MKhAOyzBSLF9r_NQ-2C9HM5pgrio8PB27mMnHF0bsB9VTD2EAJfwK1yzbwlckq3HwKeOlK-O6qDTgGzHk7xRkLZbS9P6_bwmhwCI-GRhgqFFVA-qMd8Jmu3sgqg40tQdZ6pXJg2tGCYpMHZwEZgeE-nRrg7OPetWsp1egnciR3Nw4r3M46vNWqUy-gNyP2o5brRLTvKCjGHInSA";
     // ---------------------------------------------
      if (!token) {
@@ -94,8 +90,7 @@ export async function addFoodItem(lotId, itemData) { // Removed token parameter
   try {
     // --- TEMPORARY HARDCODED TOKEN FOR TESTING ---
     const token =
-        sessionStorage.getItem("accessToken") ||
-        mockSession?.token ||
+        localStorage.getItem("accessToken") ||
         "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGU3Zjk3MGU0MGE5OGFiZWRhZDJmYTEiLCJyb2xlcyI6WyJVU0VSIiwiRE9OT1IiXSwiaXNzIjoieW91ci1pc3N1ZXIiLCJhdWQiOiJ5b3VyLWF1ZGllbmNlIiwiZXhwIjoxNzkyMzk5MjAwfQ.Lynh0kCCV-aotUhGAP-rfrEw7pGyaLRqGIlkGogtJ6SYHrHlQpDivQZ0nugM37GVQkwGGKx_ocyie7kIQs9gEBEWQjaVjNQVg-bxVHCVMtG5bubPjvGW2SY36uPtlevyoBJBa20MKhAOyzBSLF9r_NQ-2C9HM5pgrio8PB27mMnHF0bsB9VTD2EAJfwK1yzbwlckq3HwKeOlK-O6qDTgGzHk7xRkLZbS9P6_bwmhwCI-GRhgqFFVA-qMd8Jmu3sgqg40tQdZ6pXJg2tGCYpMHZwEZgeE-nRrg7OPetWsp1egnciR3Nw4r3M46vNWqUy-gNyP2o5brRLTvKCjGHInSA";
     // ---------------------------------------------
      if (!token) {
