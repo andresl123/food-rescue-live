@@ -114,9 +114,9 @@ export default function FoodItemModal({ show, onClose, lotId, onItemAdded }) {
                 required
               >
                 <option value="">Select Unit</option>
-                <option value="kg">KG</option>
-                <option value="pcs">PCS</option>
-                <option value="litre">Litre</option>
+                <option value="KG">KG</option>
+                <option value="PCS">PCS</option>
+                <option value="Litre">Litre</option>
               </select>
             </div>
 

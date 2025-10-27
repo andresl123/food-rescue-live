@@ -5,6 +5,7 @@ import DonorStatsCards from "./DonorStatsCards";
 import DonationList from "./DonationList";
 import CreateLotModal from "./CreateLotModal";
 import FoodItemModal from "./FoodItemModal";
+import EditLotModal from "./EditLotModal";
 
 export default function DonorDashboard() {
   const [lots, setLots] = useState([]);
@@ -15,6 +16,15 @@ export default function DonorDashboard() {
   const [user, setUser] = useState({ name: "User" });
   const [selectedLotId, setSelectedLotId] = useState(null);
   const [showFoodModal, setShowFoodModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedLot, setSelectedLot] = useState(null);
+
+  const handleEditLot = (lot) => {
+    setSelectedLot(lot);
+    console.log("Edit Lot: ", lot);
+    setShowEditModal(true);
+  };
+
 
   const handleAddItem = (lotId) => {
     setSelectedLotId(lotId);
@@ -90,7 +100,11 @@ export default function DonorDashboard() {
 
       <DonorStatsCards stats={stats} />
       <div className="mt-4">
-        <DonationList donations={lots} onAddItem={handleAddItem} />
+        <DonationList
+              donations={lots}
+              onAddItem={handleAddItem}
+              onEditLot={handleEditLot}
+            />
       </div>
 
       <CreateLotModal
@@ -105,6 +119,18 @@ export default function DonorDashboard() {
         onClose={() => setShowFoodModal(false)}
         onItemAdded={fetchLots}
       />
+
+      <EditLotModal
+        show={showEditModal}
+        lot={selectedLot}
+        onClose={() => setShowEditModal(false)}
+        onLotUpdated={fetchLots}
+      />
+
+
     </div>
+
+
+
   );
 }
