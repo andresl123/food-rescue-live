@@ -7,7 +7,7 @@ function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Navigate to="/courier-verification" replace />} />
+        <Route path="/" element={<Navigate to="/authentication" replace />} />
         <Route path="/authentication" element={<SignupPage />} />
         <Route path="/courier-verification" element={<CourierVerificationPage />} />
         <Route path="/dashboard" element={<UserDashboard />} />
