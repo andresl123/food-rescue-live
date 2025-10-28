@@ -14,8 +14,6 @@ export async function loginUser(credentials) {
 
     const data = await response.json();
 
-    // Assuming your backend response looks like:
-    // { success: true, data: { token: "...", user: { ... } } }
     return { success: true, data: data.data };
   } catch (error) {
     console.error("Login error:", error);
