@@ -1,5 +1,6 @@
 package com.foodrescue.uibff.http;
 
+import com.foodrescue.uibff.auth.Cookies;
 import com.foodrescue.uibff.auth.RefreshService;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,90 +14,71 @@ import reactor.core.publisher.Mono;
 @Configuration
 public class WebClientConfig {
 
-    // === Helper: copy inbound Authorization to outgoing requests (first try) ===
-    private ExchangeFilterFunction authRelayFilter() {
+    /** Always set outbound Authorization from access_token cookie (ignore any incoming header). */
+    private ExchangeFilterFunction authFromCookieOnlyFilter() {
         return (request, next) -> Mono.deferContextual(ctx -> {
+            ServerWebExchange ex = ctx.getOrDefault(ServerWebExchange.class, null);
             ClientRequest.Builder b = ClientRequest.from(request);
 
-            // If this is a retry with a refreshed token we already injected, don't overwrite it.
-            boolean hasAuth = request.headers().containsKey(HttpHeaders.AUTHORIZATION);
+            // Enforce cookie-only policy
+            b.headers(h -> h.remove(HttpHeaders.AUTHORIZATION));
 
-            ServerWebExchange ex = ctx.getOrDefault(ServerWebExchange.class, null);
-            if (!hasAuth && ex != null) {
-                String auth = ex.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-                if (auth != null && !auth.isBlank()) {
-                    b.header(HttpHeaders.AUTHORIZATION, auth);
+            if (ex != null) {
+                var accessCookie = ex.getRequest().getCookies().getFirst(Cookies.ACCESS_COOKIE);
+                if (accessCookie != null && !accessCookie.getValue().isBlank()) {
+                    b.header(HttpHeaders.AUTHORIZATION, "Bearer " + accessCookie.getValue());
                 }
             }
             return next.exchange(b.build());
         });
     }
 
-    // === The magic: when downstream replies 401, refresh and retry once ===
+    /** On 401: refresh via refresh cookie; rewrite BOTH cookies; retry once. */
     private ExchangeFilterFunction refreshOn401Filter(RefreshService refreshService) {
-        return ExchangeFilterFunction.ofResponseProcessor(response ->
-                response.statusCode() == HttpStatus.UNAUTHORIZED
-                        ? Mono.error(new WebClientResponseException(
-                        "401 from downstream", 401, "Unauthorized",
-                        response.headers().asHttpHeaders(), null, null))
-                        : Mono.just(response)
-        ).andThen((request, next) ->
-                next.exchange(request).onErrorResume(WebClientResponseException.class, ex -> {
-                    if (ex.getStatusCode() != HttpStatus.UNAUTHORIZED) {
-                        return Mono.error(ex);
+        return (request, next) ->
+                next.exchange(request).flatMap(response -> {
+                    if (response.statusCode() != HttpStatus.UNAUTHORIZED) {
+                        return Mono.just(response);
                     }
-                    // We got 401: try to refresh
                     return Mono.deferContextual(ctx -> {
                         ServerWebExchange exchange = ctx.getOrDefault(ServerWebExchange.class, null);
-                        if (exchange == null) {
-                            return Mono.error(ex);
-                        }
-                        // Avoid infinite loop: if already retried, give up
+                        if (exchange == null) return Mono.just(response);
                         if (Boolean.TRUE.equals(request.attribute("retried").orElse(false))) {
-                            return Mono.error(ex);
+                            return Mono.just(response);
                         }
 
                         String currentAccess = request.headers().getFirst(HttpHeaders.AUTHORIZATION);
-                        return refreshService.refreshAccessToken(exchange, currentAccess)
+
+                        return refreshService.refreshTokens(exchange, currentAccess)
                                 .flatMap(newAccess -> {
-                                    // Retry original request once with new Authorization
                                     ClientRequest retry = ClientRequest.from(request)
-                                            .headers(h -> h.set(HttpHeaders.AUTHORIZATION, "Bearer " + newAccess))
+                                            .headers(h -> {
+                                                h.remove(HttpHeaders.AUTHORIZATION);
+                                                h.set(HttpHeaders.AUTHORIZATION, "Bearer " + newAccess);
+                                            })
                                             .attribute("retried", true)
                                             .build();
                                     return next.exchange(retry);
                                 })
-                                .switchIfEmpty(Mono.error(ex)); // refresh failed → bubble 401
+                                .switchIfEmpty(Mono.just(response));
                     });
-                })
-        );
+                });
     }
 
-    /**
-     * Base WebClient used for *downstream* microservices (NOT auth).
-     * It relays inbound access token, and if a call comes back 401,
-     * it refreshes via Auth and retries once with the new token.
-     */
     @Bean
     @Primary
     public WebClient webClient(WebClient.Builder builder, RefreshService refreshService) {
         return builder
-                .filter(authRelayFilter())
+                .filter(authFromCookieOnlyFilter())
                 .filter(refreshOn401Filter(refreshService))
                 .build();
     }
 
-    /**
-     * Named client to talk to Auth service directly.
-     * Set your auth base URL in application.properties:
-     * services.auth.base-url=http://localhost:8080
-     */
+    /** Clean client for Auth (no filters) to avoid recursion during login/refresh. */
     @Bean
     @Qualifier("authClient")
     public WebClient authClient(WebClient.Builder builder,
                                 @Value("${services.auth.base-url}") String baseUrl) {
-        return builder
-                .baseUrl(baseUrl)
-                .build();
+        return builder.baseUrl(baseUrl).build();
     }
 }

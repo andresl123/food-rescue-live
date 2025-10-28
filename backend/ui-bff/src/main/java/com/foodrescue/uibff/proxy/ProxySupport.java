@@ -1,5 +1,7 @@
 package com.foodrescue.uibff.proxy;
 
+import com.foodrescue.uibff.auth.Cookies;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -12,6 +14,10 @@ import reactor.core.publisher.Mono;
 @Component
 public class ProxySupport {
 
+    private static boolean methodSupportsBody(HttpMethod method) {
+        return method == HttpMethod.POST || method == HttpMethod.PUT || method == HttpMethod.PATCH;
+    }
+
     public Mono<String> forward(
             WebClient client,
             HttpMethod method,
@@ -21,20 +27,44 @@ public class ProxySupport {
             MediaType contentType,
             ServerWebExchange exchange
     ) {
-        return client
-                .method(method)
-                .uri(uriBuilder -> {
-                    var b = uriBuilder.path(path);
-                    if (query != null) b.queryParams(query);
-                    return b.build();
-                })
-                .contentType(contentType == null ? MediaType.APPLICATION_JSON : contentType)
-                .body((body == null || body.isBlank())
-                        ? BodyInserters.empty()
-                        : BodyInserters.fromValue(body))
-                .retrieve()
-                .bodyToMono(String.class)
-                .contextWrite(ctx -> ctx.put(ServerWebExchange.class, exchange));
+        return Mono.defer(() -> {
+            WebClient.RequestBodySpec req = client
+                    .method(method)
+                    .uri(builder -> {
+                        var b = builder.path(path);
+                        if (query != null) b.queryParams(query);
+                        return b.build();
+                    })
+                    .accept(MediaType.APPLICATION_JSON)
+                    // Fallback: if WebClient filters didn’t inject Authorization, do it here.
+                    .headers(h -> {
+                        if (!h.containsKey(HttpHeaders.AUTHORIZATION) && exchange != null) {
+                            var access = exchange.getRequest().getCookies().getFirst(Cookies.ACCESS_COOKIE);
+                            if (access != null && !access.getValue().isBlank()) {
+                                h.set(HttpHeaders.AUTHORIZATION, "Bearer " + access.getValue());
+                            }
+                        }
+                    });
+
+            boolean hasBody = body != null && !body.isBlank();
+
+            if (methodSupportsBody(method) && hasBody) {
+                MediaType ct = (contentType == null ? MediaType.APPLICATION_JSON : contentType);
+                return req.contentType(ct)
+                        .body(BodyInserters.fromValue(body))
+                        .retrieve()
+                        .bodyToMono(String.class);
+            } else if (method == HttpMethod.DELETE && hasBody) {
+                MediaType ct = (contentType == null ? MediaType.APPLICATION_JSON : contentType);
+                return req.contentType(ct)
+                        .body(BodyInserters.fromValue(body))
+                        .retrieve()
+                        .bodyToMono(String.class);
+            } else {
+                return req.retrieve().bodyToMono(String.class);
+            }
+        });
+        // No contextWrite here; ExchangeContextWebFilter does it globally.
     }
 
     public Mono<String> forwardForm(
@@ -44,13 +74,22 @@ public class ProxySupport {
             MultiValueMap<String, String> form,
             ServerWebExchange exchange
     ) {
-        return client
-                .method(method)
-                .uri(path)
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .body(BodyInserters.fromFormData(form))
-                .retrieve()
-                .bodyToMono(String.class)
-                .contextWrite(ctx -> ctx.put(ServerWebExchange.class, exchange));
+        return Mono.defer(() ->
+                client.method(method)
+                        .uri(builder -> builder.path(path).build())
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .headers(h -> {
+                            if (!h.containsKey(HttpHeaders.AUTHORIZATION) && exchange != null) {
+                                var access = exchange.getRequest().getCookies().getFirst(Cookies.ACCESS_COOKIE);
+                                if (access != null && !access.getValue().isBlank()) {
+                                    h.set(HttpHeaders.AUTHORIZATION, "Bearer " + access.getValue());
+                                }
+                            }
+                        })
+                        .body(BodyInserters.fromFormData(form))
+                        .retrieve()
+                        .bodyToMono(String.class)
+        );
     }
 }

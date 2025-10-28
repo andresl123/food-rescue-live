@@ -1,14 +1,11 @@
-package com.foodrescue.uibff.proxyControllers;
+package com.foodrescue.uibff.proxy;
 
 import com.foodrescue.uibff.auth.AuthSessionService;
 import com.foodrescue.uibff.auth.Cookies;
-import com.foodrescue.uibff.proxy.ProxySupport;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.*;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
@@ -27,8 +24,6 @@ public class AuthProxyController {
     /** JSON login → forwards to Auth: POST http://localhost:8080/api/v1/auth/login */
     @PostMapping(path = "/login", consumes = MediaType.APPLICATION_JSON_VALUE)
     public Mono<ResponseEntity<String>> login(@RequestBody String body, ServerWebExchange exchange) {
-
-        // Make request to Auth
         return authClient.post()
                 .uri("/api/v1/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -36,10 +31,9 @@ public class AuthProxyController {
                 .exchangeToMono(resp ->
                         resp.bodyToMono(String.class).defaultIfEmpty("")
                                 .map(respBody -> {
-                                    // Set cookies from Auth JSON (safe – errors swallowed)
+                                    // Parse Auth JSON and set HttpOnly cookies (access + refresh)
                                     AuthSessionService.setFromAuthBody(exchange, respBody);
 
-                                    // Pass Auth's status and body through
                                     return ResponseEntity.status(resp.statusCode().value())
                                             .contentType(MediaType.APPLICATION_JSON)
                                             .body(respBody);
@@ -47,28 +41,20 @@ public class AuthProxyController {
                 );
     }
 
-    /** Logout → forward to auth; cookie clearing is handled by your auth if needed */
+    /** Logout → forward; always clear cookies locally to be safe */
     @PostMapping("/logout")
     public Mono<ResponseEntity<String>> logout(ServerWebExchange exchange) {
-        return authClient
-                .post()
+        return authClient.post()
                 .uri("/api/v1/auth/logout")
                 .headers(h -> {
                     String auth = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-                    if (auth != null && !auth.isBlank()) {
-                        h.set(HttpHeaders.AUTHORIZATION, auth);
-                    }
+                    if (auth != null && !auth.isBlank()) h.set(HttpHeaders.AUTHORIZATION, auth);
                 })
                 .exchangeToMono(resp ->
                         resp.bodyToMono(String.class).defaultIfEmpty("")
                                 .map(body -> {
-                                    // Tell the browser to delete the refresh cookie(s)
-                                    exchange.getResponse().addCookie(Cookies.clearRefresh());
-                                    exchange.getResponse().addCookie(Cookies.clearRefreshAtRoot());
-                                    exchange.getResponse().addCookie(Cookies.clearAccess());
-                                    exchange.getResponse().addCookie(Cookies.clearAccessAtRoot());
-
-                                    // Pass through auth's status & body
+                                    // Clear all token cookies (root + scoped)
+                                    Cookies.clearAll(exchange);
                                     return ResponseEntity.status(resp.statusCode().value())
                                             .contentType(MediaType.APPLICATION_JSON)
                                             .body(body);
@@ -81,37 +67,23 @@ public class AuthProxyController {
                 );
     }
 
-    /** Optional: expose JWKS through BFF for same-origin dev convenience */
     @GetMapping("/jwks")
     public Mono<String> jwks(ServerWebExchange exchange) {
         return proxy.forward(
-                authClient,
-                HttpMethod.GET,
-                "/.well-known/jwks.json",
-                exchange.getRequest().getQueryParams(),
-                null,
-                null,
-                exchange
+                authClient, HttpMethod.GET, "/.well-known/jwks.json",
+                exchange.getRequest().getQueryParams(), null, null, exchange
         );
     }
 
     @GetMapping("/demoendpoint")
     public Mono<String> demoEndpoint(ServerWebExchange exchange) {
-        // Read Authorization header from the caller
         String auth = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-
-        // Require a Bearer token in the header
         if (auth == null || auth.isBlank() || !auth.toLowerCase().startsWith("bearer ")) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "missing/invalid Authorization header");
+            return Mono.error(new org.springframework.web.server.ResponseStatusException(HttpStatus.UNAUTHORIZED, "missing/invalid Authorization header"));
         }
-
-        // Forward to the auth service with the same Authorization header
-        return authClient
-                .get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/demoendpoint")
-                        .queryParams(exchange.getRequest().getQueryParams())
-                        .build())
+        return authClient.get()
+                .uri(uriBuilder -> uriBuilder.path("/demoendpoint")
+                        .queryParams(exchange.getRequest().getQueryParams()).build())
                 .headers(h -> h.set(HttpHeaders.AUTHORIZATION, auth))
                 .accept(MediaType.APPLICATION_JSON)
                 .retrieve()

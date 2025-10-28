@@ -1,6 +1,7 @@
 package com.foodrescue.uibff.auth;
 
 import org.springframework.http.ResponseCookie;
+import org.springframework.web.server.ServerWebExchange;
 
 import java.time.Duration;
 
@@ -8,47 +9,36 @@ public final class Cookies {
     private Cookies() {}
 
     public static final String REFRESH_COOKIE = "refresh_token";
-    public static final String ACCESS_COOKIE = "access_token";
+    public static final String ACCESS_COOKIE  = "access_token";
 
+    public static boolean isSecureRequest(ServerWebExchange exchange) {
+        var req = exchange.getRequest();
+        String scheme = req.getURI().getScheme();
+        if ("https".equalsIgnoreCase(scheme)) return true;
 
-    public static ResponseCookie clearRefresh() {
-        return ResponseCookie.from(REFRESH_COOKIE, "")
-                .httpOnly(true)
-                .secure(false)     // set true in prod (HTTPS)
-                .sameSite("Lax")
-                .path("/api/auth")
-                .maxAge(0)
-                .build();
-    }
+        String xfp = req.getHeaders().getFirst("X-Forwarded-Proto");
+        if (xfp != null && xfp.equalsIgnoreCase("https")) return true;
 
-    /** Also clear at root, in case it was ever set with "/" path. */
-    public static ResponseCookie clearRefreshAtRoot() {
-        return ResponseCookie.from(REFRESH_COOKIE, "")
-                .httpOnly(true)
-                .secure(false)     // set true in prod (HTTPS)
-                .sameSite("Lax")
-                .path("/")
-                .maxAge(0)
-                .build();
-    }
+        String cfVisitor = req.getHeaders().getFirst("Cf-Visitor");
+        if (cfVisitor != null && cfVisitor.toLowerCase().contains("https")) return true;
 
-    public static ResponseCookie clearAccess() {
-        return ResponseCookie.from(REFRESH_COOKIE, "")
-                .httpOnly(true)
-                .secure(false)     // set true in prod (HTTPS)
-                .sameSite("Lax")
-                .path("/api/auth")
-                .maxAge(0)
-                .build();
+        return false;
     }
 
     public static ResponseCookie clearAccessAtRoot() {
+        return ResponseCookie.from(ACCESS_COOKIE, "")
+                .httpOnly(true).secure(false).sameSite("Lax")
+                .path("/").maxAge(Duration.ZERO).build();
+    }
+
+    public static ResponseCookie clearRefreshAtRoot() {
         return ResponseCookie.from(REFRESH_COOKIE, "")
-                .httpOnly(true)
-                .secure(false)     // set true in prod (HTTPS)
-                .sameSite("Lax")
-                .path("/")
-                .maxAge(0)
-                .build();
+                .httpOnly(true).secure(false).sameSite("Strict")
+                .path("/").maxAge(Duration.ZERO).build();
+    }
+
+    public static void clearAll(ServerWebExchange exchange) {
+        exchange.getResponse().addCookie(clearAccessAtRoot());
+        exchange.getResponse().addCookie(clearRefreshAtRoot());
     }
 }

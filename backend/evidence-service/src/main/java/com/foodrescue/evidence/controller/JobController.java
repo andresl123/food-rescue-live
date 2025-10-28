@@ -10,6 +10,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import org.springframework.security.access.prepost.PreAuthorize;
+import static com.foodrescue.security.contracts.RBAC.*;
+import static com.foodrescue.security.contracts.RbacExpr.*;
 
 @RestController
 @RequestMapping("/api/v1/jobs")
@@ -72,5 +75,17 @@ public class JobController {
     public Mono<ResponseEntity<ApiResponse<Void>>> delete(@PathVariable String id) {
         return jobService.delete(id)
                 .map(ResponseEntity::ok);
+    }
+
+    @PreAuthorize(ADMIN)
+    @GetMapping("/demoforadmin")
+    public Mono<String> DemoAdminAccess(){
+        return Mono.just("Only Admin can Access this");
+    }
+
+    @PreAuthorize(COURIER)
+    @GetMapping("/demoforcourier")
+    public Mono<String> DemoCourierAccess(){
+        return Mono.just("Only Courier can Access this");
     }
 }
