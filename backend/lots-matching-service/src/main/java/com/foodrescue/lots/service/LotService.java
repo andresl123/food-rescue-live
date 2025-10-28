@@ -8,10 +8,13 @@ import com.foodrescue.lots.exception.LotNotFoundException;
 import com.foodrescue.lots.repository.LotRepository;
 import com.foodrescue.lots.repository.FoodItemRepository;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.UUID;
 
 @Service
@@ -23,6 +26,29 @@ public class LotService {
     public LotService(LotRepository lotRepository, FoodItemRepository foodItemRepository) {
         this.lotRepository = lotRepository;
         this.foodItemRepository = foodItemRepository;
+    }
+
+    // REUSABLE SECURITY CHECK METHOD
+    private Mono<Lot> checkLotAdminOrOwnership(String lotId, Mono<Authentication> authMono) {
+        // Combine fetching the user auth and the lot
+        return authMono.zipWith(lotRepository.findById(lotId)
+                        .switchIfEmpty(Mono.error(new LotNotFoundException("Lot with ID " + lotId + " not found."))))
+                .flatMap(tuple -> {
+                    Authentication authentication = tuple.getT1();
+                    Lot lot = tuple.getT2();
+                    String userId = authentication.getName();
+                    Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
+
+                    boolean isAdmin = authorities.stream()
+                            .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ADMIN"));
+
+                    // --- THE CORE LOGIC: Allow if ADMIN OR if DONOR owns the lot ---
+                    if (isAdmin || lot.getUserId().equals(userId)) {
+                        return Mono.just(lot); // Authorized, return the lot
+                    } else {
+                        return Mono.error(new AccessDeniedException("You do not have permission to modify this lot."));
+                    }
+                });
     }
 
     public Mono<Lot> createLot(LotCreateRequest request, String donorId) {
@@ -37,40 +63,34 @@ public class LotService {
         return lotRepository.save(newLot);
     }
 
+    public Flux<Lot> getAllLotsForAdmin(Mono<Authentication> authMono) {
+        // Use flatMapMany to switch from a Mono<Authentication> to a Flux<Lot>
+        return authMono.flatMapMany(authentication -> {
+            // Check if the user's authorities list contains the ADMIN role.
+            boolean isAdmin = authentication.getAuthorities().stream()
+                    .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ADMIN"));
+
+            if (isAdmin) {
+                // If user is an admin, fetch all lots from the repository.
+                return lotRepository.findAll();
+            } else {
+                // If not an admin, return a Flux that immediately signals an error.
+                return Flux.error(new AccessDeniedException("You must be an admin to view all lots."));
+            }
+        });
+    }
+
     public Mono<Lot> updateLot(String lotId, LotUpdateRequest request, Mono<Authentication> authMono) {
-        return authMono.map(Authentication::getName)
-                .flatMap(userId ->
-                        lotRepository.findById(lotId)
-                                .switchIfEmpty(Mono.error(new LotNotFoundException("Lot with ID " + lotId + " not found.")))
-                                .flatMap(lot -> {
-                                    if (!lot.getUserId().equals(userId)) {
-                                        return Mono.error(new AccessDeniedException("You do not have permission to update this lot."));
-                                    }
+        return checkLotAdminOrOwnership(lotId, authMono)
+                .flatMap(lot -> {
                                     lot.setDescription(request.getDescription());
                                     lot.setStatus(request.getStatus());
                                     return lotRepository.save(lot);
-                                })
-                );
+                                });
     }
 
     public Mono<Void> deleteLot(String lotId, Mono<Authentication> authMono) {
-        return authMono.map(Authentication::getName)
-                .flatMap(userId ->
-                        // 1. Find the lot and verify ownership
-                        lotRepository.findById(lotId)
-                                .switchIfEmpty(Mono.error(new LotNotFoundException("Lot with ID " + lotId + " not found.")))
-                                .flatMap(lot -> {
-                                    if (!lot.getUserId().equals(userId)) {
-                                        return Mono.error(new AccessDeniedException("You do not have permission to delete this lot."));
-                                    }
-                                    // 2. If authorized, first delete all associated food items
-                                    return foodItemRepository.deleteByLotId(lotId)
-                                            .then(Mono.defer(() -> {
-                                                // 3. After items are deleted, delete the lot itself
-                                                System.out.println("Deleting lot: " + lotId); // Optional logging
-                                                return lotRepository.deleteById(lotId);
-                                            }));
-                                })
-                );
+        return checkLotAdminOrOwnership(lotId, authMono)
+                .flatMap(lotRepository::delete);
     }
 }

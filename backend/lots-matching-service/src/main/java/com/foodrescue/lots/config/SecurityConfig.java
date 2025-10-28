@@ -67,11 +67,15 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.POST, "/api/password/reset/**").permitAll()
                         .pathMatchers("/actuator/health", "/v3/api-docs/**", "/swagger-ui/**").permitAll()
                         .pathMatchers(HttpMethod.POST, "/api/v1/lots").hasRole("DONOR")
-                        .pathMatchers(HttpMethod.PUT, "/api/v1/lots/{lotId}").hasRole("DONOR") // Allow updating lots
-                        .pathMatchers(HttpMethod.DELETE, "/api/v1/lots/{lotId}").hasRole("DONOR") // Allow deleting lots
-                        .pathMatchers(HttpMethod.POST, "/api/v1/lots/{lotId}/items").hasRole("DONOR") // Allow adding items
-                        .pathMatchers(HttpMethod.PUT, "/api/v1/lots/{lotId}/items/{itemId}").hasRole("DONOR") // Allow updating items
-                        .pathMatchers(HttpMethod.DELETE, "/api/v1/lots/{lotId}/items/{itemId}").hasRole("DONOR") // Allow deleting items
+                        .pathMatchers(HttpMethod.GET, "/api/v1/lots").hasAnyRole("ADMIN", "DONOR")
+                        .pathMatchers(HttpMethod.GET, "/api/v1/lots/all").hasRole("ADMIN")
+                        .pathMatchers(HttpMethod.PUT,    "/api/v1/lots/{lotId}").hasAnyRole("ADMIN", "DONOR")
+                        .pathMatchers(HttpMethod.DELETE, "/api/v1/lots/{lotId}").hasAnyRole("ADMIN", "DONOR")
+                        .pathMatchers(HttpMethod.GET,    "/api/v1/lots/{lotId}/items").hasAnyRole("ADMIN", "DONOR")
+                        .pathMatchers(HttpMethod.POST, "/api/v1/lots/{lotId}/items").hasRole("DONOR")
+                        .pathMatchers(HttpMethod.PUT,    "/api/v1/lots/{lotId}/items/{itemId}").hasAnyRole("ADMIN", "DONOR")
+                        .pathMatchers(HttpMethod.DELETE, "/api/v1/lots/{lotId}/items/{itemId}").hasAnyRole("ADMIN", "DONOR")
+                        .pathMatchers(HttpMethod.GET, "/api/v1/my-items").hasAnyRole("ADMIN", "DONOR")
                         .anyExchange().authenticated()
                 )
                 .oauth2ResourceServer(oauth -> oauth

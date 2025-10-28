@@ -31,6 +31,11 @@ public class LotController {
         this.lotRepository = lotRepository;
     }
 
+    @GetMapping("/all")
+    public Flux<Lot> getAllLots(Mono<Authentication> authenticationMono) {
+        return lotService.getAllLotsForAdmin(authenticationMono);
+    }
+
     @GetMapping
     public Flux<Lot> getLotsForDonor(Mono<Authentication> authenticationMono) {
         // Flux is for a stream of 0 to many items (a list)
