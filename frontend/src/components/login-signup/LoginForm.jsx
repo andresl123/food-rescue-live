@@ -33,11 +33,12 @@ export default function LoginForm({ onForgotPasswordClick }) {
 
     try {
       const result = await loginUser(formData);
+      console.log("Login result:", result);
 
       if (result.success) {
         toast.success("Login successful!");
-        localStorage.setItem("accessToken", result.data.access);
-        localStorage.setItem("refreshToken", result.data.refresh);
+        localStorage.setItem("accessToken", result.data.accessToken);
+        localStorage.setItem("refreshToken", result.data.refreshToken);
         setTimeout(() => navigate("/dashboard"), 800);
       } else {
         toast.error(result.message || "Invalid email or password.");
