@@ -93,4 +93,16 @@ public class LotService {
         return checkLotAdminOrOwnership(lotId, authMono)
                 .flatMap(lotRepository::delete);
     }
+
+    public Flux<Lot> getLotsForPrincipal(Mono<Authentication> authMono) {
+        return authMono.flatMapMany(auth -> {
+            boolean isAdmin = auth.getAuthorities().stream()
+                    .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority())); // note ROLE_ prefix
+            if (isAdmin) {
+                return lotRepository.findAll();
+            }
+            String userId = auth.getName();
+            return lotRepository.findByUserId(userId);
+        });
+    }
 }
