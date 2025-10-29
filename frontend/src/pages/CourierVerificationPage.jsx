@@ -1,8 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Container, Row, Col, Card, Button, Form, Alert, Modal } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
+import { useJobData } from '../context/JobDataContext';
 
 function CourierVerificationPage() {
+  const navigate = useNavigate();
+  const { currentJob, verificationType, clearJobData, onVerificationComplete } = useJobData();
   const [verificationMethod, setVerificationMethod] = useState('otp');
   const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -110,6 +114,12 @@ function CourierVerificationPage() {
       if (result.success) {
         toast.success('Verification successful! Delivery completed.');
         setMessage('');
+        // Call the callback to update verification status
+        if (onVerificationComplete) {
+          onVerificationComplete();
+        }
+        clearJobData(); // Clear job data after successful verification
+        setTimeout(() => navigate('/jobs'), 2000); // Redirect to jobs page
       } else {
         toast.error(result.message);
       }
@@ -392,6 +402,12 @@ function CourierVerificationPage() {
       if (result.success) {
         toast.success('QR Code verified successfully! Delivery confirmed.');
         setMessage('');
+        // Call the callback to update verification status
+        if (onVerificationComplete) {
+          onVerificationComplete();
+        }
+        clearJobData(); // Clear job data after successful verification
+        setTimeout(() => navigate('/jobs'), 2000); // Redirect to jobs page
       } else {
         toast.error(result.message);
       }
@@ -475,11 +491,31 @@ function CourierVerificationPage() {
         {/* Form - Centered */}
         <div className="col-lg-8 col-xl-6 d-flex align-items-center justify-content-center" style={{ background: '#000000' }}>
           <div className="w-100 mx-3" style={{ maxWidth: '400px' }}>
-            <h2 className="text-center fw-bold mb-4" style={{ color: '#ffffff' }}>
-              Courier Verification
-            </h2>
+            {/* Header with Back Button */}
+            <div className="d-flex align-items-center justify-content-between mb-4">
+              <Button
+                variant="outline-light"
+                className="d-flex align-items-center"
+                style={{ 
+                  borderColor: '#333',
+                  color: '#fff',
+                  background: 'transparent',
+                  borderRadius: '8px',
+                  fontSize: '0.9rem',
+                  padding: '8px 16px'
+                }}
+                onClick={() => navigate(-1)}
+              >
+                <i className="fas fa-arrow-left me-2" style={{ fontSize: '0.8rem' }}></i>
+                Go Back
+              </Button>
+              <h2 className="fw-bold mb-0" style={{ color: '#ffffff' }}>
+                Courier Verification
+              </h2>
+              <div style={{ width: '100px' }}></div> {/* Spacer for centering */}
+            </div>
 
-            {/* Delivery Info Card */}
+            {/* Job Information Card */}
             <Card className="mb-3" style={{ 
               background: '#1a1a1a', 
               border: '1px solid #333',
@@ -487,31 +523,52 @@ function CourierVerificationPage() {
             }}>
               <Card.Body className="p-3">
                 <h6 className="fw-semibold mb-3" style={{ color: '#ffffff', fontSize: '1rem' }}>
-                  <i className="fas fa-box me-2" style={{ color: '#007aff', fontSize: '0.9rem' }}></i>
-                  Delivery Information
+                  <i className={`fas ${verificationType === 'pickup' ? 'fa-map-marker-alt' : 'fa-home'} me-2`} style={{ color: '#007aff', fontSize: '0.9rem' }}></i>
+                  {verificationType === 'pickup' ? 'Pickup Verification' : 'Delivery Verification'}
                 </h6>
-                <Row className="g-2">
-                  <Col md={6}>
-                    <div>
-                      <small className="d-block mb-1" style={{ color: '#a1a1a6', fontSize: '0.75rem' }}>Receiver ID</small>
-                      <span className="fw-semibold" style={{ color: '#ffffff', fontSize: '0.9rem' }}>user123</span>
-                    </div>
-                  </Col>
-                  <Col md={6}>
-                    <div>
-                      <small className="d-block mb-1" style={{ color: '#a1a1a6', fontSize: '0.75rem' }}>Recipient</small>
-                      <span className="fw-semibold" style={{ color: '#ffffff', fontSize: '0.9rem' }}>John Smith</span>
-                    </div>
-                  </Col>
-                  <Col md={12}>
-                    <div>
-                      <small className="d-block mb-1" style={{ color: '#a1a1a6', fontSize: '0.75rem' }}>Delivery Address</small>
-                      <span className="fw-medium" style={{ color: '#ffffff', fontSize: '0.85rem' }}>
-                        123 Main Street, Apt 4B, New York, NY 10001
-                      </span>
-                    </div>
-                  </Col>
-                </Row>
+                {currentJob ? (
+                  <Row className="g-2">
+                    <Col md={6}>
+                      <div>
+                        <small className="d-block mb-1" style={{ color: '#a1a1a6', fontSize: '0.75rem' }}>Job ID</small>
+                        <span className="fw-semibold" style={{ color: '#ffffff', fontSize: '0.9rem' }}>{currentJob.id}</span>
+                      </div>
+                    </Col>
+                    <Col md={6}>
+                      <div>
+                        <small className="d-block mb-1" style={{ color: '#a1a1a6', fontSize: '0.75rem' }}>Receiver</small>
+                        <span className="fw-semibold" style={{ color: '#ffffff', fontSize: '0.9rem' }}>{currentJob.receiverName}</span>
+                      </div>
+                    </Col>
+                    <Col md={12}>
+                      <div>
+                        <small className="d-block mb-1" style={{ color: '#a1a1a6', fontSize: '0.75rem' }}>
+                          {verificationType === 'pickup' ? 'Pickup Address' : 'Delivery Address'}
+                        </small>
+                        <span className="fw-medium" style={{ color: '#ffffff', fontSize: '0.85rem' }}>
+                          {verificationType === 'pickup' ? currentJob.pickupAddress : currentJob.deliveryAddress}
+                        </span>
+                      </div>
+                    </Col>
+                  </Row>
+                ) : (
+                  <div className="text-center py-3">
+                    <p style={{ color: '#a1a1a6', fontSize: '0.9rem' }}>No job data available</p>
+                    <Button
+                      variant="outline-light"
+                      size="sm"
+                      onClick={() => navigate('/jobs')}
+                      style={{ 
+                        borderColor: '#333',
+                        color: '#fff',
+                        background: 'transparent',
+                        borderRadius: '6px'
+                      }}
+                    >
+                      Go to Jobs
+                    </Button>
+                  </div>
+                )}
               </Card.Body>
             </Card>
 
