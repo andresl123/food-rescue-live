@@ -1,16 +1,11 @@
 package com.foodrescue.evidence.controller;
 
 import com.foodrescue.evidence.service.PODService;
-import com.foodrescue.evidence.web.request.PODCreateRequest;
-import com.foodrescue.evidence.web.request.VerificationRequest;
 import com.foodrescue.evidence.web.response.ApiResponse;
 import com.foodrescue.evidence.web.response.PODResponse;
-import com.foodrescue.evidence.web.response.VerificationResponse;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RestController
@@ -21,38 +16,29 @@ public class PODController {
     
     private final PODService podService;
     
-    @PostMapping
-    public Mono<ResponseEntity<ApiResponse<PODResponse>>> create(@Valid @RequestBody PODCreateRequest request) {
-        return podService.create(request)
-                .map(ResponseEntity::ok);
+    @PostMapping("/generate-otp")
+    public Mono<ResponseEntity<ApiResponse<PODResponse>>> generateOtp(@RequestParam String jobId) {
+        return podService.generateOtp(jobId).map(ResponseEntity::ok);
     }
-    
-    @GetMapping("/{id}")
-    public Mono<ResponseEntity<ApiResponse<PODResponse>>> getById(@PathVariable String id) {
-        return podService.getById(id)
-                .map(ResponseEntity::ok);
+
+    @GetMapping("/otp/{jobId}/donor")
+    public Mono<ResponseEntity<ApiResponse<String>>> getDonorOtp(@PathVariable String jobId) {
+        return podService.getDonorOtp(jobId).map(ResponseEntity::ok);
     }
-    
-    @GetMapping("/job/{jobId}")
-    public Flux<PODResponse> getByJobId(@PathVariable String jobId) {
-        return podService.getByJobId(jobId);
+
+    @GetMapping("/otp/{jobId}/receiver")
+    public Mono<ResponseEntity<ApiResponse<String>>> getReceiverOtp(@PathVariable String jobId) {
+        return podService.getReceiverOtp(jobId).map(ResponseEntity::ok);
     }
-    
-    @PostMapping("/verify")
-    public Mono<ResponseEntity<ApiResponse<VerificationResponse>>> verify(@Valid @RequestBody VerificationRequest request) {
-        return podService.verify(request)
-                .map(ResponseEntity::ok);
+
+    // Verification endpoints (GET only for easy browser testing)
+    @GetMapping("/verify/{jobId}/donor")
+    public Mono<ResponseEntity<Boolean>> verifyDonorGet(@PathVariable String jobId, @RequestParam String code) {
+        return podService.verifyDonorOtp(jobId, code).map(ResponseEntity::ok);
     }
-    
-    
-    @DeleteMapping("/{id}")
-    public Mono<ResponseEntity<ApiResponse<Void>>> delete(@PathVariable String id) {
-        return podService.delete(id)
-                .map(ResponseEntity::ok);
-    }
-    
-    @GetMapping("/test-collections")
-    public Mono<ResponseEntity<String>> testCollections() {
-        return Mono.just(ResponseEntity.ok("Collections will be created when you save data. Try creating an order, job, and POD first."));
+
+    @GetMapping("/verify/{jobId}/receiver")
+    public Mono<ResponseEntity<Boolean>> verifyReceiverGet(@PathVariable String jobId, @RequestParam String code) {
+        return podService.verifyReceiverOtp(jobId, code).map(ResponseEntity::ok);
     }
 }

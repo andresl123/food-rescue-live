@@ -1,97 +1,89 @@
 package com.foodrescue.evidence.service;
 
-import com.foodrescue.evidence.entity.Job;
 import com.foodrescue.evidence.entity.POD;
-import com.foodrescue.evidence.repository.JobRepository;
-import com.foodrescue.evidence.repository.OrderRepository;
 import com.foodrescue.evidence.repository.PODRepository;
-import com.foodrescue.evidence.web.request.PODCreateRequest;
-import com.foodrescue.evidence.web.request.VerificationRequest;
 import com.foodrescue.evidence.web.response.ApiResponse;
 import com.foodrescue.evidence.web.response.PODResponse;
-import com.foodrescue.evidence.web.response.VerificationResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Instant;
-import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PODService {
-    
+
     private final PODRepository podRepository;
-    private final JobRepository jobRepository;
-    private final OrderRepository orderRepository;
-    
-    public Mono<ApiResponse<PODResponse>> create(PODCreateRequest request) {
-        return podRepository.save(POD.builder()
-                .jobId(request.jobId())
-                .otp(request.otp())
-                .build())
+
+    public Mono<ApiResponse<PODResponse>> generateOtp(String jobId) {
+        // 6-digit numeric OTPs
+        String otp1 = String.format("%06d", (int)(Math.random() * 1_000_000));
+        String otp2 = String.format("%06d", (int)(Math.random() * 1_000_000));
+        log.info("Generating OTP1 and OTP2 for jobId={}", jobId);
+        return podRepository.save(POD.builder().jobId(jobId).otp1(otp1).otp2(otp2).build())
+                .doOnSuccess(p -> log.info("POD saved id={} jobId={} otp1={} otp2={} createdAt={}", p.getId(), p.getJobId(), p.getOtp1(), p.getOtp2(), p.getCreatedAt()))
                 .map(this::toResponse)
                 .map(ApiResponse::created)
-                .onErrorReturn(ApiResponse.error("Failed to create POD"));
-    }
-    
-    public Mono<ApiResponse<PODResponse>> getById(String id) {
-        return podRepository.findById(id)
-                .map(this::toResponse)
-                .map(ApiResponse::ok)
-                .switchIfEmpty(Mono.just(ApiResponse.error("POD not found")));
-    }
-    
-    public Flux<PODResponse> getByJobId(String jobId) {
-        return podRepository.findByJobId(jobId)
-                .map(this::toResponse);
-    }
-    
-    public Mono<ApiResponse<VerificationResponse>> verify(VerificationRequest request) {
-        // Find POD by jobId and OTP
-        return podRepository.findByJobIdAndOtp(request.jobId(), request.verificationCode())
-                .switchIfEmpty(Mono.error(new IllegalArgumentException("Invalid OTP or Job ID")))
-                .flatMap(pod -> {
-                    // Update job status to completed
-                    return jobRepository.findById(request.jobId())
-                            .flatMap(job -> {
-                                job.setStatus("completed");
-                                job.setCompletedAt(LocalDate.now());
-                                return jobRepository.save(job);
-                            })
-                            .then(jobRepository.findById(request.jobId()))
-                            .flatMap(job -> orderRepository.findById(job.getOrderId())
-                                    .map(order -> new VerificationResponse(
-                                            true,
-                                            "Verification successful",
-                                            order.getReceiverId(),
-                                            null, // No recipient name in simplified schema
-                                            null  // No delivery address in simplified schema
-                                    )));
-                })
-                .map(ApiResponse::ok)
-                .onErrorReturn(ApiResponse.error("Verification failed"));
-    }
-    
-    
-    public Mono<ApiResponse<Void>> delete(String id) {
-        return podRepository.existsById(id)
-                .flatMap(exists -> {
-                    if (exists) {
-                        return podRepository.deleteById(id)
-                                .then(Mono.just(ApiResponse.ok(null)));
-                    } else {
-                        return Mono.just(ApiResponse.error("POD not found"));
-                    }
+                .onErrorResume(e -> {
+                    log.error("Failed to generate OTPs for jobId={}", jobId, e);
+                    return Mono.just(ApiResponse.error("Failed to generate OTP: " + e.getMessage()));
                 });
     }
+
+    public Mono<ApiResponse<PODResponse>> getOtpByJobId(String jobId) {
+        log.info("Fetching latest OTP for jobId={}", jobId);
+        return podRepository.findFirstByJobIdOrderByCreatedAtDesc(jobId)
+                .map(p -> ApiResponse.ok(new PODResponse(p.getId(), p.getJobId(), p.getOtp1(), p.getOtp2(), p.getCreatedAt(), p.getUpdatedAt())))
+                .switchIfEmpty(Mono.just(ApiResponse.error("OTP not found for job")))
+                .onErrorResume(e -> {
+                    log.error("Failed fetching OTP for jobId={}", jobId, e);
+                    return Mono.just(ApiResponse.error("Failed fetching OTP: " + e.getMessage()));
+                });
+    }
+
+    public Mono<ApiResponse<String>> getDonorOtp(String jobId) {
+        log.info("Fetching donor OTP1 for jobId={}", jobId);
+        return podRepository.findFirstByJobIdOrderByCreatedAtDesc(jobId)
+                .map(p -> ApiResponse.ok(p.getOtp1()))
+                .switchIfEmpty(Mono.just(ApiResponse.error("OTP1 not found for job")))
+                .onErrorResume(e -> Mono.just(ApiResponse.error("Failed fetching OTP1: " + e.getMessage())));
+    }
+
+    public Mono<ApiResponse<String>> getReceiverOtp(String jobId) {
+        log.info("Fetching receiver OTP2 for jobId={}", jobId);
+        return podRepository.findFirstByJobIdOrderByCreatedAtDesc(jobId)
+                .map(p -> ApiResponse.ok(p.getOtp2()))
+                .switchIfEmpty(Mono.just(ApiResponse.error("OTP2 not found for job")))
+                .onErrorResume(e -> Mono.just(ApiResponse.error("Failed fetching OTP2: " + e.getMessage())));
+    }
+
+    public Mono<Boolean> verifyDonorOtp(String jobId, String code) {
+        log.info("Verifying donor OTP1 for jobId={}", jobId);
+        return podRepository.findFirstByJobIdOrderByCreatedAtDesc(jobId)
+                .map(p -> code != null && code.equals(p.getOtp1()))
+                .defaultIfEmpty(false)
+                .onErrorResume(e -> Mono.just(false));
+    }
+
+    public Mono<Boolean> verifyReceiverOtp(String jobId, String code) {
+        log.info("Verifying receiver OTP2 for jobId={}", jobId);
+        return podRepository.findFirstByJobIdOrderByCreatedAtDesc(jobId)
+                .map(p -> code != null && code.equals(p.getOtp2()))
+                .defaultIfEmpty(false)
+                .onErrorResume(e -> Mono.just(false));
+    }
+    
+    // removed legacy create/verify/delete endpoints; OTP is generated and retrieved only
     
     private PODResponse toResponse(POD pod) {
         return new PODResponse(
                 pod.getId(),
                 pod.getJobId(),
-                pod.getOtp(),
+                pod.getOtp1(),
+                pod.getOtp2(),
                 pod.getCreatedAt(),
                 pod.getUpdatedAt()
         );

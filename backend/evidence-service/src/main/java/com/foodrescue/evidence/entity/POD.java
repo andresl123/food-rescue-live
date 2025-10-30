@@ -20,6 +20,10 @@ public class POD extends Auditable {
     private String jobId;
     
     @NotBlank
-    @Field("otp")
-    private String otp;
+    @Field("otp1")
+    private String otp1;
+
+    @NotBlank
+    @Field("otp2")
+    private String otp2;
 }
