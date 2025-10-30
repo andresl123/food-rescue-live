@@ -63,7 +63,7 @@ public class LotController {
 
     /** Update: ADMIN can update any; DONOR only if owner of {lotId} */
     @PutMapping("/{lotId}")
-    @PreAuthorize("hasRole('ADMIN') or @ownership.owns('LOT', #lotId, authentication.name)")
+    @PreAuthorize("hasAnyRole('ADMIN','DONOR')")
     public Mono<ResponseEntity<Lot>> updateLot(
             @PathVariable String lotId,
             @Valid @RequestBody LotUpdateRequest request,
@@ -74,7 +74,7 @@ public class LotController {
 
     /** Delete: ADMIN can delete any; DONOR only if owner of {lotId} */
     @DeleteMapping("/{lotId}")
-    @PreAuthorize("hasRole('ADMIN') or @ownership.owns('LOT', #lotId, authentication.name)")
+    @PreAuthorize("hasRole('ADMIN')")
     public Mono<ResponseEntity<Void>> deleteLot(
             @PathVariable String lotId,
             Mono<Authentication> authenticationMono) {
