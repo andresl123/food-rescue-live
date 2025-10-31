@@ -2,10 +2,13 @@ package com.foodrescue.auth.controller;
 
 import com.foodrescue.auth.entity.Address;
 import com.foodrescue.auth.repository.AddressRepository;
+import com.foodrescue.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Flux;
+
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -15,6 +18,7 @@ import java.util.Map;
 public class AddressController {
 
     private final AddressRepository addressRepository;
+    private final UserRepository userRepository;
 
     // ✅ Create address
     @PostMapping
@@ -44,5 +48,18 @@ public class AddressController {
                         "success", false,
                         "message", "Address not found"
                 )));
+    }
+
+    // ✅ NEW: Get all addresses for a specific user (using moreAddresses list)
+    @GetMapping("/user/{userId}")
+    public Flux<Address> getAddressesForUser(@PathVariable String userId) {
+        return userRepository.findById(userId)
+                .flatMapMany(user -> {
+                    List<String> ids = user.getMoreAddresses();
+                    if (ids == null || ids.isEmpty()) {
+                        return Flux.empty();
+                    }
+                    return addressRepository.findAllById(ids);
+                });
     }
 }

@@ -56,12 +56,17 @@ public class LotService {
                 .lotId(UUID.randomUUID().toString())
                 .userId(donorId)
                 .description(request.getDescription())
-                .totalItems(request.getTotalItems())
+                .imageUrl(request.getImageUrl())
+                .addressId(request.getAddressId())  // ✅ Add this line
+                .totalItems(0)
                 .createdAt(Instant.now())
-                .status("OPEN")
+                .status("ACTIVE")
                 .build();
+
         return lotRepository.save(newLot);
     }
+
+
 
     public Flux<Lot> getAllLotsForAdmin(Mono<Authentication> authMono) {
         // Use flatMapMany to switch from a Mono<Authentication> to a Flux<Lot>
@@ -83,11 +88,23 @@ public class LotService {
     public Mono<Lot> updateLot(String lotId, LotUpdateRequest request, Mono<Authentication> authMono) {
         return checkLotAdminOrOwnership(lotId, authMono)
                 .flatMap(lot -> {
-                                    lot.setDescription(request.getDescription());
-                                    lot.setStatus(request.getStatus());
-                                    return lotRepository.save(lot);
-                                });
+                    if (request.getDescription() != null && request.getDescription().isBlank()) {
+                        return Mono.error(new IllegalArgumentException("Description cannot be blank."));
+                    }
+                    if (request.getDescription() != null) {
+                        lot.setDescription(request.getDescription());
+                    }
+                    if (request.getStatus() != null) {
+                        lot.setStatus(request.getStatus());
+                    }
+                    if (request.getImageUrl() != null) {
+                        lot.setImageUrl(request.getImageUrl());
+                    }
+                    return lotRepository.save(lot);
+                });
     }
+
+
 
     public Mono<Void> deleteLot(String lotId, Mono<Authentication> authMono) {
         return checkLotAdminOrOwnership(lotId, authMono)
