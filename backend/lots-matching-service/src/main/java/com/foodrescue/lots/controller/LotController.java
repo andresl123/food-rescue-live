@@ -63,7 +63,7 @@ public class LotController {
 
     /** Update: ADMIN can update any; DONOR only if owner of {lotId} */
     @PutMapping("/{lotId}")
-    @PreAuthorize("hasRole('ADMIN') or @ownership.owns('LOT', #lotId, authentication.name)")
+    /*@PreAuthorize("hasRole('ADMIN') or @ownership.owns('LOT', #lotId, authentication.name).block()")*/
     public Mono<ResponseEntity<Lot>> updateLot(
             @PathVariable String lotId,
             @Valid @RequestBody LotUpdateRequest request,

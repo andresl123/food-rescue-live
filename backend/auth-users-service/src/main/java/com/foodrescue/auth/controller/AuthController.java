@@ -115,33 +115,61 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public Mono<Void> logout(@RequestHeader(HttpHeaders.AUTHORIZATION) Optional<String> authHeader,
-                             @RequestHeader(value = "X-Refresh-Token", required = false) String refreshOpt) {
-        return Mono.fromRunnable(() -> {
-            // Revoke access token (blacklist by jti until exp)
-            String header = authHeader.orElse("");
-            if (header.startsWith("Bearer ")) {
-                String token = header.substring(7).trim();
-                try {
-                    var parsed = SignedJWT.parse(token);
-                    var jti = parsed.getJWTClaimsSet().getJWTID();
-                    var exp = parsed.getJWTClaimsSet().getExpirationTime();
-                    if (jti != null && exp != null) {
-                        blacklistService.revoke(jti, exp.toInstant().getEpochSecond());
-                    }
-                } catch (ParseException ignored) {}
-            }
+    public Mono<ResponseEntity<Map<String, Object>>> logout(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) Optional<String> authHeader,
+            @RequestHeader(value = "X-Refresh-Token", required = false) String refreshOpt) {
 
-            // Optionally revoke refresh immediately if client sends it
-            if (refreshOpt != null && !refreshOpt.isBlank()) {
-                try {
-                    var parsedR = SignedJWT.parse(refreshOpt);
-                    String rti = parsedR.getJWTClaimsSet().getJWTID();
-                    jwt.revokeRefresh(rti);
-                } catch (Exception ignored) {}
-            }
-        });
+        return Mono.fromCallable(() -> {
+                    String accessToken = null;
+                    Instant accessExp = null;
+                    String accessJti = null;
+
+                    // Extract Bearer access token if present
+                    String header = authHeader.orElse("");
+                    if (header.startsWith("Bearer ")) {
+                        accessToken = header.substring(7).trim();
+                        try {
+                            var parsed = SignedJWT.parse(accessToken);
+                            var claims = parsed.getJWTClaimsSet();
+                            accessJti = claims.getJWTID();
+                            var exp = claims.getExpirationTime();
+                            if (exp != null) accessExp = exp.toInstant();
+                        } catch (ParseException ignored) {}
+                    }
+
+                    // Revoke access token (blacklist by jti until exp)
+                    if (accessJti != null && accessExp != null) {
+                        // e.g., store jti -> expEpochSeconds in Redis/set
+                        blacklistService.revoke(accessJti, accessExp.getEpochSecond());
+                    }
+
+                    // Revoke refresh immediately if provided
+                    String refreshToken = (refreshOpt != null && !refreshOpt.isBlank()) ? refreshOpt.trim() : null;
+                    if (refreshToken != null) {
+                        try {
+                            var parsedR = SignedJWT.parse(refreshToken);
+                            var rti = parsedR.getJWTClaimsSet().getJWTID();
+                            if (rti != null) {
+                                jwt.revokeRefresh(rti); // your refresh revocation store
+                            }
+                        } catch (Exception ignored) {}
+                    }
+
+                    // Build response body echoing tokens + status
+                    Map<String, Object> body = new LinkedHashMap<>();
+                    body.put("status", "Logout");
+                    body.put("revoked_at", Instant.now().toString());
+                    if (accessToken != null) {
+                        body.put("access_token", accessToken);
+                        if (accessExp != null) body.put("access_expires_at", accessExp.toString());
+                    }
+                    if (refreshToken != null) {
+                        body.put("refresh_token", refreshToken);
+                    }
+
+                    return ResponseEntity.ok(body);
+                })
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
     // ---- DEV-ONLY: check if a jti is blacklisted ----

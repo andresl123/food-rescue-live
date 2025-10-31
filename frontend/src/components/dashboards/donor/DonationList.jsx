@@ -1,110 +1,154 @@
-import React, { useEffect, useState } from "react";
-import FoodItemList from "./FoodItemList";
+import React, { useState } from "react";
+import { Dropdown } from "react-bootstrap";
+import LotDetailsModal from "./LotDetailsModal"; // ✅ import the modal
 
 export default function DonationList({ donations, onAddItem, onEditLot }) {
-  const [expandedLots, setExpandedLots] = useState([]);
+  const [selectedLot, setSelectedLot] = useState(null);
 
-  const toggleExpand = (lotId) => {
-    setExpandedLots((prev) =>
-      prev.includes(lotId)
-        ? prev.filter((id) => id !== lotId)
-        : [...prev, lotId]
+  const handleViewDetails = (lot) => setSelectedLot(lot);
+
+  if (!donations || donations.length === 0) {
+    return (
+      <div
+        className="d-flex flex-column align-items-center justify-content-center py-5 text-muted"
+        style={{
+          backgroundColor: "#fafafa",
+          borderRadius: "12px",
+          border: "1px dashed #d1d5db",
+        }}
+      >
+        <i className="bi bi-box-seam mb-2" style={{ fontSize: "2rem" }}></i>
+        <p className="mb-0 fw-semibold">No lots created yet</p>
+        <small>Create your first donation lot to get started</small>
+      </div>
     );
-  };
-
-  const statusColor = {
-    open: "success",
-    pending: "warning",
-    delivered: "info",
-    inactive: "secondary",
-  };
-
+  }
 
   return (
-    <div className="card bg-secondary bg-opacity-10 border-0 shadow-sm text-light">
-      <div className="card-body">
-        <h5 className="card-title mb-3">Recent Donations</h5>
+    <>
+    <style>
+      {`
+        .dropdown-toggle::after {
+          display: none !important;
+          content: none !important;
+        }
+      `}
+    </style>
 
-        <div className="table-responsive">
-          <table className="table table-dark table-hover align-middle mb-0">
-            <thead>
-              <tr className="text-muted">
-                <th>Lot ID</th>
-                <th>Description</th>
-                <th>Status</th>
-                <th>Total Items</th>
-                <th>Created At</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
+      <div className="d-flex flex-column gap-3">
+        {donations.map((lot) => (
+          <div
+            key={lot.lotId}
+            className="d-flex align-items-center justify-content-between shadow-sm p-3 bg-white rounded-4"
+            style={{
+              border: "1px solid #e5e7eb",
+              transition: "all 0.2s ease-in-out",
+              cursor: "pointer",
+            }}
+            onClick={() => handleViewDetails(lot)}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.backgroundColor = "#f9fafb")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.backgroundColor = "#ffffff")
+            }
+          >
+            {/* Left Section */}
+            <div className="d-flex align-items-center">
+              <div
+                className="rounded-3 me-3 overflow-hidden"
+                style={{
+                  width: "70px",
+                  height: "70px",
+                  backgroundColor: "#f3f4f6",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {lot.imageUrl ? (
+                  <img
+                    src={lot.imageUrl}
+                    alt={lot.description || "Lot"}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : (
+                  <i
+                    className="bi bi-image text-secondary"
+                    style={{ fontSize: "1.5rem" }}
+                  ></i>
+                )}
+              </div>
 
-            <tbody>
-              {donations.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="text-center text-secondary">No donations yet.</td>
-                </tr>
-              ) : (
-                donations.map((lot, i) => (
-                  <React.Fragment key={i}>
-                    {/* Lot row */}
-                    <tr>
-                      <td>{lot.lotId}</td>
-                      <td>{lot.description}</td>
-                      <td>
-                        <span className={`badge bg-${lot.status?.toLowerCase() === "open" ? "success" : "secondary"}`}>
-                          {lot.status || "N/A"}
-                        </span>
-                      </td>
-                      <td>{lot.totalItems || 0}</td>
-                      <td>
-                        {lot.created_at || lot.createdAt
-                          ? new Date(lot.created_at || lot.createdAt).toLocaleString()
-                          : "—"}
-                      </td>
+              <div>
+                <h6 className="fw-semibold mb-1 text-dark">
+                  {lot.description || "Untitled Lot"}
+                </h6>
+                <div className="text-muted small">
+                  {lot.totalItems || 0} items •{" "}
+                  {new Date(lot.created_at || lot.createdAt).toLocaleDateString()}
+                </div>
+                <span
+                  className={`badge rounded-pill mt-2 px-3 py-1 ${
+                    lot.status?.toLowerCase() === "active"
+                      ? "bg-success-subtle text-success"
+                      : "bg-secondary-subtle text-secondary"
+                  }`}
+                  style={{ fontSize: "0.75rem" }}
+                >
+                  {lot.status || "N/A"}
+                </span>
+              </div>
+            </div>
 
-                      <td>
-                        {/* ACTION BUTTONS */}
-                        <button
-                          className="btn btn-success btn-sm me-2"
-                          onClick={() => onAddItem(lot.lotId)}
-                          disabled={lot.status?.toLowerCase() !== "open"}
-                        >
-                          + Add Item
-                        </button>
+            {/* Right Section (Total + Dropdown) */}
+            <div
+              className="d-flex align-items-center gap-3"
+              onClick={(e) => e.stopPropagation()} // prevents modal open when using dropdown
+            >
+              <small className="text-muted">Total: {lot.totalItems || 0}</small>
 
-                        <button
-                          className="btn btn-warning btn-sm me-2"
-                          onClick={() => onEditLot(lot)}
-                          disabled={lot.status?.toLowerCase() !== "open"}
-                        >
-                          ✏️ Edit Lot
-                        </button>
+              <Dropdown align="end">
+                <Dropdown.Toggle
+                  as="button"
+                  className="btn btn-light border-0 rounded-circle p-2 dropdown-toggle-no-caret"
+                  style={{ width: "38px", height: "38px" }}
+                >
+                  <i className="bi bi-three-dots-vertical"></i>
+                </Dropdown.Toggle>
 
-                        <button
-                          className="btn btn-outline-light btn-sm"
-                          onClick={() => toggleExpand(lot.lotId)}
-                        >
-                          {expandedLots.includes(lot._id) ? "▲ Collapse" : "▼ Expand"}
-                        </button>
-                      </td>
-                    </tr>
+                <Dropdown.Menu>
+                  <Dropdown.Item
+                    onClick={() => onAddItem(lot.lotId)}
+                  >
+                    Add Item
+                  </Dropdown.Item>
+                  <Dropdown.Item
+                    onClick={() => onEditLot(lot)}
+                  >
+                    Edit Lot
+                  </Dropdown.Item>
 
-                    {/* Food Items Section */}
-                    {expandedLots.includes(lot.lotId) && (
-                      <tr>
-                        <td colSpan="6" className="bg-dark bg-opacity-10">
-                          <FoodItemList lotId={lot.lotId} />
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                ))
-              )}
-            </tbody>
+                </Dropdown.Menu>
+              </Dropdown>
 
-          </table>
-        </div>
+            </div>
+          </div>
+        ))}
       </div>
-    </div>
+
+      {/* Lot Details Modal */}
+      {selectedLot && (
+        <LotDetailsModal
+          show={true}
+          lot={selectedLot}
+          onClose={() => setSelectedLot(null)}
+        />
+      )}
+    </>
   );
 }

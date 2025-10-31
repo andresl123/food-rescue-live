@@ -1,15 +1,40 @@
-// src/layout/UserLayout.jsx
 import React from "react";
-import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
+import Navbar from "./Navbar"; // if you have one
 
-export default function UserLayout({ children }) {
+export default function Layout({ children }) {
   return (
-    <div className="d-flex bg-dark text-light min-vh-100">
+    <div
+      className="d-flex"
+      style={{
+        minHeight: "100vh",
+        backgroundColor: "#f9fafb", // neutral white-gray background for content
+        overflow: "hidden",
+      }}
+    >
+      {/* Sidebar */}
       <Sidebar />
-      <div className="flex-grow-1 d-flex flex-column">
+
+      {/* Main content area */}
+      <div
+        className="flex-grow-1 d-flex flex-column"
+        style={{
+          backgroundColor: "#fff", // clean white canvas
+          minHeight: "100vh",
+        }}
+      >
+        {/* Navbar (optional) */}
         <Navbar />
-        <main className="p-4 flex-grow-1">{children}</main>
+
+        {/* Page content */}
+        <main
+          className="flex-grow-1"
+          style={{
+            backgroundColor: "#fff",
+          }}
+        >
+          {children}
+        </main>
       </div>
     </div>
   );

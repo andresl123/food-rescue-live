@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
 /** Tells the RBAC starter how to check if user owns a Lot. */
-@Component
+@Component("ownership")
 public class LotsOwnershipEvaluator implements OwnershipEvaluator {
 
     private final LotRepository lotRepository;
