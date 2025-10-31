@@ -1,25 +1,85 @@
-import React from 'react';
 import Sidebar from '../../../components/dashboards/admin/Sidebar';
-import '../../../components/dashboards/admin/Dashboard.css'; // We'll add styles to this file
+import '../../../components/dashboards/admin/Dashboard.css';
+import { getAllLots, updateLot } from '../../../services/lotService';
+import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 
 const LotsManagementPage = () => {
-  // Dummy data for the lots table
-  const lots = [
-    { name: 'Downtown Warehouse', location: '123 Main St', capacity: 500, stock: 350, manager: 'Alice Johnson', status: 'active' },
-    { name: 'North Storage', location: '456 North Ave', capacity: 300, stock: 300, manager: 'Bob Smith', status: 'full' },
-    { name: 'East Facility', location: '789 East Rd', capacity: 400, stock: 180, manager: 'Carol White', status: 'active' },
-    { name: 'West Center', location: '321 West Blvd', capacity: 250, stock: 0, manager: 'David Brown', status: 'inactive' },
-  ];
+  // --- State for our data ---
+  const [lots, setLots] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // --- Data fetching with useEffect ---
+  useEffect(() => {
+    // Define an async function inside useEffect to call our service
+    const fetchLots = async () => {
+      try {
+        setIsLoading(true);
+        const data = await getAllLots();
+        setLots(data);
+        setError(null); // Clear any previous errors
+      } catch (err) {
+        setError(err.message); // Set error message
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchLots(); // Call the function
+  }, []); // The empty array [] means this runs once when the component mounts
 
   // Helper function to get badge class for status
   const getStatusBadgeClass = (status) => {
-    return `badge status-${status}`;
+    return `badge status-${status.toLowerCase()}`;
   };
 
-  // Helper function to calculate stock percentage for the progress bar
-  const calculateStockPercentage = (stock, capacity) => {
-    if (capacity === 0) return 0;
-    return (stock / capacity) * 100;
+  // --- Helper to render the table body ---
+  const renderTableBody = () => {
+    if (isLoading) {
+      return (
+        <tr>
+          <td colSpan="5" style={{ textAlign: 'center' }}>Loading...</td>
+        </tr>
+      );
+    }
+
+    if (error) {
+      return (
+        <tr>
+          <td colSpan="5" style={{ textAlign: 'center', color: 'red' }}>
+            Error: {error}
+          </td>
+        </tr>
+      );
+    }
+
+    if (lots.length === 0) {
+      return (
+        <tr>
+          <td colSpan="5" style={{ textAlign: 'center' }}>No lots found.</td>
+        </tr>
+      );
+    }
+
+    // Render the data
+    return lots.map((lot) => (
+      <tr key={lot.lotId}>
+        <td>{lot.description}</td>
+        <td>{lot.userId}</td>
+        <td>{lot.totalItems}</td>
+        <td>
+          <span className={getStatusBadgeClass(lot.status)}>{lot.status}</span>
+        </td>
+        <td>
+          <div className="action-icons">
+            <i className="bi bi-pencil-fill edit-icon"></i>
+            <i className="bi bi-trash-fill delete-icon"></i>
+          </div>
+        </td>
+      </tr>
+    ));
   };
 
   return (
@@ -45,44 +105,16 @@ const LotsManagementPage = () => {
           <table className="users-table">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Location</th>
-                <th>Capacity</th>
-                <th>Current Stock</th>
-                <th>Manager</th>
+                <th>Description</th>
+                <th>Donor ID</th>
+                <th>Total Items</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
+            {/* Render the body using our new function */}
             <tbody>
-              {lots.map((lot, index) => (
-                <tr key={index}>
-                  <td>{lot.name}</td>
-                  <td>{lot.location}</td>
-                  <td>{lot.capacity}</td>
-                  <td>
-                    <div className="stock-info">
-                      <span>{lot.stock}</span>
-                      <div className="capacity-bar">
-                        <div
-                          className="capacity-bar-inner"
-                          style={{ width: `${calculateStockPercentage(lot.stock, lot.capacity)}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>{lot.manager}</td>
-                  <td>
-                    <span className={getStatusBadgeClass(lot.status)}>{lot.status}</span>
-                  </td>
-                  <td>
-                    <div className="action-icons">
-                       <i className="bi bi-pencil-fill edit-icon"></i>
-                       <i className="bi bi-trash-fill delete-icon"></i>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {renderTableBody()}
             </tbody>
           </table>
         </div>

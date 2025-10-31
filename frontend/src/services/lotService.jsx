@@ -1,4 +1,8 @@
-const BASE_URL = "http://localhost:8081/api/v1";
+const BASE_URL = "http://localhost:8081";
+
+const getAuthToken = () => {
+  return localStorage.getItem('accessToken');
+};
 
 export async function getLots() {
   try {
@@ -120,31 +124,6 @@ export async function getFoodItemsByLot(lotId) {
   }
 }
 
-export async function updateLot(lotId, lotData) {
-  try {
-    const token = localStorage.getItem("accessToken");
-    if (!token) return { success: false, message: "No token found" };
-
-    const response = await fetch(`http://localhost:8081/api/v1/lots/${lotId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(lotData),
-    });
-
-    const data = await response.json();
-    if (!response.ok)
-      throw new Error(data.message || "Failed to update lot");
-
-    return { success: true, data };
-  } catch (error) {
-    console.error("Update Lot Error:", error);
-    return { success: false, message: error.message };
-  }
-}
-
 export async function updateFoodItem(lotId, itemId, itemData) {
   try {
     const token = localStorage.getItem("accessToken");
@@ -188,3 +167,69 @@ export async function disableFoodItem(item) {
     return { success: false, message: err.message };
   }
 }
+
+/**
+ * Fetches all lots from the raw backend API.
+ */
+export const getAllLots = async () => {
+  const accessToken = getAuthToken(); // <-- Renamed variable
+
+  if (!accessToken) { // <-- Renamed variable
+    // If no token, we can't even try to make the request.
+    throw new Error("Authentication token not found. Please log in.");
+  }
+
+  const response = await fetch(`${BASE_URL}/api/v1/lots/all`, { // <-- Renamed
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`, // <-- Renamed variable
+    },
+  });
+
+  if (response.status === 401) {
+    throw new Error("Unauthorized: Your token may be invalid or expired.");
+  }
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch lots: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
+/**
+ * Updates an existing lot.
+ * @param {string} lotId - The ID of the lot to update.
+ * @param {object} updateData - An object with { description, status }.
+ */
+export const updateLot = async (lotId, updateData) => {
+  const accessToken = getAuthToken();
+
+  if (!accessToken) { //
+    throw new Error("Authentication token not found. Please log in.");
+  }
+
+  const response = await fetch(`${BASE_URL}/api/v1/lots/${lotId}`, { // <-- Renamed
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(updateData), // Send the new data as JSON
+  });
+
+  if (response.status === 401) {
+    throw new Error("Unauthorized: Your token may be invalid or expired.");
+  }
+
+  if (response.status === 403) {
+    throw new Error("Forbidden: You do not have permission to edit this lot.");
+  }
+
+  if (!response.ok) {
+    throw new Error(`Failed to update lot: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json(); // Return the updated lot from the server
+};
