@@ -9,8 +9,16 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
+import java.util.Map;
+import com.foodrescue.auth.web.response.AddressesResponse;
 
-@CrossOrigin(origins = "http://localhost:5173")
+
+
+@CrossOrigin(
+        origins = "http://localhost:5173",
+        allowedHeaders = "*",
+        methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PATCH, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS}
+)
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -30,4 +38,24 @@ public class UserController {
     public Mono<ApiResponse<UserResponse>> get(@PathVariable String id) {
         return service.get(id).map(ApiResponse::ok);
     }
+
+    @PatchMapping("/{id}/addresses")
+    @ResponseStatus(HttpStatus.OK)
+    public Mono<ApiResponse<UserResponse>> addAddressToUser(
+            @PathVariable String id,
+            @RequestBody Map<String, Object> body
+    ) {
+        // ✅ Debug log — add this line
+        System.out.println("➡️ PATCH /users/" + id + "/addresses called with body: " + body);
+
+        String addressId = (String) body.get("addressId");
+        boolean setAsDefault = body.get("setAsDefault") != null && (boolean) body.get("setAsDefault");
+
+        return service.addAddressToUser(id, addressId, setAsDefault)
+                .map(ApiResponse::ok);
+    }
+
+
 }
+
+
