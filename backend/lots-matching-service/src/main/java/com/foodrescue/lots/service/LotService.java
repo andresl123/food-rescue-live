@@ -64,20 +64,7 @@ public class LotService {
     }
 
     public Flux<Lot> getAllLotsForAdmin(Mono<Authentication> authMono) {
-        // Use flatMapMany to switch from a Mono<Authentication> to a Flux<Lot>
-        return authMono.flatMapMany(authentication -> {
-            // Check if the user's authorities list contains the ADMIN role.
-            boolean isAdmin = authentication.getAuthorities().stream()
-                    .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ADMIN"));
-
-            if (isAdmin) {
-                // If user is an admin, fetch all lots from the repository.
-                return lotRepository.findAll();
-            } else {
-                // If not an admin, return a Flux that immediately signals an error.
-                return Flux.error(new AccessDeniedException("You must be an admin to view all lots."));
-            }
-        });
+           return lotRepository.findAll();
     }
 
     public Mono<Lot> updateLot(String lotId, LotUpdateRequest request, Mono<Authentication> authMono) {
