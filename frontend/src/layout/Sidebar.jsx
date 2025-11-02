@@ -1,67 +1,34 @@
-import React, { useEffect, useState } from "react";
-import { NavLink } from "react-router-dom";
+// src/layout/Sidebar.jsx
+import React, { useState } from "react";
 import { jwtDecode } from "jwt-decode";
 
-export default function Sidebar() {
-  const [role, setRole] = useState("USER");
+export default function Sidebar({ activeTab, setActiveTab, role }) {
   const [collapsed, setCollapsed] = useState(false);
 
-  // ---------- Decode User Role ----------
-  useEffect(() => {
-    const token = localStorage.getItem("accessToken");
-    if (token) {
-      try {
-        const decoded = jwtDecode(token);
-        const userRole = decoded.roles?.[0] || "USER";
-        setRole(userRole);
-      } catch (err) {
-        console.error("Invalid token:", err);
-      }
-    }
-  }, []);
-
-  // ---------- Sidebar Items ----------
   const items = [
-    { path: "/dashboard", label: "Dashboard", icon: "bi-grid" },
-    role === "DONOR" && {
-      path: "/donations",
-      label: "My Donations",
-      icon: "bi-heart",
-    },
-    role === "RECEIVER" && {
-      path: "/requests",
-      label: "My Requests",
-      icon: "bi-basket",
-    },
-    role === "COURIER" && {
-      path: "/jobs",
-      label: "Delivery Jobs",
-      icon: "bi-truck",
-    },
-    { path: "/profile", label: "Profile", icon: "bi-person" },
-  ].filter(Boolean);
+    { key: "dashboard", label: "Dashboard", icon: "bi-grid" },
+    ...(role === "DONOR"
+      ? [{ key: "foodItems", label: "Food Items", icon: "bi-egg-fried" }]
+      : []),
+    { key: "profile", label: "Profile", icon: "bi-person" },
+  ];
 
-  // ---------- Render ----------
   return (
     <aside
       className="d-flex flex-column border-end"
       style={{
         width: collapsed ? "84px" : "250px",
         height: "100vh",
-        backgroundColor: "#fff", // ensures no dark bleed
+        backgroundColor: "#ffffff",
         transition: "width 0.3s ease",
-        overflow: "hidden", // hides content when collapsing
+        overflow: "hidden",
       }}
     >
       {/* ---------- Header ---------- */}
       <div
         className="d-flex align-items-center justify-content-between px-3 py-3 border-bottom"
         style={{
-          minHeight: "64px",
           backgroundColor: "#fff",
-          position: "sticky",
-          top: 0,
-          zIndex: 5,
         }}
       >
         {!collapsed && (
@@ -73,14 +40,11 @@ export default function Sidebar() {
           </h5>
         )}
         <button
-          className="btn btn-light border-0 p-1 d-flex align-items-center justify-content-center"
+          className="btn btn-light border-0 p-1"
           onClick={() => setCollapsed(!collapsed)}
           style={{
             background: "transparent",
             color: "#6b7280",
-            fontSize: "1.1rem",
-            width: "32px",
-            height: "32px",
           }}
         >
           <i
@@ -92,47 +56,50 @@ export default function Sidebar() {
       </div>
 
       {/* ---------- Navigation ---------- */}
-      <nav className="flex-grow-1 mt-3">
-        {items.map((it, i) => (
-          <NavLink
-            key={i}
-            to={it.path}
-            end
-            className={({ isActive }) =>
-              `d-flex align-items-center text-decoration-none mb-2 mx-3 ${
-                isActive ? "text-white" : "text-secondary"
-              }`
-            }
-            style={({ isActive }) => ({
-              height: "48px",
-              borderRadius: "10px", // subtle rectangular corners
-              transition: "all 0.25s ease",
-              padding: collapsed ? "0 12px" : "0 18px",
-              justifyContent: collapsed ? "center" : "flex-start",
-              fontWeight: isActive ? "600" : "500",
-              backgroundColor: isActive ? "#111827" : "transparent",
-            })}
-          >
-            <i
-              className={`bi ${it.icon}`}
+      <nav className="flex-grow-1 mt-3 px-3">
+        {items.map((it) => {
+          const isActive = activeTab === it.key;
+          return (
+            <button
+              key={it.key}
+              onClick={() => setActiveTab(it.key)}
+              className="d-flex align-items-center border-0"
               style={{
-                fontSize: "1.2rem",
-                marginRight: collapsed ? "0" : "12px",
+                width: "100%",
+                height: "46px",
+                marginBottom: "6px",
+                borderRadius: "10px",
+                backgroundColor: isActive ? "#111827" : "transparent",
+                color: isActive ? "#ffffff" : "#6b7280",
+                fontWeight: isActive ? 600 : 500,
+                justifyContent: collapsed ? "center" : "flex-start",
+                transition: "background-color 0.2s ease, color 0.2s ease",
+                cursor: "pointer",
+                padding: collapsed ? "0" : "0 16px",
+                boxSizing: "border-box",
               }}
-            ></i>
-            {!collapsed && (
-              <span
-                className="fw-medium"
+            >
+              <i
+                className={`bi ${it.icon}`}
                 style={{
-                  fontSize: "0.95rem",
+                  fontSize: "1.15rem",
+                  marginRight: collapsed ? 0 : 12,
                   color: "inherit",
                 }}
-              >
-                {it.label}
-              </span>
-            )}
-          </NavLink>
-        ))}
+              />
+              {!collapsed && (
+                <span
+                  style={{
+                    fontSize: "0.95rem",
+                    color: "inherit",
+                  }}
+                >
+                  {it.label}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </nav>
     </aside>
   );

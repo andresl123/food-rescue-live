@@ -127,10 +127,6 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
                     <i className="bi bi-geo-alt me-1"></i>
                     {currentLot.location || "Green Valley Community Garden"}
                   </p>
-                  <p className="mb-1 text-muted small">
-                    <i className="bi bi-clock me-1"></i>
-                    {currentLot.timeSlot || "Today 4–7pm"}
-                  </p>
                   <p className="mb-0 text-muted small">
                     <i className="bi bi-calendar-event me-1"></i>
                     Expires: {currentLot.expiry || "3d left"}

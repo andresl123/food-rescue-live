@@ -32,10 +32,28 @@ export default function DonationList({ donations, onAddItem, onEditLot }) {
           display: none !important;
           content: none !important;
         }
+
+        /* Custom scrollbar for DonationList */
+        .d-flex.flex-column.gap-3::-webkit-scrollbar {
+          width: 6px;
+        }
+        .d-flex.flex-column.gap-3::-webkit-scrollbar-thumb {
+          background-color: #d1d5db; /* light gray */
+          border-radius: 4px;
+        }
+        .d-flex.flex-column.gap-3::-webkit-scrollbar-thumb:hover {
+          background-color: #9ca3af; /* darker gray on hover */
+        }
       `}
     </style>
 
-      <div className="d-flex flex-column gap-3">
+      <div className="d-flex flex-column gap-3"
+          style={{
+              maxHeight: "460px", // ~4 cards tall (adjust if your cards are taller/shorter)
+              overflowY: "auto",
+              paddingRight: "6px",
+            }}
+        >
         {donations.map((lot) => (
           <div
             key={lot.lotId}
@@ -93,15 +111,44 @@ export default function DonationList({ donations, onAddItem, onEditLot }) {
                   {new Date(lot.created_at || lot.createdAt).toLocaleDateString()}
                 </div>
                 <span
-                  className={`badge rounded-pill mt-2 px-3 py-1 ${
-                    lot.status?.toLowerCase() === "active"
-                      ? "bg-success-subtle text-success"
-                      : "bg-secondary-subtle text-secondary"
-                  }`}
-                  style={{ fontSize: "0.75rem" }}
+                  className={`badge rounded-pill mt-2 px-3 py-1 fw-semibold`}
+                  style={{
+                    fontSize: "0.75rem",
+                    backgroundColor:
+                      lot.status?.toLowerCase() === "active"
+                        ? "#dcfce7" // light green bg
+                        : lot.status?.toLowerCase() === "pending"
+                        ? "#fff7ed" // orange bg (same as expiring soon)
+                        : lot.status?.toLowerCase() === "expiring_soon"
+                        ? "#f97316" // solid orange bg
+                        : lot.status?.toLowerCase() === "inactive"
+                        ? "#000000" // black bg
+                        : lot.status?.toLowerCase() === "delivered"
+                        ? "#dbeafe" // light blue bg
+                        : "#f3f4f6",
+
+                    color:
+                      lot.status?.toLowerCase() === "active"
+                        ? "#166534" // dark green text
+                        : lot.status?.toLowerCase() === "pending"
+                        ? "#b45309" // dark orange text (same as expiring soon)
+                        : lot.status?.toLowerCase() === "expiring_soon"
+                        ? "#ffffff" // white text for orange bg
+                        : lot.status?.toLowerCase() === "inactive"
+                        ? "#ffffff" // white text for black bg
+                        : lot.status?.toLowerCase() === "delivered"
+                        ? "#1e3a8a" // deep blue text
+                        : "#6b7280",
+
+                    fontWeight: 600,
+                    letterSpacing: "0.5px",
+                    textTransform: "uppercase",
+                  }}
+
                 >
                   {lot.status || "N/A"}
                 </span>
+
               </div>
             </div>
 

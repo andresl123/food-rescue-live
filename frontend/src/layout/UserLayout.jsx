@@ -1,39 +1,26 @@
-import React from "react";
+// src/layout/UserLayout.jsx
+import React, { useState } from "react";
 import Sidebar from "./Sidebar";
-import Navbar from "./Navbar"; // if you have one
+import Navbar from "./Navbar";
+import FoodItems from "../components/dashboards/donor/FoodItemList";
 
-export default function Layout({ children }) {
+export default function UserLayout({ role, children }) {
+  const [activeTab, setActiveTab] = useState("dashboard");
+
   return (
-    <div
-      className="d-flex"
-      style={{
-        minHeight: "100vh",
-        backgroundColor: "#f9fafb", // neutral white-gray background for content
-        overflow: "hidden",
-      }}
-    >
-      {/* Sidebar */}
-      <Sidebar />
+    <div className="d-flex" style={{ minHeight: "100vh" }}>
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} role={role} />
 
-      {/* Main content area */}
-      <div
-        className="flex-grow-1 d-flex flex-column"
-        style={{
-          backgroundColor: "#fff", // clean white canvas
-          minHeight: "100vh",
-        }}
-      >
-        {/* Navbar (optional) */}
+
+      <div className="flex-grow-1 d-flex flex-column">
         <Navbar />
 
-        {/* Page content */}
         <main
           className="flex-grow-1"
-          style={{
-            backgroundColor: "#fff",
-          }}
+          style={{ backgroundColor: "#f9fafb", minHeight: "100vh" }}
         >
-          {children}
+          {activeTab === "dashboard" && children}
+          {activeTab === "foodItems" && role === "DONOR" && <FoodItems />}
         </main>
       </div>
     </div>
