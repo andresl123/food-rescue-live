@@ -233,3 +233,42 @@ export const updateLot = async (lotId, updateData) => {
 
   return response.json(); // Return the updated lot from the server
 };
+
+/**
+ * Deletes a lot permanently from the database.
+ * @param {string} lotId - The ID of the lot to delete.
+ */
+export const deleteLot = async (lotId) => {
+  const accessToken = getAuthToken();
+
+  if (!accessToken) {
+    throw new Error("Authentication token not found. Please log in.");
+  }
+
+  const response = await fetch(`${BASE_URL}/api/v1/lots/${lotId}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+    },
+  });
+
+  if (response.status === 401) {
+    throw new Error("Unauthorized: Your token may be invalid or expired.");
+  }
+
+  if (response.status === 403) {
+    throw new Error("Forbidden: You must be an ADMIN to permanently delete a lot.");
+  }
+
+  // A successful DELETE often returns a 204 No Content
+  if (response.status === 204) {
+    return; // Success
+  }
+
+  if (!response.ok) {
+    throw new Error(`Failed to delete lot: ${response.status} ${response.statusText}`);
+  }
+
+  // Handle if server returns 200 OK with a body, though 204 is more common
+  return;
+};

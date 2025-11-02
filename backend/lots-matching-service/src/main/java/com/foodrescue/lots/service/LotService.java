@@ -68,16 +68,24 @@ public class LotService {
     }
 
     public Mono<Lot> updateLot(String lotId, LotUpdateRequest request, Mono<Authentication> authMono) {
-        return checkLotAdminOrOwnership(lotId, authMono)
+        // Find the lot by ID first
+        return lotRepository.findById(lotId)
+                // Handle case where lot doesn't exist
+                .switchIfEmpty(Mono.error(new LotNotFoundException("Lot with ID " + lotId + " not found.")))
                 .flatMap(lot -> {
-                                    lot.setDescription(request.getDescription());
-                                    lot.setStatus(request.getStatus());
-                                    return lotRepository.save(lot);
-                                });
+                    // Update the fields
+                    lot.setDescription(request.getDescription());
+                    lot.setStatus(request.getStatus());
+                    // Save the updated lot
+                    return lotRepository.save(lot);
+                });
     }
 
     public Mono<Void> deleteLot(String lotId, Mono<Authentication> authMono) {
-        return checkLotAdminOrOwnership(lotId, authMono)
+        // Find the lot by ID first, then delete it
+        return lotRepository.findById(lotId)
+                // Handle case where lot doesn't exist
+                .switchIfEmpty(Mono.error(new LotNotFoundException("Lot with ID " + lotId + " not found.")))
                 .flatMap(lotRepository::delete);
     }
 
