@@ -378,13 +378,13 @@
 
 /* New Status Badge Styles */
 .status-fresh {
-    background-color: #a5d6a7; /* Darker green */
-    color: #1b5e20;
+    background-color: #388e3c; /* Even darker, solid green */
+    color: #ffffff; /* White text for high contrast */
 }
 
 .status-expiring_soon {
-    background-color: #fff59d; /* Darker yellow */
-    color: #827717;
+    background-color: #fbc02d; /* Even darker amber/yellow */
+    color: #3e2723; /* Dark brown text for high contrast */
 }
 /* --- Orders & POD Page Styles --- */
 
@@ -540,4 +540,9 @@
 /* Make sure the badges are also faded */
 .lot-unavailable .badge {
   opacity: 0.7;
+}
+
+.status-expired {
+    background-color: #d32f2f; /* Even darker, solid red */
+    color: #ffffff; /* White text for high contrast */
 }

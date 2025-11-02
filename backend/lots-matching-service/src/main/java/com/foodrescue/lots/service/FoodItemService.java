@@ -18,9 +18,6 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Flux;
 
 import java.util.Collection;
-import java.util.List;
-import java.util.stream.Collectors;
-
 import java.time.Instant;
 import java.util.UUID;
 
@@ -35,48 +32,100 @@ public class FoodItemService {
         this.lotRepository = lotRepository;
     }
 
-    private Mono<Lot> checkLotAdminOrOwnershipForItemAccess(String lotId, Mono<Authentication> authMono) {
+    // --- 1. THE NEW REUSABLE AUTHORIZATION METHOD ---
+    // (This is your original 'checkLotAdminOrOwnershipForItemAccess' method, renamed)
+    private Mono<Lot> authorizeAdminOrLotOwner(String lotId, Mono<Authentication> authMono) {
         return authMono.zipWith(lotRepository.findById(lotId)
                         .switchIfEmpty(Mono.error(new LotNotFoundException("Lot with ID " + lotId + " not found."))))
                 .flatMap(tuple -> {
-                    Authentication authentication = tuple.getT1();
+                    Authentication auth = tuple.getT1();
                     Lot lot = tuple.getT2();
-                    String userId = authentication.getName();
-                    Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
+                    String currentUserId = auth.getName();
 
-                    boolean isAdmin = authorities.stream()
-                            .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ROLE_ADMIN"));
+                    boolean isAdmin = auth.getAuthorities().stream()
+                            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
-                    if (isAdmin || lot.getUserId().equals(userId)) {
-                        return Mono.just(lot); // Authorized
+                    // This is the core logic: Allow if ADMIN or if DONOR owns the lot
+                    if (isAdmin || lot.getUserId().equals(currentUserId)) {
+                        return Mono.just(lot); // Authorized, return the lot for chaining
                     } else {
                         return Mono.error(new AccessDeniedException("You do not have permission to access items in this lot."));
                     }
                 });
     }
 
-    // SECURITY CHECK METHOD TO BE REUSED
-    private Mono<Lot> checkLotOwnership(String lotId, String userId) {
-        return lotRepository.findById(lotId)
-                .switchIfEmpty(Mono.error(new LotNotFoundException("Lot with ID " + lotId + " not found.")))
-                .flatMap(lot -> {
-                    if (!lot.getUserId().equals(userId)) {
-                        return Mono.error(new AccessDeniedException("You do not have permission to modify items in this lot."));
-                    }
-                    return Mono.just(lot); // Return the lot if ownership is verified
-                });
+    /**
+     * ADMIN-only method to get all food items from all lots.
+     * Security is handled by @PreAuthorize("hasRole('ADMIN')") in the controller.
+     */
+    public Flux<FoodItem> getAllFoodItems() {
+        return foodItemRepository.findAll();
     }
 
-    // METHOD TO GET ITEMS FOR A LOT
+    /**
+     * GET ITEMS: Checks for Admin/Owner, then finds items.
+     */
     public Flux<FoodItem> getItemsForLot(String lotId, Mono<Authentication> authMono) {
-        return checkLotAdminOrOwnershipForItemAccess(lotId, authMono)
+        // 1. Authorize
+        return authorizeAdminOrLotOwner(lotId, authMono)
+                // 2. If successful, proceed to get items
                 .thenMany(foodItemRepository.findByLotId(lotId));
     }
 
+    /**
+     * UPDATE ITEM: Checks for Admin/Owner, then finds and updates the item.
+     */
+    public Mono<FoodItem> updateFoodItem(String lotId, String itemId, FoodItemUpdateRequest request, Mono<Authentication> authMono) {
+        // 1. Authorize
+        return authorizeAdminOrLotOwner(lotId, authMono)
+                // 2. If successful, proceed to find the item
+                .flatMap(authorizedLot -> // We get the lot but don't need it
+                        foodItemRepository.findById(itemId)
+                                .switchIfEmpty(Mono.error(new FoodItemNotFoundException("Food Item with ID " + itemId + " not found.")))
+                                .flatMap(item -> {
+                                    // 3. Data integrity check
+                                    if (!item.getLotId().equals(lotId)) {
+                                        return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Item does not belong to the specified lot."));
+                                    }
+
+                                    // 4. Update and save
+                                    item.setItemName(request.getItemName());
+                                    item.setCategory(request.getCategory());
+                                    item.setExpiryDate(request.getExpiryDate());
+                                    item.setQuantity(request.getQuantity());
+                                    item.setUnitOfMeasure(request.getUnitOfMeasure());
+                                    return foodItemRepository.save(item);
+                                })
+                );
+    }
+
+    /**
+     * DELETE ITEM: Checks for Admin/Owner, then finds and deletes the item.
+     */
+    public Mono<Void> deleteFoodItem(String lotId, String itemId, Mono<Authentication> authMono) {
+        // 1. Authorize
+        return authorizeAdminOrLotOwner(lotId, authMono)
+                // 2. If successful, proceed to find the item
+                .flatMap(authorizedLot -> // We get the lot but don't need it
+                        foodItemRepository.findById(itemId)
+                                .switchIfEmpty(Mono.error(new FoodItemNotFoundException("Food Item with ID " + itemId + " not found.")))
+                                .flatMap(item -> {
+                                    // 3. Data integrity check
+                                    if (!item.getLotId().equals(lotId)) {
+                                        return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Item does not belong to the specified lot."));
+                                    }
+                                    // 4. Delete
+                                    return foodItemRepository.delete(item);
+                                })
+                );
+    }
+
+    // This method has a *different* check (checkLotOwnership)
+    // which is correct because only the owner can add items to their *own* lot.
     public Mono<FoodItem> addItemToLot(FoodItemCreateRequest request, String lotId, Mono<Authentication> authMono) {
         return authMono.map(Authentication::getName)
                 .flatMap(userId ->
-                        checkLotOwnership(lotId, userId)
+                        checkLotOwnership(lotId, userId) // Uses the stricter check
                                 .flatMap(lot -> {
                                     FoodItem foodItem = FoodItem.builder()
                                             .itemId(UUID.randomUUID().toString())
@@ -93,56 +142,29 @@ public class FoodItemService {
                 );
     }
 
-    // UPDATE FOOD ITEM METHOD
-    public Mono<FoodItem> updateFoodItem(String lotId, String itemId, FoodItemUpdateRequest request, Mono<Authentication> authMono) {
-        return checkLotAdminOrOwnershipForItemAccess(lotId, authMono)
-                .flatMap(lot ->
-                        foodItemRepository.findById(itemId)
-                                .switchIfEmpty(Mono.error(new FoodItemNotFoundException("Food Item with ID " + itemId + " not found.")))
-                                .flatMap(item -> {
-                                    if (!item.getLotId().equals(lotId)) {
-                                        return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Item does not belong to the specified lot."));
-                                    }
-                                    item.setItemName(request.getItemName());
-                                    item.setCategory(request.getCategory());
-                                    item.setExpiryDate(request.getExpiryDate());
-                                    item.setQuantity(request.getQuantity());
-                                    item.setUnitOfMeasure(request.getUnitOfMeasure());
-                                    return foodItemRepository.save(item);
-                                })
-                );
+    // This check is used only by addItemToLot
+    private Mono<Lot> checkLotOwnership(String lotId, String userId) {
+        return lotRepository.findById(lotId)
+                .switchIfEmpty(Mono.error(new LotNotFoundException("Lot with ID " + lotId + " not found.")))
+                .flatMap(lot -> {
+                    if (!lot.getUserId().equals(userId)) {
+                        return Mono.error(new AccessDeniedException("You do not have permission to modify items in this lot."));
+                    }
+                    return Mono.just(lot); // Return the lot if ownership is verified
+                });
     }
 
-    // DELETE FOOD ITEM METHOD
-    public Mono<Void> deleteFoodItem(String lotId, String itemId, Mono<Authentication> authMono) {
-        return checkLotAdminOrOwnershipForItemAccess(lotId, authMono)
-                .flatMap(lot ->
-                        foodItemRepository.findById(itemId)
-                                .switchIfEmpty(Mono.error(new FoodItemNotFoundException("Food Item with ID " + itemId + " not found.")))
-                                .flatMap(item -> {
-                                    if (!item.getLotId().equals(lotId)) {
-                                        return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Item does not belong to the specified lot."));
-                                    }
-                                    return foodItemRepository.deleteById(itemId);
-                                })
-                );
-    }
-    // GET ALL ITEMS FOR A USER BASED IN LOTID
+    // This method is also unchanged
     public Flux<FoodItem> getAllItemsForUser(Mono<Authentication> authMono) {
-        // 1. Get the authenticated user's ID
         return authMono.map(Authentication::getName)
                 .flatMapMany(userId ->
-                        // 2. Find all lots owned by this user
                         lotRepository.findByUserId(userId)
-                                // 3. Extract the lot IDs from the found lots
-                                .map(Lot::getLotId) // Get the ID string from each Lot object
-                                .collectList() // Collect all the lot IDs into a List<String>
+                                .map(Lot::getLotId)
+                                .collectList()
                                 .flatMapMany(lotIds -> {
-                                    // 4. Handle the case where the user has no lots
                                     if (lotIds.isEmpty()) {
-                                        return Flux.empty(); // Return an empty stream if no lots found
+                                        return Flux.empty();
                                     }
-                                    // 5. Find all food items whose lotId is in the collected list
                                     return foodItemRepository.findByLotIdIn(lotIds);
                                 })
                 );
