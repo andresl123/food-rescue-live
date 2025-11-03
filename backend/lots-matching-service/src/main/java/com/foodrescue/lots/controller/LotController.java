@@ -74,7 +74,7 @@ public class LotController {
 
     /** Delete: ADMIN can delete any; DONOR only if owner of {lotId} */
     @DeleteMapping("/{lotId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','DONOR')")
     public Mono<ResponseEntity<Void>> deleteLot(
             @PathVariable String lotId,
             Mono<Authentication> authenticationMono) {
