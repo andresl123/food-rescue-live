@@ -38,6 +38,33 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
       0
     ) || 0;
 
+  // helper to capitalize / title case category
+  const formatCategory = (cat) => {
+    if (!cat) return "Produce";
+    // handle enums like "DAIRY"
+    const normalized = cat.toString().replace(/_/g, " ").toLowerCase();
+    return normalized
+      .split(" ")
+      .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+      .join(" ");
+  };
+
+  // helper to format tags CSV
+  const tagsCsv =
+    Array.isArray(currentLot.tags) && currentLot.tags.length > 0
+      ? currentLot.tags
+          .map((t) =>
+            t
+              .toString()
+              .replace(/_/g, " ")
+              .toLowerCase()
+              .split(" ")
+              .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+              .join(" ")
+          )
+          .join(", ")
+      : null;
+
   return (
     <>
       <div
@@ -79,26 +106,6 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
 
             {/* ---------- STATUS & META INFO ---------- */}
             <div className="px-4">
-{/*               <div className="d-flex align-items-center gap-2 mb-2"> */}
-{/*                 <span */}
-{/*                   className="badge rounded-pill text-uppercase fw-semibold" */}
-{/*                   style={{ */}
-{/*                     backgroundColor: "#eef2ff", */}
-{/*                     color: "#4338ca", */}
-{/*                     fontSize: "0.75rem", */}
-{/*                     letterSpacing: "0.3px", */}
-{/*                   }} */}
-{/*                 > */}
-{/*                   {currentLot.status || "OPEN"} */}
-{/*                 </span> */}
-{/*                 <div className="text-muted small"> */}
-{/*                   <i className="bi bi-box2 me-1"></i> */}
-{/*                   {currentLot.totalWeight || "15 lbs"} •{" "} */}
-{/*                   <i className="bi bi-heart ms-1 me-1"></i> */}
-{/*                   {currentLot.interestedCount || "24"} interested */}
-{/*                 </div> */}
-{/*               </div> */}
-
               {/* ---------- IMAGE + DETAILS ---------- */}
               <div className="d-flex flex-wrap align-items-start gap-3 mt-3">
                 <div
@@ -120,8 +127,9 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
                 </div>
 
                 <div className="flex-grow-1">
+                  {/* ✅ category capitalized */}
                   <h6 className="fw-semibold mb-1 text-dark">
-                    {currentLot.category || "Produce"}
+                    {formatCategory(currentLot.category)}
                   </h6>
                   <p className="mb-1 text-muted small">
                     <i className="bi bi-geo-alt me-1"></i>
@@ -131,6 +139,13 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
                     <i className="bi bi-calendar-event me-1"></i>
                     Expires: {currentLot.expiry || "3d left"}
                   </p>
+                  {/* ✅ tags CSV under expiry */}
+                  {tagsCsv && (
+                    <p className="mb-0 text-muted small mt-1">
+                      <i className="bi bi-tags me-1"></i>
+                      {tagsCsv}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -235,7 +250,7 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
               <div className="d-flex align-items-center w-100 justify-content-between">
                 <div className="text-muted small d-flex align-items-center">
                   <i className="bi bi-info-circle me-2"></i>
-                  Click <b> + Add Item </b> to add food to this lot.
+                  Click <b> + Add Item </b>  to add food to this lot.
                 </div>
                 <button
                   className="btn btn-outline-dark btn-sm px-3 py-1"

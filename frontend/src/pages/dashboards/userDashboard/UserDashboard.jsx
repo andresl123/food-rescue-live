@@ -67,5 +67,4 @@ export default function UserDashboard() {
   };
 
   return <UserLayout role={role}>{renderByRole()}</UserLayout>;
-import ReceiverDashboard from "../../dashboards/receiver/ReceiverDashboard";
 }

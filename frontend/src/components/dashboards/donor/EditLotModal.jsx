@@ -7,13 +7,49 @@ export default function EditLotModal({ show, lot, onClose, onLotUpdated }) {
   const [formData, setFormData] = useState({
     description: "",
     status: "OPEN",
+    category: "",
+    tags: [],
   });
+
+  // same options as in create modal
+  const CATEGORY_OPTIONS = [
+    { value: "produce", label: "Produce" },
+    { value: "dairy", label: "Dairy" },
+    { value: "bakery", label: "Bakery" },
+    { value: "meat", label: "Meat" },
+    { value: "frozen", label: "Frozen" },
+    { value: "other", label: "Other" },
+  ];
+
+  const TAG_OPTIONS = [
+    { value: "vegetarian", label: "Vegetarian" },
+    { value: "vegan", label: "Vegan" },
+    { value: "glutenFree", label: "Gluten Free" },
+    { value: "organic", label: "Organic" },
+    { value: "perishable", label: "Perishable" },
+    { value: "refrigerated", label: "Refrigerated" },
+  ];
+
+  // normalize backend enum-like values to our lower-case UI values
+  const normalize = (v) => (typeof v === "string" ? v.trim() : v);
+  const toUiValue = (v) => {
+    if (!v) return "";
+    // convert e.g. "DAIRY" -> "dairy", "GLUTEN_FREE" -> "glutenFree"
+    const lower = v.toLowerCase();
+    if (lower.includes("_")) {
+      const parts = lower.split("_");
+      return parts[0] + parts.slice(1).map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join("");
+    }
+    return lower;
+  };
 
   useEffect(() => {
     if (lot) {
       setFormData({
         description: lot.description || "",
         status: lot.status || "OPEN",
+        category: toUiValue(lot.category) || "other",
+        tags: Array.isArray(lot.tags) ? lot.tags.map((t) => toUiValue(t)) : [],
       });
     }
   }, [lot]);
@@ -21,6 +57,24 @@ export default function EditLotModal({ show, lot, onClose, onLotUpdated }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleCategoryClick = (value) => {
+    setFormData((prev) => ({ ...prev, category: value }));
+  };
+
+  const handleTagToggle = (value) => {
+    setFormData((prev) => {
+      const already = prev.tags.includes(value);
+      if (already) {
+        return { ...prev, tags: prev.tags.filter((t) => t !== value) };
+      }
+      if (prev.tags.length >= 3) {
+        toast.error("You can select up to 3 tags only.");
+        return prev;
+      }
+      return { ...prev, tags: [...prev.tags, value] };
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -32,7 +86,15 @@ export default function EditLotModal({ show, lot, onClose, onLotUpdated }) {
     }
 
     try {
-      const res = await updateLot(lot.lotId, formData);
+      // send only what your backend accepts — we now include category + tags
+      const payload = {
+        description: formData.description,
+        status: formData.status,
+        category: formData.category || "other",
+        tags: formData.tags || [],
+      };
+
+      const res = await updateLot(lot.lotId, payload);
       if (res.success) {
         toast.success("Lot updated successfully!");
         onLotUpdated();
@@ -132,11 +194,75 @@ export default function EditLotModal({ show, lot, onClose, onLotUpdated }) {
                 >
                   {Object.values(Status).map((status) => (
                     <option key={status} value={status}>
-                      {status.charAt(0) + status.slice(1).toLowerCase().replace("_", " ")}
+                      {status.charAt(0) +
+                        status
+                          .slice(1)
+                          .toLowerCase()
+                          .replace("_", " ")}
                     </option>
                   ))}
                 </select>
+              </div>
 
+              {/* ✅ Category pills */}
+              <div className="mb-3">
+                <label
+                  className="form-label fw-semibold text-secondary"
+                  style={{ fontSize: "0.9rem" }}
+                >
+                  Category
+                </label>
+                <div className="d-flex flex-wrap gap-2">
+                  {CATEGORY_OPTIONS.map((cat) => {
+                    const active = formData.category === cat.value;
+                    return (
+                      <button
+                        key={cat.value}
+                        type="button"
+                        onClick={() => handleCategoryClick(cat.value)}
+                        className={`btn btn-sm ${active ? "btn-dark" : "btn-light"}`}
+                        style={{
+                          borderRadius: "9999px",
+                          border: active ? "1px solid #000" : "1px solid #e5e7eb",
+                        }}
+                      >
+                        {cat.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* ✅ Tags pills (max 3) */}
+              <div className="mb-3">
+                <label
+                  className="form-label fw-semibold text-secondary d-flex justify-content-between"
+                  style={{ fontSize: "0.9rem" }}
+                >
+                  <span>Tags (max 3)</span>
+                  <small className="text-muted">{formData.tags.length}/3 selected</small>
+                </label>
+                <div className="d-flex flex-wrap gap-2">
+                  {TAG_OPTIONS.map((tag) => {
+                    const active = formData.tags.includes(tag.value);
+                    return (
+                      <button
+                        key={tag.value}
+                        type="button"
+                        onClick={() => handleTagToggle(tag.value)}
+                        className={`btn btn-sm ${active ? "btn-outline-dark" : "btn-light"}`}
+                        style={{
+                          borderRadius: "9999px",
+                          backgroundColor: active ? "#fff" : "#f9fafb",
+                          border: active ? "1px solid #000" : "1px solid #e5e7eb",
+                          color: active ? "#000" : "#374151",
+                        }}
+                      >
+                        {tag.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 

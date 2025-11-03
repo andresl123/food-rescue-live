@@ -17,6 +17,10 @@ export default function CreateLotModal({ show, onClose, onLotCreated }) {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // ✅ NEW: category + tags state
+  const [category, setCategory] = useState("");
+  const [selectedTags, setSelectedTags] = useState([]);
+
   // ---------- Food Items ----------
   const [items, setItems] = useState([]);
   const [showFoodItemModal, setShowFoodItemModal] = useState(false);
@@ -32,6 +36,38 @@ export default function CreateLotModal({ show, onClose, onLotCreated }) {
     postalCode: "",
   });
   const [addingAddress, setAddingAddress] = useState(false);
+
+  // options for category / tags (UI only)
+  const CATEGORY_OPTIONS = [
+    { value: "produce", label: "Produce" },
+    { value: "dairy", label: "Dairy" },
+    { value: "bakery", label: "Bakery" },
+    { value: "meat", label: "Meat" },
+    { value: "frozen", label: "Frozen" },
+    { value: "other", label: "Other" },
+  ];
+
+  const TAG_OPTIONS = [
+    { value: "vegetarian", label: "Vegetarian" },
+    { value: "vegan", label: "Vegan" },
+    { value: "glutenFree", label: "Gluten Free" },
+    { value: "organic", label: "Organic" },
+    { value: "perishable", label: "Perishable" },
+    { value: "refrigerated", label: "Refrigerated" },
+  ];
+
+  // toggle tag (max 3)
+  const handleTagToggle = (tag) => {
+    if (selectedTags.includes(tag)) {
+      setSelectedTags((prev) => prev.filter((t) => t !== tag));
+    } else {
+      if (selectedTags.length >= 3) {
+        toast.error("You can select up to 3 tags only.");
+        return;
+      }
+      setSelectedTags((prev) => [...prev, tag]);
+    }
+  };
 
   // ---------- Fetch Addresses on Open ----------
   useEffect(() => {
@@ -162,6 +198,8 @@ export default function CreateLotModal({ show, onClose, onLotCreated }) {
       description,
       imageUrl: uploadedUrl || imageUrl || null,
       addressId: selectedAddressId, // ✅ include selected address
+      category: category || "other",
+      tags: selectedTags,
     };
 
     try {
@@ -190,6 +228,8 @@ export default function CreateLotModal({ show, onClose, onLotCreated }) {
     setItems([]);
     setMessage("");
     setStep(1);
+    setCategory("");
+    setSelectedTags([]);
   };
 
   if (!show) return null;
@@ -219,7 +259,7 @@ export default function CreateLotModal({ show, onClose, onLotCreated }) {
             <div
               className="d-flex justify-content-between align-items-center mb-4"
               style={{
-                backgroundColor: "#f5f5f6",        // slightly lighter gray
+                backgroundColor: "#f5f5f6",
                 borderRadius: "9999px",
                 padding: "4px",
               }}
@@ -260,7 +300,6 @@ export default function CreateLotModal({ show, onClose, onLotCreated }) {
               })}
             </div>
 
-
             {/* Step 1: Lot Info */}
             {step === 1 && (
               <>
@@ -288,14 +327,76 @@ export default function CreateLotModal({ show, onClose, onLotCreated }) {
                   </div>
                   <div className="col-md-6 mb-3">
                     <label className="form-label fw-semibold">Or Image URL</label>
-                    <input type="url" className="form-control" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} />
+                    <input
+                      type="url"
+                      className="form-control"
+                      value={imageUrl}
+                      onChange={(e) => setImageUrl(e.target.value)}
+                    />
                   </div>
                 </div>
 
-                {message && <div className="alert alert-light border mt-2 py-2 text-secondary">{message}</div>}
+                {/* ✅ NEW: Category */}
+                <div className="mb-3">
+                  <label className="form-label fw-semibold">Category</label>
+                  <div className="d-flex flex-wrap gap-2">
+                    {CATEGORY_OPTIONS.map((cat) => {
+                      const active = category === cat.value;
+                      return (
+                        <button
+                          key={cat.value}
+                          type="button"
+                          onClick={() => setCategory(cat.value)}
+                          className={`btn btn-sm ${active ? "btn-dark" : "btn-light"}`}
+                          style={{
+                            borderRadius: "9999px",
+                            border: active ? "1px solid #000" : "1px solid #e5e7eb",
+                          }}
+                        >
+                          {cat.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* ✅ NEW: Tags (max 3) */}
+                <div className="mb-2">
+                  <label className="form-label fw-semibold d-flex justify-content-between">
+                    <span>Tags</span>
+                    <small className="text-muted">{selectedTags.length}/3 selected</small>
+                  </label>
+                  <div className="d-flex flex-wrap gap-2">
+                    {TAG_OPTIONS.map((tag) => {
+                      const active = selectedTags.includes(tag.value);
+                      return (
+                        <button
+                          key={tag.value}
+                          type="button"
+                          onClick={() => handleTagToggle(tag.value)}
+                          className={`btn btn-sm ${active ? "btn-outline-dark" : "btn-light"}`}
+                          style={{
+                            borderRadius: "9999px",
+                            backgroundColor: active ? "#fff" : "#f9fafb",
+                            border: active ? "1px solid #000" : "1px solid #e5e7eb",
+                            color: active ? "#000" : "#374151",
+                          }}
+                        >
+                          {tag.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {message && (
+                  <div className="alert alert-light border mt-2 py-2 text-secondary">{message}</div>
+                )}
 
                 <div className="d-flex justify-content-end mt-4">
-                  <button className="btn btn-dark px-4" onClick={() => setStep(2)}>Next</button>
+                  <button className="btn btn-dark px-4" onClick={() => setStep(2)}>
+                    Next
+                  </button>
                 </div>
               </>
             )}
@@ -311,7 +412,9 @@ export default function CreateLotModal({ show, onClose, onLotCreated }) {
                   addresses.map((addr, idx) => (
                     <div
                       key={addr._id || addr.id || idx}
-                      className={`p-3 border rounded mb-2 ${selectedAddressId === (addr._id || addr.id) ? "bg-light border-dark" : ""}`}
+                      className={`p-3 border rounded mb-2 ${
+                        selectedAddressId === (addr._id || addr.id) ? "bg-light border-dark" : ""
+                      }`}
                       style={{ cursor: "pointer" }}
                       onClick={() => setSelectedAddressId(addr._id || addr.id)}
                     >
@@ -354,7 +457,11 @@ export default function CreateLotModal({ show, onClose, onLotCreated }) {
                   ))}
                 </div>
 
-                <button className="btn btn-outline-dark w-100" onClick={handleAddAddress} disabled={addingAddress}>
+                <button
+                  className="btn btn-outline-dark w-100"
+                  onClick={handleAddAddress}
+                  disabled={addingAddress}
+                >
                   {addingAddress ? "Adding..." : "Add Address"}
                 </button>
 
@@ -419,10 +526,7 @@ export default function CreateLotModal({ show, onClose, onLotCreated }) {
                                 height: "42px",
                               }}
                             >
-                              <i
-                                className="bi bi-basket2-fill text-dark"
-                                style={{ fontSize: "1.1rem" }}
-                              ></i>
+                              <i className="bi bi-basket2-fill text-dark" style={{ fontSize: "1.1rem" }}></i>
                             </div>
                             <div>
                               <div className="fw-semibold text-dark">{item.itemName}</div>
@@ -438,7 +542,6 @@ export default function CreateLotModal({ show, onClose, onLotCreated }) {
                       ))}
                     </div>
                   )}
-
                 </div>
 
                 <div className="d-flex justify-content-end mt-4">
