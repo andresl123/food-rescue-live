@@ -546,3 +546,27 @@
     background-color: #d32f2f; /* Even darker, solid red */
     color: #ffffff; /* White text for high contrast */
 }
+/* --- User Role Badge Styles --- */
+
+.role-admin {
+    background-color: #d1fae5; /* Green */
+    color: #065f46;
+}
+.role-volunteer { /* For DONOR */
+    background-color: #eef2ff; /* Indigo */
+    color: #4338ca;
+}
+.role-recipient {
+    background-color: #fef3c7; /* Amber */
+    color: #92400e;
+}
+.role-user {
+    background-color: #e5e7eb; /* Gray */
+    color: #374151;
+}
+
+/* New Status Styles for Users */
+.status-suspended {
+    background-color: #ffcdd2; /* Red */
+    color: #b71c1c;
+}

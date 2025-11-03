@@ -2,6 +2,7 @@ package com.foodrescue.auth.entity;
 
 import com.foodrescue.auth.entity.base.Auditable;
 import java.util.Set;
+import java.util.List;
 import jakarta.validation.constraints.*;
 import lombok.*;
 import org.springframework.data.annotation.Id;
@@ -30,6 +31,8 @@ public class User extends Auditable {
     private String phoneNumber;
 
     private String defaultAddressId;
+
+    private List<String> moreAddresses;
 
     @Builder.Default
     private Set<String> roles = Set.of("USER");
