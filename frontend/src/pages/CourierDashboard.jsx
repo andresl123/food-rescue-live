@@ -16,7 +16,8 @@ const availableJobsData = [
     distance: "2.3 km",
     estimatedTime: "15 min",
     servings: 25,
-    status: "available",
+    status_1: "pending",
+    status_2: "pending",
     urgency: "high",
     assigned_at: null,
     completed_at: null,
@@ -33,7 +34,8 @@ const availableJobsData = [
     distance: "3.8 km",
     estimatedTime: "20 min",
     servings: 40,
-    status: "available",
+    status_1: "pending",
+    status_2: "pending",
     urgency: "medium",
     assigned_at: null,
     completed_at: null,
@@ -50,7 +52,8 @@ const availableJobsData = [
     distance: "5.2 km",
     estimatedTime: "25 min",
     servings: 30,
-    status: "available",
+    status_1: "pending",
+    status_2: "pending",
     urgency: "low",
     assigned_at: null,
     completed_at: null,
@@ -58,7 +61,7 @@ const availableJobsData = [
   },
 ];
 
-// Mock data for my jobs
+// Mock data for my jobs (only one job at a time)
 const myJobsData = [
   {
     id: "JOB-004",
@@ -71,29 +74,13 @@ const myJobsData = [
     distance: "1.8 km",
     estimatedTime: "12 min",
     servings: 20,
-    status: "pickup_pending",
+    status_1: "pending",
+    status_2: "pending",
     urgency: "high",
     assigned_at: "2024-01-14T10:30:00",
     completed_at: null,
     notes: "Urgent delivery - call recipient upon arrival"
-  },
-  {
-    id: "JOB-005",
-    orderId: "ORDER-105",
-    donorName: "Downtown Deli",
-    donorAddress: "890 Market St, Center City",
-    recipientName: "Family Support Center",
-    recipientAddress: "432 Cedar Ave, Hillside",
-    foodItems: ["Prepared Meals", "Sides"],
-    distance: "4.1 km",
-    estimatedTime: "22 min",
-    servings: 35,
-    status: "delivery_pending",
-    urgency: "medium",
-    assigned_at: "2024-01-14T09:15:00",
-    completed_at: null,
-    notes: "Multiple containers - check all items"
-  },
+  }
 ];
 
 export default function CourierDashboard() {
@@ -280,6 +267,46 @@ export default function CourierDashboard() {
     } catch (e) {
       return "Invalid date";
     }
+  };
+
+  // Helper function to split each job into pickup and delivery jobs
+  const splitJobIntoTwo = (job) => {
+    const pickupJob = {
+      ...job,
+      jobType: 'pickup',
+      displayId: `${job.id}-PICKUP`,
+      locationName: job.donorName,
+      locationAddress: job.donorAddress,
+      status: job.status_1 || "pending",
+      jobStatus: job.status_1 || "pending"
+    };
+
+    const deliveryJob = {
+      ...job,
+      jobType: 'delivery',
+      displayId: `${job.id}-DELIVERY`,
+      locationName: job.recipientName,
+      locationAddress: job.recipientAddress,
+      status: job.status_2 || "pending",
+      jobStatus: job.status_2 || "pending"
+    };
+
+    return [pickupJob, deliveryJob];
+  };
+
+  // Get status badge for pickup/delivery jobs
+  const getJobStatusBadge = (status, jobType) => {
+    const isPending = status === "pending";
+    const isCompleted = status === "completed";
+    
+    if (jobType === 'pickup') {
+      if (isPending) return <Badge bg="warning" className="text-dark">Pickup Pending</Badge>;
+      if (isCompleted) return <Badge bg="success">Pickup Completed</Badge>;
+    } else {
+      if (isPending) return <Badge bg="primary">Delivery Pending</Badge>;
+      if (isCompleted) return <Badge bg="success">Delivery Completed</Badge>;
+    }
+    return <Badge bg="secondary">{status}</Badge>;
   };
 
   return (
@@ -649,7 +676,7 @@ export default function CourierDashboard() {
                                   <span style={{ fontSize: '0.875rem', fontWeight: '700', color: '#111827' }}>{job.orderId}</span>
                                 </div>
                               </div>
-                              {getStatusBadge(job.status)}
+                              <Badge bg="info">Available</Badge>
                             </div>
 
                             {/* Section 2: Pickup Location */}
@@ -768,36 +795,8 @@ export default function CourierDashboard() {
                               borderRadius: '8px',
                               borderTop: '1px solid #e5e7eb'
                             }}>
-                              <small className="d-block mb-2" style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                <i className="fas fa-history me-1"></i>
-                                Timeline
-                              </small>
-                              <div className="d-flex flex-wrap gap-3 mb-2">
-                                <div className="d-flex align-items-center gap-2">
-                                  <i className="fas fa-calendar-check" style={{ fontSize: '0.875rem', color: '#3b82f6' }}></i>
-                                  <div>
-                                    <small className="d-block" style={{ fontSize: '0.7rem', color: '#6b7280' }}>
-                                      Assigned
-                                    </small>
-                                    <span style={{ fontSize: '0.8rem', color: '#111827', fontWeight: '500' }}>
-                                      {formatDate(job.assigned_at)}
-                                    </span>
-                                  </div>
-                                </div>
-                                <div className="d-flex align-items-center gap-2">
-                                  <i className="fas fa-check-circle" style={{ fontSize: '0.875rem', color: '#10b981' }}></i>
-                                  <div>
-                                    <small className="d-block" style={{ fontSize: '0.7rem', color: '#6b7280' }}>
-                                      Completed
-                                    </small>
-                                    <span style={{ fontSize: '0.8rem', color: '#111827', fontWeight: '500' }}>
-                                      {formatDate(job.completed_at)}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
                               {job.notes && (
-                                <div className="mt-3 pt-3" style={{ borderTop: '1px solid #e5e7eb' }}>
+                                <div>
                                   <div className="d-flex align-items-start gap-2">
                                     <i className="fas fa-sticky-note mt-1" style={{ fontSize: '0.875rem', color: '#f59e0b' }}></i>
                                     <div className="flex-grow-1">
@@ -845,181 +844,223 @@ export default function CourierDashboard() {
                     </div>
                   ) : (
                     <div>
-                      {myJobs.map((job) => (
-                        <Card key={job.id} className="mb-4" style={{
-                          background: '#fff',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '16px',
-                          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-                        }}>
-                          <Card.Body className="p-4">
-                            {/* Section 1: Job Identification */}
-                            <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4" style={{ 
-                              paddingBottom: '16px',
-                              borderBottom: '2px solid #e5e7eb'
-                            }}>
-                              <div className="d-flex flex-wrap align-items-center gap-3">
-                                <div className="d-flex align-items-center gap-2">
-                                  <i className="fas fa-briefcase" style={{ fontSize: '0.875rem', color: '#6b7280' }}></i>
-                                  <small style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '500' }}>
-                                    Job ID:
-                                  </small>
-                                  <span style={{ fontSize: '0.875rem', fontWeight: '700', color: '#111827' }}>{job.id}</span>
-                                </div>
-                                <div className="d-flex align-items-center gap-2">
-                                  <i className="fas fa-shopping-cart" style={{ fontSize: '0.875rem', color: '#6b7280' }}></i>
-                                  <small style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '500' }}>
-                                    Order ID:
-                                  </small>
-                                  <span style={{ fontSize: '0.875rem', fontWeight: '700', color: '#111827' }}>{job.orderId}</span>
-                                </div>
-                              </div>
-                              {getStatusBadge(job.status)}
-                            </div>
-
-                            {/* Section 2: Pickup Location */}
-                            <div className="mb-4">
-                              <div className="d-flex justify-content-between align-items-start mb-2">
-                                <div className="flex-grow-1">
-                                  <div className="d-flex align-items-center gap-2 mb-1">
-                                    <i className="fas fa-store" style={{ fontSize: '0.875rem', color: '#10b981' }}></i>
-                                    <small style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                      Pickup From
+                      {(() => {
+                        // Show only the first job (should be only one)
+                        const job = myJobs[0];
+                        const [pickupJob, deliveryJob] = splitJobIntoTwo(job);
+                        return (
+                          <Card key={job.id} className="mb-4" style={{
+                            background: '#fff',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '16px',
+                            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                          }}>
+                            <Card.Body className="p-4">
+                              {/* Job Header */}
+                              <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4" style={{ 
+                                paddingBottom: '16px',
+                                borderBottom: '2px solid #e5e7eb'
+                              }}>
+                                <div className="d-flex flex-wrap align-items-center gap-3">
+                                  <div className="d-flex align-items-center gap-2">
+                                    <i className="fas fa-briefcase" style={{ fontSize: '0.875rem', color: '#6b7280' }}></i>
+                                    <small style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '500' }}>
+                                      Job ID:
                                     </small>
+                                    <span style={{ fontSize: '0.875rem', fontWeight: '700', color: '#111827' }}>{job.id}</span>
                                   </div>
-                                  <h6 style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#111827', marginBottom: '4px' }}>
-                                    {job.donorName}
+                                  <div className="d-flex align-items-center gap-2">
+                                    <i className="fas fa-shopping-cart" style={{ fontSize: '0.875rem', color: '#6b7280' }}></i>
+                                    <small style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '500' }}>
+                                      Order ID:
+                                    </small>
+                                    <span style={{ fontSize: '0.875rem', fontWeight: '700', color: '#111827' }}>{job.orderId}</span>
+                                  </div>
+                                </div>
+                                {getUrgencyBadge(job.urgency)}
+                              </div>
+
+                              {/* Pickup Section */}
+                              <div className="mb-4" style={{
+                                padding: '20px',
+                                background: '#fef2f2',
+                                borderRadius: '12px',
+                                borderLeft: '4px solid #ef4444'
+                              }}>
+                                <div className="d-flex align-items-center justify-content-between mb-3">
+                                  <div className="d-flex align-items-center gap-2">
+                                    <i className="fas fa-store" style={{ fontSize: '1rem', color: '#ef4444' }}></i>
+                                    <h5 style={{ fontSize: '1rem', fontWeight: 'bold', color: '#111827', margin: 0 }}>
+                                      Pickup Section
+                                    </h5>
+                                  </div>
+                                  {getJobStatusBadge(pickupJob.jobStatus, 'pickup')}
+                                </div>
+                                <div className="mb-3">
+                                  <small style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    Pickup From
+                                  </small>
+                                  <h6 style={{ fontSize: '1rem', fontWeight: 'bold', color: '#111827', marginBottom: '4px', marginTop: '4px' }}>
+                                    {pickupJob.locationName}
                                   </h6>
                                   <small style={{ fontSize: '0.85rem', color: '#6b7280' }}>
                                     <i className="fas fa-map-marker-alt me-1" style={{ color: '#ef4444' }}></i>
-                                    {job.donorAddress}
+                                    {pickupJob.locationAddress}
                                   </small>
                                 </div>
-                              </div>
-                            </div>
-                            
-                            {/* Section 3: Delivery Location */}
-                            <div className="mb-4" style={{
-                              padding: '16px',
-                              background: '#f9fafb',
-                              borderRadius: '8px',
-                              borderLeft: '3px solid #10b981'
-                            }}>
-                              <div className="d-flex align-items-start gap-2 mb-1">
-                                <i className="fas fa-arrow-right mt-1" style={{ color: '#10b981', fontSize: '1rem' }}></i>
-                                <div className="flex-grow-1">
-                                  <div className="d-flex align-items-center gap-2 mb-1">
-                                    <i className="fas fa-home" style={{ fontSize: '0.875rem', color: '#10b981' }}></i>
-                                    <small style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                      Deliver To
-                                    </small>
+                                {pickupJob.jobStatus === "pending" && (
+                                  <Button
+                                    className="w-100"
+                                    style={{
+                                      background: '#ef4444',
+                                      border: 'none',
+                                      borderRadius: '8px',
+                                      padding: '10px',
+                                      fontSize: '0.875rem',
+                                      fontWeight: '600'
+                                    }}
+                                    onClick={() => handleConfirmPickup(pickupJob.id)}
+                                  >
+                                    <i className="fas fa-check-circle me-2"></i>
+                                    Confirm Pickup
+                                  </Button>
+                                )}
+                                {pickupJob.jobStatus === "completed" && (
+                                  <div className="text-center p-2" style={{
+                                    background: '#d1fae5',
+                                    borderRadius: '8px',
+                                    color: '#065f46',
+                                    fontWeight: '600'
+                                  }}>
+                                    <i className="fas fa-check-circle me-2"></i>
+                                    Pickup Completed
                                   </div>
-                                  <h6 style={{ fontSize: '1rem', fontWeight: '600', color: '#111827', marginBottom: '4px' }}>
-                                    {job.recipientName}
+                                )}
+                              </div>
+
+                              {/* Delivery Section */}
+                              <div className="mb-4" style={{
+                                padding: '20px',
+                                background: '#f0fdf4',
+                                borderRadius: '12px',
+                                borderLeft: '4px solid #10b981'
+                              }}>
+                                <div className="d-flex align-items-center justify-content-between mb-3">
+                                  <div className="d-flex align-items-center gap-2">
+                                    <i className="fas fa-home" style={{ fontSize: '1rem', color: '#10b981' }}></i>
+                                    <h5 style={{ fontSize: '1rem', fontWeight: 'bold', color: '#111827', margin: 0 }}>
+                                      Delivery Section
+                                    </h5>
+                                  </div>
+                                  {getJobStatusBadge(deliveryJob.jobStatus, 'delivery')}
+                                </div>
+                                <div className="mb-3">
+                                  <small style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    Deliver To
+                                  </small>
+                                  <h6 style={{ fontSize: '1rem', fontWeight: 'bold', color: '#111827', marginBottom: '4px', marginTop: '4px' }}>
+                                    {deliveryJob.locationName}
                                   </h6>
                                   <small style={{ fontSize: '0.85rem', color: '#6b7280' }}>
                                     <i className="fas fa-map-marker-alt me-1" style={{ color: '#10b981' }}></i>
-                                    {job.recipientAddress}
+                                    {deliveryJob.locationAddress}
                                   </small>
                                 </div>
+                                {deliveryJob.jobStatus === "pending" && (
+                                  <Button
+                                    className="w-100"
+                                    style={{
+                                      background: '#10b981',
+                                      border: 'none',
+                                      borderRadius: '8px',
+                                      padding: '10px',
+                                      fontSize: '0.875rem',
+                                      fontWeight: '600'
+                                    }}
+                                    onClick={() => handleConfirmDelivery(deliveryJob.id)}
+                                  >
+                                    <i className="fas fa-check-circle me-2"></i>
+                                    Confirm Delivery
+                                  </Button>
+                                )}
+                                {deliveryJob.jobStatus === "completed" && (
+                                  <div className="text-center p-2" style={{
+                                    background: '#d1fae5',
+                                    borderRadius: '8px',
+                                    color: '#065f46',
+                                    fontWeight: '600'
+                                  }}>
+                                    <i className="fas fa-check-circle me-2"></i>
+                                    Delivery Completed
+                                  </div>
+                                )}
                               </div>
-                            </div>
 
-                            {/* Section 4: Delivery Details Grid */}
-                            <div className="mb-4">
-                              <small className="d-block mb-3" style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                <i className="fas fa-info-circle me-1"></i>
-                                Delivery Details
-                              </small>
-                              <Row className="g-3">
-                                <Col xs={4}>
-                                  <div className="text-center p-2" style={{ background: '#f9fafb', borderRadius: '6px' }}>
-                                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#111827', marginBottom: '4px' }}>
-                                      {job.distance}
+                              {/* Job Details */}
+                              <div className="mb-4">
+                                <small className="d-block mb-3" style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                  <i className="fas fa-info-circle me-1"></i>
+                                  Job Details
+                                </small>
+                                <Row className="g-3">
+                                  <Col xs={4}>
+                                    <div className="text-center p-2" style={{ background: '#f9fafb', borderRadius: '6px' }}>
+                                      <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#111827', marginBottom: '4px' }}>
+                                        {job.distance}
+                                      </div>
+                                      <small style={{ fontSize: '0.7rem', color: '#6b7280' }}>
+                                        <i className="fas fa-route me-1"></i>
+                                        Distance
+                                      </small>
                                     </div>
-                                    <small style={{ fontSize: '0.7rem', color: '#6b7280' }}>
-                                      <i className="fas fa-route me-1"></i>
-                                      Distance
-                                    </small>
-                                  </div>
-                                </Col>
-                                <Col xs={4}>
-                                  <div className="text-center p-2" style={{ background: '#f9fafb', borderRadius: '6px' }}>
-                                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#111827', marginBottom: '4px' }}>
-                                      {job.estimatedTime}
+                                  </Col>
+                                  <Col xs={4}>
+                                    <div className="text-center p-2" style={{ background: '#f9fafb', borderRadius: '6px' }}>
+                                      <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#111827', marginBottom: '4px' }}>
+                                        {job.estimatedTime}
+                                      </div>
+                                      <small style={{ fontSize: '0.7rem', color: '#6b7280' }}>
+                                        <i className="fas fa-clock me-1"></i>
+                                        Time
+                                      </small>
                                     </div>
-                                    <small style={{ fontSize: '0.7rem', color: '#6b7280' }}>
-                                      <i className="fas fa-clock me-1"></i>
-                                      Time
-                                    </small>
-                                  </div>
-                                </Col>
-                                <Col xs={4}>
-                                  <div className="text-center p-2" style={{ background: '#f9fafb', borderRadius: '6px' }}>
-                                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#111827', marginBottom: '4px' }}>
-                                      {job.servings}
+                                  </Col>
+                                  <Col xs={4}>
+                                    <div className="text-center p-2" style={{ background: '#f9fafb', borderRadius: '6px' }}>
+                                      <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#111827', marginBottom: '4px' }}>
+                                        {job.servings}
+                                      </div>
+                                      <small style={{ fontSize: '0.7rem', color: '#6b7280' }}>
+                                        <i className="fas fa-users me-1"></i>
+                                        Servings
+                                      </small>
                                     </div>
-                                    <small style={{ fontSize: '0.7rem', color: '#6b7280' }}>
-                                      <i className="fas fa-users me-1"></i>
-                                      Servings
-                                    </small>
-                                  </div>
-                                </Col>
-                              </Row>
-                            </div>
-
-                            {/* Section 5: Items */}
-                            <div className="mb-4">
-                              <small className="d-block mb-2" style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                <i className="fas fa-box me-1"></i>
-                                Food Items
-                              </small>
-                              <div className="d-flex flex-wrap gap-2">
-                                {job.foodItems.map((item, idx) => (
-                                  <Badge key={idx} bg="secondary" style={{ fontSize: '0.75rem', padding: '6px 12px', borderRadius: '6px' }}>
-                                    {item}
-                                  </Badge>
-                                ))}
+                                  </Col>
+                                </Row>
                               </div>
-                            </div>
 
-                            {/* Section 6: Timeline & Notes */}
-                            <div className="mb-3" style={{ 
-                              padding: '12px',
-                              background: '#f9fafb',
-                              borderRadius: '8px',
-                              borderTop: '1px solid #e5e7eb'
-                            }}>
-                              <small className="d-block mb-2" style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                <i className="fas fa-history me-1"></i>
-                                Timeline
-                              </small>
-                              <div className="d-flex flex-wrap gap-3 mb-2">
-                                <div className="d-flex align-items-center gap-2">
-                                  <i className="fas fa-calendar-check" style={{ fontSize: '0.875rem', color: '#3b82f6' }}></i>
-                                  <div>
-                                    <small className="d-block" style={{ fontSize: '0.7rem', color: '#6b7280' }}>
-                                      Assigned
-                                    </small>
-                                    <span style={{ fontSize: '0.8rem', color: '#111827', fontWeight: '500' }}>
-                                      {formatDate(job.assigned_at)}
-                                    </span>
-                                  </div>
-                                </div>
-                                <div className="d-flex align-items-center gap-2">
-                                  <i className="fas fa-check-circle" style={{ fontSize: '0.875rem', color: '#10b981' }}></i>
-                                  <div>
-                                    <small className="d-block" style={{ fontSize: '0.7rem', color: '#6b7280' }}>
-                                      Completed
-                                    </small>
-                                    <span style={{ fontSize: '0.8rem', color: '#111827', fontWeight: '500' }}>
-                                      {formatDate(job.completed_at)}
-                                    </span>
-                                  </div>
+                              {/* Food Items */}
+                              <div className="mb-4">
+                                <small className="d-block mb-2" style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                  <i className="fas fa-box me-1"></i>
+                                  Food Items
+                                </small>
+                                <div className="d-flex flex-wrap gap-2">
+                                  {job.foodItems.map((item, idx) => (
+                                    <Badge key={idx} bg="secondary" style={{ fontSize: '0.75rem', padding: '6px 12px', borderRadius: '6px' }}>
+                                      {item}
+                                    </Badge>
+                                  ))}
                                 </div>
                               </div>
+
+                              {/* Notes */}
                               {job.notes && (
-                                <div className="mt-3 pt-3" style={{ borderTop: '1px solid #e5e7eb' }}>
+                                <div className="mb-4" style={{ 
+                                  padding: '12px',
+                                  background: '#f9fafb',
+                                  borderRadius: '8px'
+                                }}>
                                   <div className="d-flex align-items-start gap-2">
                                     <i className="fas fa-sticky-note mt-1" style={{ fontSize: '0.875rem', color: '#f59e0b' }}></i>
                                     <div className="flex-grow-1">
@@ -1033,56 +1074,25 @@ export default function CourierDashboard() {
                                   </div>
                                 </div>
                               )}
-                            </div>
 
-                            <div className="d-grid gap-2">
-                              {job.status === "pickup_pending" && (
-                                <Button
-                                  style={{
-                                    background: '#3b82f6',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    padding: '12px',
-                                    fontSize: '0.875rem',
-                                    fontWeight: '600'
-                                  }}
-                                  onClick={() => handleConfirmPickup(job.id)}
-                                >
-                                  <i className="fas fa-check-circle me-2"></i>
-                                  Confirm Pickup
-                                </Button>
-                              )}
-                              {job.status === "delivery_pending" && (
-                                <Button
-                                  style={{
-                                    background: '#10b981',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    padding: '12px',
-                                    fontSize: '0.875rem',
-                                    fontWeight: '600'
-                                  }}
-                                  onClick={() => handleConfirmDelivery(job.id)}
-                                >
-                                  <i className="fas fa-check-circle me-2"></i>
-                                  Confirm Delivery
-                                </Button>
-                              )}
+                              {/* Cancel Job Button */}
                               <Button
                                 variant="outline-secondary"
+                                className="w-100"
                                 style={{
                                   borderRadius: '8px',
-                                  fontSize: '0.875rem'
+                                  fontSize: '0.875rem',
+                                  padding: '10px'
                                 }}
                                 onClick={() => handleCancelJob(job.id)}
                               >
                                 <i className="fas fa-times me-2"></i>
                                 Cancel Job
                               </Button>
-                            </div>
-                          </Card.Body>
-                        </Card>
-                      ))}
+                            </Card.Body>
+                          </Card>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>

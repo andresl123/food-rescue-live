@@ -1,10 +1,11 @@
 package com.foodrescue.jobs.model;
 
+import com.foodrescue.jobs.entity.base.Auditable;
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
-import java.time.LocalDate;
 import java.time.Instant;
 
 @Data
@@ -12,23 +13,23 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Document("jobs")
-public class Job {
+@EqualsAndHashCode(callSuper = false)
+public class Job extends Auditable {
     @Id
     private String jobId;
 
     private String courierId;
     private String orderId; // FK to orders.orderId
-    private String status; // assigned | pickup_pending | delivery_pending | delivered | cancelled
-    private LocalDate assignedAt;
-    private LocalDate completedAt;
+    
+    @Field("status_1")
+    private String status_1; // Status for donor/pickup verification
+    
+    @Field("status_2")
+    private String status_2; // Status for receiver/delivery verification
+    
+    private Instant assignedAt;
+    private Instant completedAt;
     private String notes;
-
-    // Denormalized convenience
-    private String recipientName;
-    private String deliveryAddress;
-
-    private Instant createdAt;
-    private Instant updatedAt;
 }
 
 
