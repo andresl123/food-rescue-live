@@ -15,7 +15,6 @@ function CourierVerificationPage() {
   const [scannedResult, setScannedResult] = useState('');
   const [cameraStream, setCameraStream] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
-  const [testJobId, setTestJobId] = useState('');
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -27,67 +26,7 @@ function CourierVerificationPage() {
     };
   }, []);
 
-  // Create test data on component mount
-  useEffect(() => {
-    const createTestData = async () => {
-      try {
-        // Create test order
-        const orderResponse = await fetch('http://localhost:8082/api/v1/orders', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            receiverId: 'user123',
-            status: 'pending'
-          })
-        });
-        
-        if (orderResponse.ok) {
-          const orderData = await orderResponse.json();
-          const orderId = orderData.data.id;
-          
-          // Create test job
-          const jobResponse = await fetch('http://localhost:8082/api/v1/jobs', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              courierId: 'courier789',
-              orderId: orderId,
-              status: 'assigned',
-              notes: 'Handle with care'
-            })
-          });
-          
-          if (jobResponse.ok) {
-            const jobData = await jobResponse.json();
-            const jobId = jobData.data.id;
-            setTestJobId(jobId); // Store the actual job ID
-            
-            // Create test POD
-            await fetch('http://localhost:8082/api/v1/pods', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                jobId: jobId,
-                otp: '123456'
-              })
-            });
-            
-            console.log('Test data created successfully with jobId:', jobId);
-          }
-        }
-      } catch (error) {
-        console.log('Test data creation failed (this is expected if backend is not running)');
-      }
-    };
-    
-    createTestData();
-  }, []);
+  // Note: Test data creation removed - we now use real job data from JobDataContext
 
   const handleOtpSubmit = async (e) => {
     e.preventDefault();
@@ -96,36 +35,67 @@ function CourierVerificationPage() {
     setMessage('');
 
     try {
-      // Call the real API endpoint
-      const response = await fetch('http://localhost:8082/api/v1/pods/verify', {
-        method: 'POST',
+      // Validate required data
+      if (!currentJob || !currentJob.id) {
+        toast.error('Job information is missing. Please go back and try again.');
+        setIsLoading(false);
+        return;
+      }
+
+      if (!otp || otp.length !== 6) {
+        toast.error('Please enter a valid 6-digit OTP.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Determine the endpoint based on verification type
+      const endpoint = verificationType === 'pickup' 
+        ? `http://localhost:8082/api/v1/pods/verify/${currentJob.id}/donor?code=${otp}`
+        : `http://localhost:8082/api/v1/pods/verify/${currentJob.id}/receiver?code=${otp}`;
+
+      console.log('Verifying OTP:', { jobId: currentJob.id, verificationType, endpoint });
+      
+      // Call the evidence-service API endpoint
+      const response = await fetch(endpoint, {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          jobId: testJobId || 'test-job-123',
-          verificationCode: otp
-        })
+        }
       });
       
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // The API returns a boolean directly (true/false)
       const result = await response.json();
       console.log('OTP Verification Response:', result);
       
-      if (result.success) {
-        toast.success('Verification successful! Delivery completed.');
+      if (result === true) {
+        const successMessage = verificationType === 'pickup' 
+          ? 'Pickup verification successful!'
+          : 'Delivery verification successful!';
+        toast.success(successMessage);
         setMessage('');
+        
         // Call the callback to update verification status
         if (onVerificationComplete) {
           onVerificationComplete();
         }
-        clearJobData(); // Clear job data after successful verification
-        setTimeout(() => navigate('/jobs'), 2000); // Redirect to jobs page
+        
+        // Clear job data after successful verification
+        clearJobData();
+        
+        // Redirect to jobs page after a short delay
+        setTimeout(() => navigate('/courier-dashboard'), 2000);
       } else {
-        toast.error(result.message);
+        toast.error('Invalid OTP. Please check and try again.');
+        setError('The OTP you entered is incorrect.');
       }
     } catch (err) {
       console.error('API Error:', err);
       toast.error('Verification failed. Please try again.');
+      setError('An error occurred during verification. Please check your connection and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -381,39 +351,76 @@ function CourierVerificationPage() {
     try {
       if (!scannedResult) {
         setError('❌ No QR code scanned or uploaded.');
+        setIsLoading(false);
         return;
       }
 
-      // Call the real API endpoint
-      const response = await fetch('http://localhost:8082/api/v1/pods/verify', {
-        method: 'POST',
+      // Validate required data
+      if (!currentJob || !currentJob.id) {
+        toast.error('Job information is missing. Please go back and try again.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Extract OTP from QR code (assuming QR code contains the OTP)
+      // If QR code contains job ID or other data, we might need to parse it differently
+      const qrOtp = scannedResult.replace(/\D/g, '').slice(0, 6);
+      
+      if (!qrOtp || qrOtp.length !== 6) {
+        toast.error('QR code does not contain a valid 6-digit OTP.');
+        setError('Please scan a valid QR code containing a 6-digit OTP.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Determine the endpoint based on verification type
+      const endpoint = verificationType === 'pickup' 
+        ? `http://localhost:8082/api/v1/pods/verify/${currentJob.id}/donor?code=${qrOtp}`
+        : `http://localhost:8082/api/v1/pods/verify/${currentJob.id}/receiver?code=${qrOtp}`;
+
+      console.log('Verifying QR Code OTP:', { jobId: currentJob.id, verificationType, qrOtp, endpoint });
+      
+      // Call the evidence-service API endpoint
+      const response = await fetch(endpoint, {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          jobId: testJobId || 'test-job-123',
-          verificationCode: scannedResult
-        })
+        }
       });
       
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // The API returns a boolean directly (true/false)
       const result = await response.json();
       console.log('QR Verification Response:', result);
       
-      if (result.success) {
-        toast.success('QR Code verified successfully! Delivery confirmed.');
+      if (result === true) {
+        const successMessage = verificationType === 'pickup' 
+          ? 'Pickup verification successful!'
+          : 'Delivery verification successful!';
+        toast.success(successMessage);
         setMessage('');
+        
         // Call the callback to update verification status
         if (onVerificationComplete) {
           onVerificationComplete();
         }
-        clearJobData(); // Clear job data after successful verification
-        setTimeout(() => navigate('/jobs'), 2000); // Redirect to jobs page
+        
+        // Clear job data after successful verification
+        clearJobData();
+        
+        // Redirect to jobs page after a short delay
+        setTimeout(() => navigate('/courier-dashboard'), 2000);
       } else {
-        toast.error(result.message);
+        toast.error('Invalid OTP from QR code. Please check and try again.');
+        setError('The OTP from the QR code is incorrect.');
       }
     } catch (err) {
       console.error('API Error:', err);
-      toast.error('An unexpected error occurred.');
+      toast.error('Verification failed. Please try again.');
+      setError('An error occurred during verification. Please check your connection and try again.');
     } finally {
       setIsLoading(false);
     }
