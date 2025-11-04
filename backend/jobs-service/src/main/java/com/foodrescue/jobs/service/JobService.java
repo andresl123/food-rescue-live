@@ -4,6 +4,7 @@ import com.foodrescue.jobs.model.Job;
 import com.foodrescue.jobs.repository.JobRepository;
 import com.foodrescue.jobs.web.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -12,6 +13,7 @@ import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class JobService {
 
     private final JobRepository jobs;
@@ -62,6 +64,14 @@ public class JobService {
     public Flux<Job> getByCourierId(String courierId) { return jobs.findByCourierId(courierId); }
     public Flux<Job> getByCourierIdAndStatus1(String courierId, String status1) { return jobs.findByCourierIdAndStatus_1(courierId, status1); }
     public Flux<Job> getByCourierIdAndStatus2(String courierId, String status2) { return jobs.findByCourierIdAndStatus_2(courierId, status2); }
+    
+    public Flux<Job> getAvailableJobs() {
+        log.info("Fetching all available jobs (where courierId is null)");
+        return jobs.findAvailableJobs()
+                .doOnNext(job -> log.debug("Found available job: jobId={}, orderId={}", job.getJobId(), job.getOrderId()))
+                .doOnComplete(() -> log.info("Finished fetching available jobs"))
+                .doOnError(error -> log.error("Error fetching available jobs", error));
+    }
 
     public Mono<ApiResponse<Job>> updateStatus1(String id, String status1) {
         return jobs.findById(id)
@@ -100,6 +110,49 @@ public class JobService {
                     return jobs.save(job);
                 })
                 .map(ApiResponse::ok)
+                .switchIfEmpty(Mono.just(ApiResponse.error("Job not found")));
+    }
+
+    public Mono<ApiResponse<Job>> unassignCourier(String jobId) {
+        log.info("Unassigning courier from job: jobId={}", jobId);
+        return jobs.findById(jobId)
+                .flatMap(job -> {
+                    job.setCourierId(null);
+                    job.setUpdatedAt(Instant.now());
+                    return jobs.save(job);
+                })
+                .map(ApiResponse::ok)
+                .doOnSuccess(job -> log.info("Courier unassigned successfully from job: jobId={}", jobId))
+                .switchIfEmpty(Mono.just(ApiResponse.error("Job not found")));
+    }
+
+    public Mono<ApiResponse<Job>> verifyStatus1(String jobId) {
+        log.info("Verifying status_1 (pickup) for job: jobId={}", jobId);
+        return jobs.findById(jobId)
+                .flatMap(job -> {
+                    job.setStatus_1("verified");
+                    job.setUpdatedAt(Instant.now());
+                    return jobs.save(job);
+                })
+                .map(ApiResponse::ok)
+                .doOnSuccess(job -> log.info("Status_1 verified successfully for job: jobId={}", jobId))
+                .switchIfEmpty(Mono.just(ApiResponse.error("Job not found")));
+    }
+
+    public Mono<ApiResponse<Job>> verifyStatus2(String jobId) {
+        log.info("Verifying status_2 (delivery) for job: jobId={}", jobId);
+        return jobs.findById(jobId)
+                .flatMap(job -> {
+                    job.setStatus_2("verified");
+                    job.setUpdatedAt(Instant.now());
+                    // If delivery is verified, also set completedAt
+                    if (job.getCompletedAt() == null) {
+                        job.setCompletedAt(Instant.now());
+                    }
+                    return jobs.save(job);
+                })
+                .map(ApiResponse::ok)
+                .doOnSuccess(job -> log.info("Status_2 verified successfully for job: jobId={}", jobId))
                 .switchIfEmpty(Mono.just(ApiResponse.error("Job not found")));
     }
 }

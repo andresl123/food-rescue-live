@@ -32,9 +32,10 @@ public class JobController {
         return service.getAllJobs();
     }
 
-    @GetMapping("/{id}")
-    public Mono<ResponseEntity<ApiResponse<Job>>> get(@PathVariable String id) {
-        return service.getById(id).map(ResponseEntity::ok);
+    // Specific routes must come before path variable routes
+    @GetMapping("/available")
+    public Flux<Job> getAvailableJobs() {
+        return service.getAvailableJobs();
     }
 
     @GetMapping("/order/{orderId}")
@@ -59,6 +60,11 @@ public class JobController {
         return service.getByCourierIdAndStatus2(courierId, status2);
     }
 
+    @GetMapping("/{id}")
+    public Mono<ResponseEntity<ApiResponse<Job>>> get(@PathVariable String id) {
+        return service.getById(id).map(ResponseEntity::ok);
+    }
+
     @PutMapping("/{id}/status1")
     public Mono<ResponseEntity<ApiResponse<Job>>> updateStatus1(@PathVariable String id, @RequestParam String status1) {
         return service.updateStatus1(id, status1).map(ResponseEntity::ok);
@@ -72,6 +78,21 @@ public class JobController {
     @PutMapping("/{jobId}/assign-courier/{courierId}")
     public Mono<ResponseEntity<ApiResponse<Job>>> assignCourier(@PathVariable String jobId, @PathVariable String courierId) {
         return service.assignCourier(jobId, courierId).map(ResponseEntity::ok);
+    }
+
+    @PutMapping("/{jobId}/unassign-courier")
+    public Mono<ResponseEntity<ApiResponse<Job>>> unassignCourier(@PathVariable String jobId) {
+        return service.unassignCourier(jobId).map(ResponseEntity::ok);
+    }
+
+    @PutMapping("/{jobId}/verify-status1")
+    public Mono<ResponseEntity<ApiResponse<Job>>> verifyStatus1(@PathVariable String jobId) {
+        return service.verifyStatus1(jobId).map(ResponseEntity::ok);
+    }
+
+    @PutMapping("/{jobId}/verify-status2")
+    public Mono<ResponseEntity<ApiResponse<Job>>> verifyStatus2(@PathVariable String jobId) {
+        return service.verifyStatus2(jobId).map(ResponseEntity::ok);
     }
 }
 

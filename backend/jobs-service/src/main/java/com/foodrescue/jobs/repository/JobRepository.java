@@ -21,6 +21,11 @@ public interface JobRepository extends ReactiveMongoRepository<Job, String> {
     
     @Query("{ 'courierId': ?0, 'status_2': ?1 }")
     Flux<Job> findByCourierIdAndStatus_2(String courierId, String status2);
+    
+    // Find jobs where courierId is null or doesn't exist (available jobs)
+    // Using explicit query to handle both null and missing fields
+    @Query("{ $or: [ { 'courierId': null }, { 'courierId': { $exists: false } } ] }")
+    Flux<Job> findAvailableJobs();
 }
 
 

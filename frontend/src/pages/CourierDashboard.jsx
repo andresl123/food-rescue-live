@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Row, Col, Card, Button, Badge, Modal } from 'react-bootstrap';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Row, Col, Card, Button, Badge, Modal, Spinner } from 'react-bootstrap';
+import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 // Mock data for available jobs
@@ -85,14 +85,132 @@ const myJobsData = [
 
 export default function CourierDashboard() {
   const navigate = useNavigate();
-  const [availableJobs, setAvailableJobs] = useState(availableJobsData);
-  const [myJobs, setMyJobs] = useState(myJobsData);
+  const location = useLocation();
+  const [availableJobs, setAvailableJobs] = useState([]);
+  const [myJobs, setMyJobs] = useState([]);
   const [activeTab, setActiveTab] = useState("available");
+  const [loading, setLoading] = useState(true);
+  const [loadingAccept, setLoadingAccept] = useState(false);
   
-  // Debug: Log when component renders
-  React.useEffect(() => {
-    console.log('CourierDashboard mounted', { availableJobs: availableJobs.length, myJobs: myJobs.length });
+  // Get courier ID from localStorage or use a default (you may want to get this from auth)
+  const getCourierId = () => {
+    // For now, using a placeholder. In production, get from auth context or localStorage
+    return localStorage.getItem('courierId') || 'COURIER-001';
+  };
+
+  // Fetch available jobs from API
+  const fetchAvailableJobs = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:8083/api/v1/jobs/available');
+      if (!response.ok) {
+        throw new Error('Failed to fetch available jobs');
+      }
+      const jobs = await response.json();
+      console.log('Available jobs fetched:', jobs);
+      
+      // Map API response to UI format
+      const mappedJobs = jobs.map(job => ({
+        id: job.jobId,
+        orderId: job.orderId,
+        jobId: job.jobId,
+        courierId: job.courierId,
+        status_1: job.status_1 || 'pending',
+        status_2: job.status_2 || 'pending',
+        assigned_at: job.assignedAt,
+        completed_at: job.completedAt,
+        notes: job.notes || '',
+        // Keep mock data fields for display (you may want to fetch these from order service)
+        donorName: `Donor for ${job.orderId}`,
+        donorAddress: "Address will be fetched from order service",
+        recipientName: `Recipient for ${job.orderId}`,
+        recipientAddress: "Address will be fetched from order service",
+        foodItems: ["Food items from order"],
+        distance: "2.5 km",
+        estimatedTime: "15 min",
+        servings: 20,
+        urgency: "medium"
+      }));
+      
+      setAvailableJobs(mappedJobs);
+    } catch (error) {
+      console.error('Error fetching available jobs:', error);
+      toast.error('Failed to load available jobs. Using mock data.');
+      // Fallback to mock data on error
+      setAvailableJobs(availableJobsData);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch my jobs (jobs assigned to this courier)
+  const fetchMyJobs = async () => {
+    try {
+      const courierId = getCourierId();
+      const response = await fetch(`http://localhost:8083/api/v1/jobs/courier/${courierId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch my jobs');
+      }
+      const jobs = await response.json();
+      console.log('My jobs fetched:', jobs);
+      
+      // Map API response to UI format
+      const mappedJobs = jobs.map(job => ({
+        id: job.jobId,
+        orderId: job.orderId,
+        jobId: job.jobId,
+        courierId: job.courierId,
+        status_1: job.status_1 || 'pending',
+        status_2: job.status_2 || 'pending',
+        assigned_at: job.assignedAt,
+        completed_at: job.completedAt,
+        notes: job.notes || '',
+        // Keep mock data fields for display
+        donorName: `Donor for ${job.orderId}`,
+        donorAddress: "Address will be fetched from order service",
+        recipientName: `Recipient for ${job.orderId}`,
+        recipientAddress: "Address will be fetched from order service",
+        foodItems: ["Food items from order"],
+        distance: "2.5 km",
+        estimatedTime: "15 min",
+        servings: 20,
+        urgency: "medium"
+      }));
+      
+      // Only show jobs that are not completed (both status_1 and status_2 should not be 'verified')
+      // A job is complete when both pickup (status_1) and delivery (status_2) are verified
+      const activeJobs = mappedJobs.filter(job => 
+        !(job.status_1 === 'verified' && job.status_2 === 'verified')
+      );
+      setMyJobs(activeJobs);
+    } catch (error) {
+      console.error('Error fetching my jobs:', error);
+      // Don't show error toast for my jobs, just keep empty array
+      setMyJobs([]);
+    }
+  };
+
+  // Check if we should switch to "my-jobs" tab from navigation state
+  useEffect(() => {
+    if (location.state?.activeTab === 'my-jobs') {
+      setActiveTab('my-jobs');
+    }
+  }, [location.state]);
+
+  // Fetch data on component mount and when tab changes
+  useEffect(() => {
+    fetchAvailableJobs();
+    fetchMyJobs();
   }, []);
+  
+  // Refresh available jobs when tab switches to available
+  useEffect(() => {
+    if (activeTab === 'available') {
+      fetchAvailableJobs();
+    } else if (activeTab === 'my-jobs') {
+      fetchMyJobs();
+    }
+  }, [activeTab]);
   const [confirmationDialog, setConfirmationDialog] = useState({
     open: false,
     type: "pickup",
@@ -113,7 +231,7 @@ export default function CourierDashboard() {
     rating: 4.9,
   });
 
-  const handleAcceptJob = (jobId) => {
+  const handleAcceptJob = async (jobId) => {
     // Check if courier already has a job
     if (myJobs.length > 0) {
       toast.error("You can only have one active job at a time", {
@@ -123,22 +241,93 @@ export default function CourierDashboard() {
     }
 
     const job = availableJobs.find((j) => j.id === jobId);
-    if (job) {
+    if (!job) {
+      toast.error("Job not found", { duration: 4000 });
+      return;
+    }
+
+    try {
+      setLoadingAccept(true);
+      const courierId = getCourierId();
+      
+      // Call the assign-courier API
+      const response = await fetch(
+        `http://localhost:8083/api/v1/jobs/${jobId}/assign-courier/${courierId}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Job assigned successfully:', result);
+
+      // Generate OTPs for this job
+      try {
+        const otpResponse = await fetch(
+          `http://localhost:8082/api/v1/pods/generate-otp?jobId=${jobId}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          }
+        );
+
+        if (!otpResponse.ok) {
+          console.warn('Failed to generate OTPs, but job was assigned successfully');
+          // Don't throw error here, job assignment was successful
+        } else {
+          const otpResult = await otpResponse.json();
+          console.log('OTPs generated successfully:', otpResult);
+        }
+      } catch (otpError) {
+        console.error('Error generating OTPs:', otpError);
+        // Don't throw error here, job assignment was successful
+        // OTPs can be generated later if needed
+      }
+
+      // Update local state - preserve all job data including donor/recipient info
       const acceptedJob = { 
         ...job, 
-        status: "pickup_pending",
-        assigned_at: new Date().toISOString()
+        courierId: courierId,
+        assigned_at: new Date().toISOString(),
+        status_1: job.status_1 || 'pending',
+        status_2: job.status_2 || 'pending',
+        // Preserve donor and recipient data from available job
+        donorName: job.donorName || `Donor for ${job.orderId}`,
+        donorAddress: job.donorAddress || "Address will be fetched from order service",
+        recipientName: job.recipientName || `Recipient for ${job.orderId}`,
+        recipientAddress: job.recipientAddress || "Address will be fetched from order service"
       };
+      
       setMyJobs([acceptedJob]);
       setAvailableJobs(availableJobs.filter((j) => j.id !== jobId));
+      
+      // Refresh available jobs to reflect the change
+      await fetchAvailableJobs();
       
       setTimeout(() => {
         setActiveTab("my-jobs");
       }, 300);
       
-      toast.success("Job accepted! Get ready for pickup.", {
+      toast.success("Job accepted! OTPs generated. Get ready for pickup.", {
         duration: 4000,
       });
+    } catch (error) {
+      console.error('Error accepting job:', error);
+      toast.error(`Failed to accept job: ${error.message}`, {
+        duration: 4000,
+      });
+    } finally {
+      setLoadingAccept(false);
     }
   };
 
@@ -179,17 +368,74 @@ export default function CourierDashboard() {
     }
   };
 
-  const handleConfirmCancel = (reason) => {
+  const handleConfirmCancel = async (reason) => {
     const job = myJobs.find((j) => j.id === cancelDialog.jobId);
-    if (job) {
+    if (!job) {
+      toast.error("Job not found", { duration: 4000 });
+      return;
+    }
+
+    try {
+      // Call the unassign-courier API to remove courier_id from the job
+      const response = await fetch(
+        `http://localhost:8083/api/v1/jobs/${cancelDialog.jobId}/unassign-courier`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Courier unassigned successfully:', result);
+
+      // Delete POD records for this job
+      try {
+        const deletePodResponse = await fetch(
+          `http://localhost:8082/api/v1/pods/job/${cancelDialog.jobId}`,
+          {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          }
+        );
+
+        if (deletePodResponse.ok) {
+          const deleteResult = await deletePodResponse.json();
+          console.log('POD records deleted successfully:', deleteResult);
+        } else {
+          // Log warning but don't fail the entire cancel operation
+          console.warn('Failed to delete POD records, but job cancellation succeeded');
+        }
+      } catch (podError) {
+        // Log error but don't fail the entire cancel operation
+        console.error('Error deleting POD records:', podError);
+      }
+
+      // Update local state
       setMyJobs([]);
       setCancelDialog({ open: false, jobId: "", jobName: "" });
+      
+      // Refresh available jobs to show the cancelled job
+      await fetchAvailableJobs();
       
       setTimeout(() => {
         setActiveTab("available");
       }, 500);
       
-      toast.info("Job cancelled", {
+      toast.success("Job cancelled successfully. It's now available for other couriers.", {
+        duration: 4000,
+      });
+    } catch (error) {
+      console.error('Error cancelling job:', error);
+      toast.error(`Failed to cancel job: ${error.message}`, {
         duration: 4000,
       });
     }
@@ -297,7 +543,7 @@ export default function CourierDashboard() {
   // Get status badge for pickup/delivery jobs
   const getJobStatusBadge = (status, jobType) => {
     const isPending = status === "pending";
-    const isCompleted = status === "completed";
+    const isCompleted = status === "completed" || status === "verified";
     
     if (jobType === 'pickup') {
       if (isPending) return <Badge bg="warning" className="text-dark">Pickup Pending</Badge>;
@@ -618,7 +864,14 @@ export default function CourierDashboard() {
             <div>
               {activeTab === "available" && (
                 <div>
-                  {myJobs.length > 0 ? (
+                  {loading ? (
+                    <div className="text-center py-5">
+                      <Spinner animation="border" role="status" style={{ color: '#10b981' }}>
+                        <span className="visually-hidden">Loading...</span>
+                      </Spinner>
+                      <p style={{ color: '#6b7280', marginTop: '16px' }}>Loading available jobs...</p>
+                    </div>
+                  ) : myJobs.length > 0 ? (
                     <div className="text-center py-5">
                       <div className="position-relative d-inline-block mb-3">
                         <i className="fas fa-box" style={{ fontSize: '4rem', color: '#86efac' }}></i>
@@ -823,8 +1076,23 @@ export default function CourierDashboard() {
                                 fontWeight: '600'
                               }}
                               onClick={() => handleAcceptJob(job.id)}
+                              disabled={loadingAccept}
                             >
-                              Accept Job
+                              {loadingAccept ? (
+                                <>
+                                  <Spinner
+                                    as="span"
+                                    animation="border"
+                                    size="sm"
+                                    role="status"
+                                    aria-hidden="true"
+                                    className="me-2"
+                                  />
+                                  Accepting...
+                                </>
+                              ) : (
+                                'Accept Job'
+                              )}
                             </Button>
                           </Card.Body>
                         </Card>
@@ -898,17 +1166,20 @@ export default function CourierDashboard() {
                                 </div>
                                 <div className="mb-3">
                                   <small style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                    Pickup From
+                                    Donor Name
                                   </small>
-                                  <h6 style={{ fontSize: '1rem', fontWeight: 'bold', color: '#111827', marginBottom: '4px', marginTop: '4px' }}>
-                                    {pickupJob.locationName}
+                                  <h6 style={{ fontSize: '1rem', fontWeight: 'bold', color: '#111827', marginBottom: '8px', marginTop: '4px' }}>
+                                    {job.donorName || 'N/A'}
                                   </h6>
-                                  <small style={{ fontSize: '0.85rem', color: '#6b7280' }}>
+                                  <small style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    Pickup Address
+                                  </small>
+                                  <small style={{ fontSize: '0.85rem', color: '#6b7280', display: 'block', marginTop: '4px' }}>
                                     <i className="fas fa-map-marker-alt me-1" style={{ color: '#ef4444' }}></i>
-                                    {pickupJob.locationAddress}
+                                    {job.donorAddress || 'Address not available'}
                                   </small>
                                 </div>
-                                {pickupJob.jobStatus === "pending" && (
+                                {(pickupJob.jobStatus === "pending" || !pickupJob.jobStatus) && (
                                   <Button
                                     className="w-100"
                                     style={{
@@ -925,7 +1196,7 @@ export default function CourierDashboard() {
                                     Confirm Pickup
                                   </Button>
                                 )}
-                                {pickupJob.jobStatus === "completed" && (
+                                {(pickupJob.jobStatus === "completed" || pickupJob.jobStatus === "verified") && (
                                   <div className="text-center p-2" style={{
                                     background: '#d1fae5',
                                     borderRadius: '8px',
@@ -956,17 +1227,20 @@ export default function CourierDashboard() {
                                 </div>
                                 <div className="mb-3">
                                   <small style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                    Deliver To
+                                    Receiver Name
                                   </small>
-                                  <h6 style={{ fontSize: '1rem', fontWeight: 'bold', color: '#111827', marginBottom: '4px', marginTop: '4px' }}>
-                                    {deliveryJob.locationName}
+                                  <h6 style={{ fontSize: '1rem', fontWeight: 'bold', color: '#111827', marginBottom: '8px', marginTop: '4px' }}>
+                                    {job.recipientName || 'N/A'}
                                   </h6>
-                                  <small style={{ fontSize: '0.85rem', color: '#6b7280' }}>
+                                  <small style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    Delivery Address
+                                  </small>
+                                  <small style={{ fontSize: '0.85rem', color: '#6b7280', display: 'block', marginTop: '4px' }}>
                                     <i className="fas fa-map-marker-alt me-1" style={{ color: '#10b981' }}></i>
-                                    {deliveryJob.locationAddress}
+                                    {job.recipientAddress || 'Address not available'}
                                   </small>
                                 </div>
-                                {deliveryJob.jobStatus === "pending" && (
+                                {(deliveryJob.jobStatus === "pending" || !deliveryJob.jobStatus) && (
                                   <Button
                                     className="w-100"
                                     style={{
@@ -983,7 +1257,7 @@ export default function CourierDashboard() {
                                     Confirm Delivery
                                   </Button>
                                 )}
-                                {deliveryJob.jobStatus === "completed" && (
+                                {(deliveryJob.jobStatus === "completed" || deliveryJob.jobStatus === "verified") && (
                                   <div className="text-center p-2" style={{
                                     background: '#d1fae5',
                                     borderRadius: '8px',

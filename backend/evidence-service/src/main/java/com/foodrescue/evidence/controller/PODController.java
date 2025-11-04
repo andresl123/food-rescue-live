@@ -41,4 +41,9 @@ public class PODController {
     public Mono<ResponseEntity<Boolean>> verifyReceiverGet(@PathVariable String jobId, @RequestParam String code) {
         return podService.verifyReceiverOtp(jobId, code).map(ResponseEntity::ok);
     }
+
+    @DeleteMapping("/job/{jobId}")
+    public Mono<ResponseEntity<ApiResponse<String>>> deleteByJobId(@PathVariable String jobId) {
+        return podService.deleteByJobId(jobId).map(ResponseEntity::ok);
+    }
 }

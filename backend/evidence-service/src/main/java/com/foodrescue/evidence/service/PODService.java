@@ -75,6 +75,26 @@ public class PODService {
                 .defaultIfEmpty(false)
                 .onErrorResume(e -> Mono.just(false));
     }
+
+    public Mono<ApiResponse<String>> deleteByJobId(String jobId) {
+        log.info("Deleting POD records for jobId={}", jobId);
+        return podRepository.findByJobId(jobId)
+                .collectList()
+                .flatMap(pods -> {
+                    if (pods.isEmpty()) {
+                        log.warn("No POD records found for jobId={}", jobId);
+                        return Mono.just(ApiResponse.<String>error("No POD records found for jobId: " + jobId));
+                    }
+                    log.info("Found {} POD record(s) to delete for jobId={}", pods.size(), jobId);
+                    return podRepository.deleteAll(pods)
+                            .then(Mono.just(ApiResponse.ok("Successfully deleted " + pods.size() + " POD record(s) for jobId: " + jobId)))
+                            .doOnSuccess(result -> log.info("Successfully deleted {} POD record(s) for jobId={}", pods.size(), jobId));
+                })
+                .onErrorResume(e -> {
+                    log.error("Failed to delete POD records for jobId={}", jobId, e);
+                    return Mono.just(ApiResponse.<String>error("Failed to delete POD records: " + e.getMessage()));
+                });
+    }
     
     // removed legacy create/verify/delete endpoints; OTP is generated and retrieved only
     

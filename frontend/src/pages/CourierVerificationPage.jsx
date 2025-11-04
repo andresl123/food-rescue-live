@@ -1,12 +1,35 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Container, Row, Col, Card, Button, Form, Alert, Modal } from 'react-bootstrap';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import { useJobData } from '../context/JobDataContext';
 
 function CourierVerificationPage() {
   const navigate = useNavigate();
-  const { currentJob, verificationType, clearJobData, onVerificationComplete } = useJobData();
+  const location = useLocation();
+  const { currentJob, verificationType, clearJobData, onVerificationComplete, setJobForVerification } = useJobData();
+  
+  // Get job data from location state or context
+  useEffect(() => {
+    if (location.state?.jobData && location.state?.verificationType) {
+      // Normalize job data to ensure all required fields are present
+      const jobData = location.state.jobData;
+      const normalizedJob = {
+        ...jobData,
+        // Ensure id field exists (use jobId if id is not present)
+        id: jobData.id || jobData.jobId,
+        // Map address fields for verification page
+        pickupAddress: jobData.pickupAddress || jobData.donorAddress,
+        deliveryAddress: jobData.deliveryAddress || jobData.recipientAddress,
+        // Map receiver name
+        receiverName: jobData.receiverName || jobData.recipientName
+      };
+      
+      console.log('Setting job for verification:', { normalizedJob, verificationType: location.state.verificationType });
+      // Set job data in context from location state
+      setJobForVerification(normalizedJob, location.state.verificationType);
+    }
+  }, [location.state, setJobForVerification]);
   const [verificationMethod, setVerificationMethod] = useState('otp');
   const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -36,7 +59,9 @@ function CourierVerificationPage() {
 
     try {
       // Validate required data
-      if (!currentJob || !currentJob.id) {
+      const jobId = currentJob?.id || currentJob?.jobId;
+      if (!currentJob || !jobId) {
+        console.error('Job data missing:', { currentJob, locationState: location.state });
         toast.error('Job information is missing. Please go back and try again.');
         setIsLoading(false);
         return;
@@ -48,12 +73,20 @@ function CourierVerificationPage() {
         return;
       }
 
+      // Ensure OTP is properly formatted (6 digits, no spaces)
+      const cleanOtp = otp.trim();
+      if (cleanOtp.length !== 6) {
+        toast.error('Please enter a valid 6-digit OTP.');
+        setIsLoading(false);
+        return;
+      }
+
       // Determine the endpoint based on verification type
       const endpoint = verificationType === 'pickup' 
-        ? `http://localhost:8082/api/v1/pods/verify/${currentJob.id}/donor?code=${otp}`
-        : `http://localhost:8082/api/v1/pods/verify/${currentJob.id}/receiver?code=${otp}`;
+        ? `http://localhost:8082/api/v1/pods/verify/${jobId}/donor?code=${cleanOtp}`
+        : `http://localhost:8082/api/v1/pods/verify/${jobId}/receiver?code=${cleanOtp}`;
 
-      console.log('Verifying OTP:', { jobId: currentJob.id, verificationType, endpoint });
+      console.log('Verifying OTP:', { jobId, verificationType, otp: cleanOtp, endpoint });
       
       // Call the evidence-service API endpoint
       const response = await fetch(endpoint, {
@@ -63,15 +96,49 @@ function CourierVerificationPage() {
         }
       });
       
+      console.log('Response status:', response.status, 'Response ok:', response.ok);
+      
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('Verification API error:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
 
       // The API returns a boolean directly (true/false)
       const result = await response.json();
-      console.log('OTP Verification Response:', result);
+      console.log('OTP Verification Response:', result, 'Type:', typeof result, 'Raw response:', JSON.stringify(result));
       
-      if (result === true) {
+      // Handle both direct boolean and wrapped responses
+      const isValid = result === true || result === 'true' || (typeof result === 'object' && result !== null && (result.success === true || result.data === true));
+      
+      if (isValid) {
+        // OTP verification successful, now update job status
+        try {
+          const statusEndpoint = verificationType === 'pickup'
+            ? `http://localhost:8083/api/v1/jobs/${jobId}/verify-status1`
+            : `http://localhost:8083/api/v1/jobs/${jobId}/verify-status2`;
+          
+          console.log('Updating job status:', { jobId, verificationType, statusEndpoint });
+          
+          const statusResponse = await fetch(statusEndpoint, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          });
+
+          if (!statusResponse.ok) {
+            console.warn('Failed to update job status, but OTP verification was successful');
+            // Don't throw error, OTP verification succeeded
+          } else {
+            const statusResult = await statusResponse.json();
+            console.log('Job status updated successfully:', statusResult);
+          }
+        } catch (statusError) {
+          console.error('Error updating job status:', statusError);
+          // Don't throw error, OTP verification succeeded
+        }
+
         const successMessage = verificationType === 'pickup' 
           ? 'Pickup verification successful!'
           : 'Delivery verification successful!';
@@ -86,8 +153,16 @@ function CourierVerificationPage() {
         // Clear job data after successful verification
         clearJobData();
         
-        // Redirect to jobs page after a short delay
-        setTimeout(() => navigate('/courier-dashboard'), 2000);
+        // Set loading to false before redirect
+        setIsLoading(false);
+        
+        // Use setTimeout to ensure state updates complete before navigation
+        setTimeout(() => {
+          navigate('/courier-dashboard', { 
+            replace: true,
+            state: { activeTab: 'my-jobs' }
+          });
+        }, 100);
       } else {
         toast.error('Invalid OTP. Please check and try again.');
         setError('The OTP you entered is incorrect.');
@@ -356,7 +431,9 @@ function CourierVerificationPage() {
       }
 
       // Validate required data
-      if (!currentJob || !currentJob.id) {
+      const jobId = currentJob?.id || currentJob?.jobId;
+      if (!currentJob || !jobId) {
+        console.error('Job data missing:', { currentJob, locationState: location.state });
         toast.error('Job information is missing. Please go back and try again.');
         setIsLoading(false);
         return;
@@ -373,12 +450,20 @@ function CourierVerificationPage() {
         return;
       }
 
+      // Ensure OTP is properly formatted (6 digits, no spaces)
+      const cleanQrOtp = qrOtp.trim();
+      if (cleanQrOtp.length !== 6) {
+        toast.error('QR code does not contain a valid 6-digit OTP.');
+        setIsLoading(false);
+        return;
+      }
+
       // Determine the endpoint based on verification type
       const endpoint = verificationType === 'pickup' 
-        ? `http://localhost:8082/api/v1/pods/verify/${currentJob.id}/donor?code=${qrOtp}`
-        : `http://localhost:8082/api/v1/pods/verify/${currentJob.id}/receiver?code=${qrOtp}`;
+        ? `http://localhost:8082/api/v1/pods/verify/${jobId}/donor?code=${cleanQrOtp}`
+        : `http://localhost:8082/api/v1/pods/verify/${jobId}/receiver?code=${cleanQrOtp}`;
 
-      console.log('Verifying QR Code OTP:', { jobId: currentJob.id, verificationType, qrOtp, endpoint });
+      console.log('Verifying QR Code OTP:', { jobId, verificationType, qrOtp: cleanQrOtp, endpoint });
       
       // Call the evidence-service API endpoint
       const response = await fetch(endpoint, {
@@ -388,15 +473,49 @@ function CourierVerificationPage() {
         }
       });
       
+      console.log('Response status:', response.status, 'Response ok:', response.ok);
+      
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('Verification API error:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
 
       // The API returns a boolean directly (true/false)
       const result = await response.json();
-      console.log('QR Verification Response:', result);
+      console.log('QR Verification Response:', result, 'Type:', typeof result, 'Raw response:', JSON.stringify(result));
       
-      if (result === true) {
+      // Handle both direct boolean and wrapped responses
+      const isValid = result === true || result === 'true' || (typeof result === 'object' && result !== null && (result.success === true || result.data === true));
+      
+      if (isValid) {
+        // OTP verification successful, now update job status
+        try {
+          const statusEndpoint = verificationType === 'pickup'
+            ? `http://localhost:8083/api/v1/jobs/${jobId}/verify-status1`
+            : `http://localhost:8083/api/v1/jobs/${jobId}/verify-status2`;
+          
+          console.log('Updating job status:', { jobId, verificationType, statusEndpoint });
+          
+          const statusResponse = await fetch(statusEndpoint, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          });
+
+          if (!statusResponse.ok) {
+            console.warn('Failed to update job status, but OTP verification was successful');
+            // Don't throw error, OTP verification succeeded
+          } else {
+            const statusResult = await statusResponse.json();
+            console.log('Job status updated successfully:', statusResult);
+          }
+        } catch (statusError) {
+          console.error('Error updating job status:', statusError);
+          // Don't throw error, OTP verification succeeded
+        }
+
         const successMessage = verificationType === 'pickup' 
           ? 'Pickup verification successful!'
           : 'Delivery verification successful!';
@@ -411,8 +530,16 @@ function CourierVerificationPage() {
         // Clear job data after successful verification
         clearJobData();
         
-        // Redirect to jobs page after a short delay
-        setTimeout(() => navigate('/courier-dashboard'), 2000);
+        // Set loading to false before redirect
+        setIsLoading(false);
+        
+        // Use setTimeout to ensure state updates complete before navigation
+        setTimeout(() => {
+          navigate('/courier-dashboard', { 
+            replace: true,
+            state: { activeTab: 'my-jobs' }
+          });
+        }, 100);
       } else {
         toast.error('Invalid OTP from QR code. Please check and try again.');
         setError('The OTP from the QR code is incorrect.');
@@ -538,13 +665,15 @@ function CourierVerificationPage() {
                     <Col md={6}>
                       <div>
                         <small className="d-block mb-1" style={{ color: '#a1a1a6', fontSize: '0.75rem' }}>Job ID</small>
-                        <span className="fw-semibold" style={{ color: '#ffffff', fontSize: '0.9rem' }}>{currentJob.id}</span>
+                        <span className="fw-semibold" style={{ color: '#ffffff', fontSize: '0.9rem' }}>{currentJob.id || currentJob.jobId}</span>
                       </div>
                     </Col>
                     <Col md={6}>
                       <div>
                         <small className="d-block mb-1" style={{ color: '#a1a1a6', fontSize: '0.75rem' }}>Receiver</small>
-                        <span className="fw-semibold" style={{ color: '#ffffff', fontSize: '0.9rem' }}>{currentJob.receiverName}</span>
+                        <span className="fw-semibold" style={{ color: '#ffffff', fontSize: '0.9rem' }}>
+                          {currentJob.receiverName || currentJob.recipientName || 'N/A'}
+                        </span>
                       </div>
                     </Col>
                     <Col md={12}>
@@ -553,7 +682,9 @@ function CourierVerificationPage() {
                           {verificationType === 'pickup' ? 'Pickup Address' : 'Delivery Address'}
                         </small>
                         <span className="fw-medium" style={{ color: '#ffffff', fontSize: '0.85rem' }}>
-                          {verificationType === 'pickup' ? currentJob.pickupAddress : currentJob.deliveryAddress}
+                          {verificationType === 'pickup' 
+                            ? (currentJob.pickupAddress || currentJob.donorAddress || 'Address not available')
+                            : (currentJob.deliveryAddress || currentJob.recipientAddress || 'Address not available')}
                         </span>
                       </div>
                     </Col>
