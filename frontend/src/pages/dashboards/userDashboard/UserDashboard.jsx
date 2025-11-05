@@ -5,6 +5,7 @@ import UserLayout from "../../../layout/UserLayout";
 
 // role components
 import DonorDashboard from "../../../components/dashboards/donor/DonorDashboard";
+import CourierDashboard from "../../../components/dashboards/Courier/CourierDashboard";
 
 export default function UserDashboard() {
   const token = localStorage.getItem("accessToken");
@@ -26,7 +27,7 @@ export default function UserDashboard() {
       case "RECEIVER":
         return <div className="text-center text-secondary mt-5">Receiver Dashboard coming soon…</div>;
       case "COURIER":
-        return <div className="text-center text-secondary mt-5">Courier Dashboard coming soon…</div>;
+        return <CourierDashboard />;
       default:
         return <div className="text-center text-danger mt-5">Invalid or missing role</div>;
     }

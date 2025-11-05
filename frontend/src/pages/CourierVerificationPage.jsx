@@ -115,8 +115,8 @@ function CourierVerificationPage() {
         // OTP verification successful, now update job status
         try {
           const statusEndpoint = verificationType === 'pickup'
-            ? `http://localhost:8083/api/v1/jobs/${jobId}/verify-status1`
-            : `http://localhost:8083/api/v1/jobs/${jobId}/verify-status2`;
+            ? `http://localhost:8083/api/v1/jobs/${jobId}/pickup`
+            : `http://localhost:8083/api/v1/jobs/${jobId}/delivered`;
           
           console.log('Updating job status:', { jobId, verificationType, statusEndpoint });
           
@@ -492,8 +492,8 @@ function CourierVerificationPage() {
         // OTP verification successful, now update job status
         try {
           const statusEndpoint = verificationType === 'pickup'
-            ? `http://localhost:8083/api/v1/jobs/${jobId}/verify-status1`
-            : `http://localhost:8083/api/v1/jobs/${jobId}/verify-status2`;
+            ? `http://localhost:8083/api/v1/jobs/${jobId}/pickup`
+            : `http://localhost:8083/api/v1/jobs/${jobId}/delivered`;
           
           console.log('Updating job status:', { jobId, verificationType, statusEndpoint });
           
