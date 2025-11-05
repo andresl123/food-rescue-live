@@ -152,4 +152,36 @@ public class LotService {
             return lotRepository.findByUserId(userId);
         });
     }
+
+    // Methods for Receiver Dashboard
+
+    public Mono<Lot> getLotById(String lotId) {
+        return lotRepository.findById(lotId)
+                .switchIfEmpty(Mono.error(new LotNotFoundException(
+                        "Lot with ID " + lotId + " not found."
+                )));
+    }
+
+    /**
+     * Dashboard-style listing: anyone can see, page/size.
+     */
+    public Mono<Map<String, Object>> getLotsPaged(int page, int size) {
+        int skip = page * size;
+
+        Mono<java.util.List<Lot>> lotsMono = lotRepository.findAll()
+                .skip(skip)
+                .take(size)
+                .collectList();
+
+        Mono<Long> totalMono = lotRepository.count();
+
+        return Mono.zip(lotsMono, totalMono)
+                .map(tuple -> Map.of(
+                        "success", true,
+                        "page", page,
+                        "size", size,
+                        "totalElements", tuple.getT2(),
+                        "data", tuple.getT1()
+                ));
+    }
 }

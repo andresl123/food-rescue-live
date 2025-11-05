@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/v1/lots")
 public class LotController {
@@ -81,4 +83,24 @@ public class LotController {
         return lotService.deleteLot(lotId, authenticationMono)
                 .then(Mono.just(ResponseEntity.noContent().build()));
     }
+
+    // Endpoints for the Reciever Dashboard
+
+    @GetMapping("/dashboard")
+    public Mono<Map<String, Object>> getLots(
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "12") int size
+    ) {
+        return lotService.getLotsPaged(page, size);
+    }
+
+    @GetMapping("/{id}")
+    public Mono<Map<String, Object>> getLotById(@PathVariable String id) {
+        return lotService.getLotById(id)
+                .map(lot -> Map.of(
+                        "success", true,
+                        "data", lot
+                ));
+    }
+
 }

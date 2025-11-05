@@ -1,16 +1,16 @@
-// pages/receiver/ReceiverDashboard.jsx (or your current path)
-import React, { useMemo, useState } from "react";
+// pages/receiver/ReceiverDashboard.jsx
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import LotCard from "../../../components/dashboards/receiver/LotCard";
 import LotFlipCard from "../../../components/dashboards/receiver/LotFlipCard";
 import ControlledDropdown from "../../../components/dashboards/receiver/ControlledDropdown";
-import { lots as MOCK_LOTS } from "../../../mock/lots";
-
-// NEW: modals
 import LotDetailsModal from "../../../components/dashboards/receiver/LotDetailsModal";
 import ConfirmReserveModal from "../../../components/dashboards/receiver/ConfirmReserveModal";
 
+import { bffFetch } from "../../../services/receiverLots";
+
+// ------------------ filters ------------------
 const FILTERS = {
   Distance: {
     key: "distanceKm",
@@ -21,7 +21,8 @@ const FILTERS = {
       { label: "10 km", value: 10 },
       { label: "Any", value: "any" },
     ],
-    apply: (lot, v) => (v === "any" ? true : lot.distanceKm <= v),
+    apply: (lot, v) =>
+      v === "any" ? true : (lot.distanceKm ?? Number.MAX_SAFE_INTEGER) <= v,
     display(v) {
       return this.options.find((o) => o.value === v)?.label ?? "Any";
     },
@@ -35,6 +36,7 @@ const FILTERS = {
     ],
     apply: (lot, v) => {
       if (v === "all") return true;
+      if (!lot.expiresAt) return true;
       const days = Math.ceil(
         (new Date(lot.expiresAt).getTime() - Date.now()) / 86400000
       );
@@ -47,16 +49,17 @@ const FILTERS = {
     },
   },
   Quantity: {
-    key: "weightLbs",
+    key: "totalItems",
     options: [
+      { label: "Any", value: 0 },
       { label: "10+", value: 10 },
       { label: "20+", value: 20 },
       { label: "30+", value: 30 },
       { label: "40+", value: 40 },
     ],
-    apply: (lot, v) => lot.weightLbs >= v,
+    apply: (lot, v) => (lot.totalItems ?? 0) >= v,
     display(v) {
-      return this.options.find((o) => o.value === v)?.label ?? "10+";
+      return this.options.find((o) => o.value === v)?.label ?? "Any";
     },
   },
   "Lot Type": {
@@ -69,7 +72,9 @@ const FILTERS = {
     ],
     apply: (lot, v) => (v ? lot.category === v : true),
     display(v) {
-      return v ? this.options.find((o) => o.value === v)?.label : "All categories";
+      return v
+        ? this.options.find((o) => o.value === v)?.label
+        : "All categories";
     },
   },
 };
@@ -77,23 +82,71 @@ const FILTERS = {
 const DEFAULT_FILTERS = Object.freeze({
   Distance: "any",
   Freshness: "all",
-  Quantity: 10,
+  Quantity: 0,
   "Lot Type": null,
 });
+
+// ---------------------------------------------------------------
 
 export default function ReceiverDashboard() {
   const navigate = useNavigate();
 
-  // existing UI state
   const [query, setQuery] = useState("");
   const [primary, setPrimary] = useState("Distance");
   const [selected, setSelected] = useState({ ...DEFAULT_FILTERS });
 
-  // NEW: modal state (kept minimal; doesn’t affect existing flow)
+  // data from backend
+  const [lots, setLots] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState(null);
+
+  // modals
   const [selectedLot, setSelectedLot] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
   const [confirmLot, setConfirmLot] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
+
+  // fetch once on mount
+  useEffect(() => {
+    let ignore = false;
+    (async () => {
+      try {
+        setLoading(true);
+        setErr(null);
+        const data = await bffFetch("/api/r_dashboard/dashboard");
+        console.log(data);
+        if (!ignore) {
+          // normalize each lot so items is always an array and totalItems is correct
+          const normalized = (Array.isArray(data) ? data : []).map((lot) => {
+            const itemsArr = Array.isArray(lot.items) ? lot.items : [];
+            const total =
+              typeof lot.totalItems === "number" && lot.totalItems > 0
+                ? lot.totalItems
+                : itemsArr.length;
+
+            return {
+              ...lot,
+              items: itemsArr,
+              totalItems: total,
+            };
+          });
+
+          setLots(normalized);
+        }
+      } catch (e) {
+        console.error("error fetching lots", e);
+        if (!ignore) {
+          setErr("Failed to load lots.");
+          setLots([]);
+        }
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    })();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const isDirty =
     selected.Distance !== DEFAULT_FILTERS.Distance ||
@@ -116,17 +169,24 @@ export default function ReceiverDashboard() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return MOCK_LOTS.filter((l) => {
+    return lots.filter((l) => {
       const inText =
         q.length === 0
           ? true
-          : [l.title, l.description, l.locationName, l.category, ...(l.tags || [])]
+          : [
+              l.title,
+              l.description,
+              l.locationName,
+              l.category,
+              ...(l.tags || []),
+            ]
+              .filter(Boolean)
               .join(" ")
               .toLowerCase()
               .includes(q);
       return inText && applyAll(l);
     });
-  }, [query, selected]);
+  }, [query, selected, lots]);
 
   const primaryItems = Object.keys(FILTERS).map((name) => ({
     key: name,
@@ -153,7 +213,6 @@ export default function ReceiverDashboard() {
     });
   }
 
-  // ---- NEW handlers (non-breaking) ----
   const openDetails = (lot) => {
     setSelectedLot(lot);
     setShowDetails(true);
@@ -169,11 +228,10 @@ export default function ReceiverDashboard() {
     setShowConfirm(false);
     navigate("/dashboard");
   };
-  // -------------------------------------
 
   return (
     <div className="container-fluid">
-      {/* Controls — inline reset slot */}
+      {/* Controls */}
       <div className={`frl-controls ${isDirty ? "show-reset" : ""}`}>
         <div className="frl-controls-main">
           <div className="row g-3 align-items-stretch">
@@ -234,7 +292,9 @@ export default function ReceiverDashboard() {
       {/* Summary */}
       <div className="mb-2 small text-muted d-flex align-items-center flex-wrap gap-2">
         <span>Showing</span>
-        <span className="badge text-bg-light border">{filtered.length} lots</span>
+        <span className="badge text-bg-light border">
+          {loading ? "…" : filtered.length} lots
+        </span>
         <span>within</span>
         <span className="badge text-bg-light border">
           {FILTERS.Distance.display(selected.Distance)}
@@ -257,28 +317,41 @@ export default function ReceiverDashboard() {
         )}
       </div>
 
+      {/* Errors */}
+      {err && <div className="alert alert-danger py-2">{err}</div>}
+
       {/* Grid */}
       <div className="row g-4">
-        {filtered.map((lot) => (
-          <div
-            className="col-12 col-md-6 col-xl-3"
-            key={lot.id}
-            onClick={() => openDetails(lot)}      // NEW: open details on click
-            style={{ cursor: "pointer" }}          // visual affordance only
-          >
-            <LotFlipCard lot={lot} front={<LotCard lot={lot} />} />
-          </div>
-        ))}
-        {filtered.length === 0 && (
+        {!loading &&
+          filtered.map((lot) => (
+            <div
+              className="col-12 col-md-6 col-xl-3"
+              key={lot.id}
+              onClick={() => openDetails(lot)}
+              style={{ cursor: "pointer" }}
+            >
+              <LotFlipCard lot={lot} front={<LotCard lot={lot} />} />
+            </div>
+          ))}
+
+        {!loading && filtered.length === 0 && !err && (
           <div className="col-12">
             <div className="text-center text-muted py-5">
               No lots match your filters.
             </div>
           </div>
         )}
+
+        {loading && (
+          <div className="col-12">
+            <div className="text-center text-muted py-5">
+              Loading lots…
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* --- NEW: Modals (don’t affect layout) --- */}
+      {/* Modals */}
       <LotDetailsModal
         lot={selectedLot}
         show={showDetails}
@@ -291,7 +364,6 @@ export default function ReceiverDashboard() {
         onCancel={() => setShowConfirm(false)}
         onConfirm={handleConfirmYes}
       />
-      {/* --------------------------------------- */}
     </div>
   );
 }
