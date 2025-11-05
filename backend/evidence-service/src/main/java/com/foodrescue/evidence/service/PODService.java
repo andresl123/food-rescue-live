@@ -20,11 +20,11 @@ public class PODService {
 
     public Mono<ApiResponse<PODResponse>> generateOtp(String jobId) {
         // 6-digit numeric OTPs
-        String otp1 = String.format("%06d", (int)(Math.random() * 1_000_000));
-        String otp2 = String.format("%06d", (int)(Math.random() * 1_000_000));
-        log.info("Generating OTP1 and OTP2 for jobId={}", jobId);
-        return podRepository.save(POD.builder().jobId(jobId).otp1(otp1).otp2(otp2).build())
-                .doOnSuccess(p -> log.info("POD saved id={} jobId={} otp1={} otp2={} createdAt={}", p.getId(), p.getJobId(), p.getOtp1(), p.getOtp2(), p.getCreatedAt()))
+        String pickupOtp = String.format("%06d", (int)(Math.random() * 1_000_000));
+        String deliveryOtp = String.format("%06d", (int)(Math.random() * 1_000_000));
+        log.info("Generating pickup OTP and delivery OTP for jobId={}", jobId);
+        return podRepository.save(POD.builder().jobId(jobId).pickupOtp(pickupOtp).deliveryOtp(deliveryOtp).build())
+                .doOnSuccess(p -> log.info("POD saved id={} jobId={} pickupOtp={} deliveryOtp={} createdAt={}", p.getId(), p.getJobId(), p.getPickupOtp(), p.getDeliveryOtp(), p.getCreatedAt()))
                 .map(this::toResponse)
                 .map(ApiResponse::created)
                 .onErrorResume(e -> {
@@ -36,7 +36,7 @@ public class PODService {
     public Mono<ApiResponse<PODResponse>> getOtpByJobId(String jobId) {
         log.info("Fetching latest OTP for jobId={}", jobId);
         return podRepository.findFirstByJobIdOrderByCreatedAtDesc(jobId)
-                .map(p -> ApiResponse.ok(new PODResponse(p.getId(), p.getJobId(), p.getOtp1(), p.getOtp2(), p.getCreatedAt(), p.getUpdatedAt())))
+                .map(p -> ApiResponse.ok(new PODResponse(p.getId(), p.getJobId(), p.getPickupOtp(), p.getDeliveryOtp(), p.getCreatedAt(), p.getUpdatedAt())))
                 .switchIfEmpty(Mono.just(ApiResponse.error("OTP not found for job")))
                 .onErrorResume(e -> {
                     log.error("Failed fetching OTP for jobId={}", jobId, e);
@@ -45,33 +45,33 @@ public class PODService {
     }
 
     public Mono<ApiResponse<String>> getDonorOtp(String jobId) {
-        log.info("Fetching donor OTP1 for jobId={}", jobId);
+        log.info("Fetching pickup OTP for jobId={}", jobId);
         return podRepository.findFirstByJobIdOrderByCreatedAtDesc(jobId)
-                .map(p -> ApiResponse.ok(p.getOtp1()))
-                .switchIfEmpty(Mono.just(ApiResponse.error("OTP1 not found for job")))
-                .onErrorResume(e -> Mono.just(ApiResponse.error("Failed fetching OTP1: " + e.getMessage())));
+                .map(p -> ApiResponse.ok(p.getPickupOtp()))
+                .switchIfEmpty(Mono.just(ApiResponse.error("Pickup OTP not found for job")))
+                .onErrorResume(e -> Mono.just(ApiResponse.error("Failed fetching pickup OTP: " + e.getMessage())));
     }
 
     public Mono<ApiResponse<String>> getReceiverOtp(String jobId) {
-        log.info("Fetching receiver OTP2 for jobId={}", jobId);
+        log.info("Fetching delivery OTP for jobId={}", jobId);
         return podRepository.findFirstByJobIdOrderByCreatedAtDesc(jobId)
-                .map(p -> ApiResponse.ok(p.getOtp2()))
-                .switchIfEmpty(Mono.just(ApiResponse.error("OTP2 not found for job")))
-                .onErrorResume(e -> Mono.just(ApiResponse.error("Failed fetching OTP2: " + e.getMessage())));
+                .map(p -> ApiResponse.ok(p.getDeliveryOtp()))
+                .switchIfEmpty(Mono.just(ApiResponse.error("Delivery OTP not found for job")))
+                .onErrorResume(e -> Mono.just(ApiResponse.error("Failed fetching delivery OTP: " + e.getMessage())));
     }
 
     public Mono<Boolean> verifyDonorOtp(String jobId, String code) {
-        log.info("Verifying donor OTP1 for jobId={}", jobId);
+        log.info("Verifying pickup OTP for jobId={}", jobId);
         return podRepository.findFirstByJobIdOrderByCreatedAtDesc(jobId)
-                .map(p -> code != null && code.equals(p.getOtp1()))
+                .map(p -> code != null && code.equals(p.getPickupOtp()))
                 .defaultIfEmpty(false)
                 .onErrorResume(e -> Mono.just(false));
     }
 
     public Mono<Boolean> verifyReceiverOtp(String jobId, String code) {
-        log.info("Verifying receiver OTP2 for jobId={}", jobId);
+        log.info("Verifying delivery OTP for jobId={}", jobId);
         return podRepository.findFirstByJobIdOrderByCreatedAtDesc(jobId)
-                .map(p -> code != null && code.equals(p.getOtp2()))
+                .map(p -> code != null && code.equals(p.getDeliveryOtp()))
                 .defaultIfEmpty(false)
                 .onErrorResume(e -> Mono.just(false));
     }
@@ -102,8 +102,8 @@ public class PODService {
         return new PODResponse(
                 pod.getId(),
                 pod.getJobId(),
-                pod.getOtp1(),
-                pod.getOtp2(),
+                pod.getPickupOtp(),
+                pod.getDeliveryOtp(),
                 pod.getCreatedAt(),
                 pod.getUpdatedAt()
         );

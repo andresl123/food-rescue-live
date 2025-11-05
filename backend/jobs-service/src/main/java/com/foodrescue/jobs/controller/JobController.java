@@ -41,23 +41,15 @@ public class JobController {
     @GetMapping("/order/{orderId}")
     public Flux<Job> byOrder(@PathVariable String orderId) { return service.getByOrderId(orderId); }
 
-    @GetMapping("/status1/{status1}")
-    public Flux<Job> byStatus1(@PathVariable String status1) { return service.getByStatus1(status1); }
-
-    @GetMapping("/status2/{status2}")
-    public Flux<Job> byStatus2(@PathVariable String status2) { return service.getByStatus2(status2); }
+    @GetMapping("/status/{status}")
+    public Flux<Job> byStatus(@PathVariable String status) { return service.getByStatus(status); }
 
     @GetMapping("/courier/{courierId}")
     public Flux<Job> byCourier(@PathVariable String courierId) { return service.getByCourierId(courierId); }
 
-    @GetMapping("/courier/{courierId}/status1/{status1}")
-    public Flux<Job> byCourierAndStatus1(@PathVariable String courierId, @PathVariable String status1) {
-        return service.getByCourierIdAndStatus1(courierId, status1);
-    }
-
-    @GetMapping("/courier/{courierId}/status2/{status2}")
-    public Flux<Job> byCourierAndStatus2(@PathVariable String courierId, @PathVariable String status2) {
-        return service.getByCourierIdAndStatus2(courierId, status2);
+    @GetMapping("/courier/{courierId}/status/{status}")
+    public Flux<Job> byCourierAndStatus(@PathVariable String courierId, @PathVariable String status) {
+        return service.getByCourierIdAndStatus(courierId, status);
     }
 
     @GetMapping("/{id}")
@@ -65,14 +57,9 @@ public class JobController {
         return service.getById(id).map(ResponseEntity::ok);
     }
 
-    @PutMapping("/{id}/status1")
-    public Mono<ResponseEntity<ApiResponse<Job>>> updateStatus1(@PathVariable String id, @RequestParam String status1) {
-        return service.updateStatus1(id, status1).map(ResponseEntity::ok);
-    }
-
-    @PutMapping("/{id}/status2")
-    public Mono<ResponseEntity<ApiResponse<Job>>> updateStatus2(@PathVariable String id, @RequestParam String status2) {
-        return service.updateStatus2(id, status2).map(ResponseEntity::ok);
+    @PutMapping("/{id}/status")
+    public Mono<ResponseEntity<ApiResponse<Job>>> updateStatus(@PathVariable String id, @RequestParam String status) {
+        return service.updateStatus(id, status).map(ResponseEntity::ok);
     }
 
     @PutMapping("/{jobId}/assign-courier/{courierId}")
@@ -85,14 +72,39 @@ public class JobController {
         return service.unassignCourier(jobId).map(ResponseEntity::ok);
     }
 
-    @PutMapping("/{jobId}/verify-status1")
-    public Mono<ResponseEntity<ApiResponse<Job>>> verifyStatus1(@PathVariable String jobId) {
-        return service.verifyStatus1(jobId).map(ResponseEntity::ok);
+    @PutMapping("/{jobId}/pickup")
+    public Mono<ResponseEntity<ApiResponse<Job>>> markAsPickedUp(@PathVariable String jobId) {
+        return service.markAsPickedUp(jobId).map(ResponseEntity::ok);
     }
 
-    @PutMapping("/{jobId}/verify-status2")
-    public Mono<ResponseEntity<ApiResponse<Job>>> verifyStatus2(@PathVariable String jobId) {
-        return service.verifyStatus2(jobId).map(ResponseEntity::ok);
+    @PutMapping("/{jobId}/in-transit")
+    public Mono<ResponseEntity<ApiResponse<Job>>> markAsInTransit(@PathVariable String jobId) {
+        return service.markAsInTransit(jobId).map(ResponseEntity::ok);
+    }
+
+    @PutMapping("/{jobId}/out-for-delivery")
+    public Mono<ResponseEntity<ApiResponse<Job>>> markAsOutForDelivery(@PathVariable String jobId) {
+        return service.markAsOutForDelivery(jobId).map(ResponseEntity::ok);
+    }
+
+    @PutMapping("/{jobId}/delivered")
+    public Mono<ResponseEntity<ApiResponse<Job>>> markAsDelivered(@PathVariable String jobId) {
+        return service.markAsDelivered(jobId).map(ResponseEntity::ok);
+    }
+
+    @PutMapping("/{jobId}/failed")
+    public Mono<ResponseEntity<ApiResponse<Job>>> markAsFailed(@PathVariable String jobId) {
+        return service.markAsFailed(jobId).map(ResponseEntity::ok);
+    }
+
+    @PutMapping("/{jobId}/cancelled")
+    public Mono<ResponseEntity<ApiResponse<Job>>> markAsCancelled(@PathVariable String jobId) {
+        return service.markAsCancelled(jobId).map(ResponseEntity::ok);
+    }
+
+    @PutMapping("/{jobId}/returned")
+    public Mono<ResponseEntity<ApiResponse<Job>>> markAsReturned(@PathVariable String jobId) {
+        return service.markAsReturned(jobId).map(ResponseEntity::ok);
     }
 }
 

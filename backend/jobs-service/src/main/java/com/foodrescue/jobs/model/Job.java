@@ -21,11 +21,7 @@ public class Job extends Auditable {
     private String courierId;
     private String orderId; // FK to orders.orderId
     
-    @Field("status_1")
-    private String status_1; // Status for donor/pickup verification
-    
-    @Field("status_2")
-    private String status_2; // Status for receiver/delivery verification
+    private String status; // Job status (pending, assigned, in_progress, completed, etc.)
     
     private Instant assignedAt;
     private Instant completedAt;

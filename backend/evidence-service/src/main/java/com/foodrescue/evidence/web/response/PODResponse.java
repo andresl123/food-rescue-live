@@ -5,8 +5,8 @@ import java.time.Instant;
 public record PODResponse(
         String id,
         String jobId,
-        String otp1,
-        String otp2,
+        String pickupOtp,
+        String deliveryOtp,
         Instant createdAt,
         Instant updatedAt
 ) {}

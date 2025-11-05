@@ -1,6 +1,7 @@
 package com.foodrescue.jobs.service;
 
 import com.foodrescue.jobs.model.Job;
+import com.foodrescue.jobs.model.JobStatus;
 import com.foodrescue.jobs.repository.JobRepository;
 import com.foodrescue.jobs.web.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -40,8 +41,7 @@ public class JobService {
         Job job = new Job();
         job.setJobId(generateJobId()); // Auto-generate unique job ID
         job.setOrderId(orderId);
-        job.setStatus_1("pending"); // Default status for pickup
-        job.setStatus_2("pending"); // Default status for delivery
+        // Status will be set when courier is assigned
         job.setAssignedAt(Instant.now());
         
         return jobs.save(job)
@@ -59,11 +59,9 @@ public class JobService {
     }
 
     public Flux<Job> getByOrderId(String orderId) { return jobs.findByOrderId(orderId); }
-    public Flux<Job> getByStatus1(String status1) { return jobs.findByStatus_1(status1); }
-    public Flux<Job> getByStatus2(String status2) { return jobs.findByStatus_2(status2); }
+    public Flux<Job> getByStatus(String status) { return jobs.findByStatus(status); }
     public Flux<Job> getByCourierId(String courierId) { return jobs.findByCourierId(courierId); }
-    public Flux<Job> getByCourierIdAndStatus1(String courierId, String status1) { return jobs.findByCourierIdAndStatus_1(courierId, status1); }
-    public Flux<Job> getByCourierIdAndStatus2(String courierId, String status2) { return jobs.findByCourierIdAndStatus_2(courierId, status2); }
+    public Flux<Job> getByCourierIdAndStatus(String courierId, String status) { return jobs.findByCourierIdAndStatus(courierId, status); }
     
     public Flux<Job> getAvailableJobs() {
         log.info("Fetching all available jobs (where courierId is null)");
@@ -73,24 +71,19 @@ public class JobService {
                 .doOnError(error -> log.error("Error fetching available jobs", error));
     }
 
-    public Mono<ApiResponse<Job>> updateStatus1(String id, String status1) {
+    public Mono<ApiResponse<Job>> updateStatus(String id, String status) {
         return jobs.findById(id)
                 .flatMap(j -> {
-                    j.setStatus_1(status1);
+                    j.setStatus(status);
                     j.setUpdatedAt(Instant.now());
-                    return jobs.save(j);
-                })
-                .map(ApiResponse::ok)
-                .switchIfEmpty(Mono.just(ApiResponse.error("Job not found")));
-    }
-
-    public Mono<ApiResponse<Job>> updateStatus2(String id, String status2) {
-        return jobs.findById(id)
-                .flatMap(j -> {
-                    j.setStatus_2(status2);
-                    j.setUpdatedAt(Instant.now());
-                    if ("completed".equalsIgnoreCase(status2)) {
-                        j.setCompletedAt(Instant.now());
+                    // Set completedAt for final statuses
+                    if (JobStatus.DELIVERED.equalsIgnoreCase(status) || 
+                        JobStatus.FAILED.equalsIgnoreCase(status) || 
+                        JobStatus.CANCELLED.equalsIgnoreCase(status) ||
+                        JobStatus.RETURNED.equalsIgnoreCase(status)) {
+                        if (j.getCompletedAt() == null) {
+                            j.setCompletedAt(Instant.now());
+                        }
                     }
                     return jobs.save(j);
                 })
@@ -99,9 +92,11 @@ public class JobService {
     }
 
     public Mono<ApiResponse<Job>> assignCourier(String jobId, String courierId) {
+        log.info("Assigning courier {} to job: {}", courierId, jobId);
         return jobs.findById(jobId)
                 .flatMap(job -> {
                     job.setCourierId(courierId);
+                    job.setStatus(JobStatus.ASSIGNED);
                     job.setUpdatedAt(Instant.now());
                     // If assignedAt is null, set it to now (first time assignment)
                     if (job.getAssignedAt() == null) {
@@ -110,6 +105,7 @@ public class JobService {
                     return jobs.save(job);
                 })
                 .map(ApiResponse::ok)
+                .doOnSuccess(job -> log.info("Courier {} assigned successfully to job: {}", courierId, jobId))
                 .switchIfEmpty(Mono.just(ApiResponse.error("Job not found")));
     }
 
@@ -118,41 +114,118 @@ public class JobService {
         return jobs.findById(jobId)
                 .flatMap(job -> {
                     job.setCourierId(null);
+                    job.setStatus(JobStatus.CANCELLED);
                     job.setUpdatedAt(Instant.now());
-                    return jobs.save(job);
-                })
-                .map(ApiResponse::ok)
-                .doOnSuccess(job -> log.info("Courier unassigned successfully from job: jobId={}", jobId))
-                .switchIfEmpty(Mono.just(ApiResponse.error("Job not found")));
-    }
-
-    public Mono<ApiResponse<Job>> verifyStatus1(String jobId) {
-        log.info("Verifying status_1 (pickup) for job: jobId={}", jobId);
-        return jobs.findById(jobId)
-                .flatMap(job -> {
-                    job.setStatus_1("verified");
-                    job.setUpdatedAt(Instant.now());
-                    return jobs.save(job);
-                })
-                .map(ApiResponse::ok)
-                .doOnSuccess(job -> log.info("Status_1 verified successfully for job: jobId={}", jobId))
-                .switchIfEmpty(Mono.just(ApiResponse.error("Job not found")));
-    }
-
-    public Mono<ApiResponse<Job>> verifyStatus2(String jobId) {
-        log.info("Verifying status_2 (delivery) for job: jobId={}", jobId);
-        return jobs.findById(jobId)
-                .flatMap(job -> {
-                    job.setStatus_2("verified");
-                    job.setUpdatedAt(Instant.now());
-                    // If delivery is verified, also set completedAt
                     if (job.getCompletedAt() == null) {
                         job.setCompletedAt(Instant.now());
                     }
                     return jobs.save(job);
                 })
                 .map(ApiResponse::ok)
-                .doOnSuccess(job -> log.info("Status_2 verified successfully for job: jobId={}", jobId))
+                .doOnSuccess(job -> log.info("Courier unassigned and job cancelled: jobId={}", jobId))
+                .switchIfEmpty(Mono.just(ApiResponse.error("Job not found")));
+    }
+
+    public Mono<ApiResponse<Job>> markAsPickedUp(String jobId) {
+        log.info("Marking job as picked up: jobId={}", jobId);
+        return jobs.findById(jobId)
+                .flatMap(job -> {
+                    job.setStatus(JobStatus.PICKED_UP);
+                    job.setUpdatedAt(Instant.now());
+                    return jobs.save(job);
+                })
+                .map(ApiResponse::ok)
+                .doOnSuccess(job -> log.info("Job marked as picked up: jobId={}", jobId))
+                .switchIfEmpty(Mono.just(ApiResponse.error("Job not found")));
+    }
+
+    public Mono<ApiResponse<Job>> markAsInTransit(String jobId) {
+        log.info("Marking job as in transit: jobId={}", jobId);
+        return jobs.findById(jobId)
+                .flatMap(job -> {
+                    job.setStatus(JobStatus.IN_TRANSIT);
+                    job.setUpdatedAt(Instant.now());
+                    return jobs.save(job);
+                })
+                .map(ApiResponse::ok)
+                .doOnSuccess(job -> log.info("Job marked as in transit: jobId={}", jobId))
+                .switchIfEmpty(Mono.just(ApiResponse.error("Job not found")));
+    }
+
+    public Mono<ApiResponse<Job>> markAsOutForDelivery(String jobId) {
+        log.info("Marking job as out for delivery: jobId={}", jobId);
+        return jobs.findById(jobId)
+                .flatMap(job -> {
+                    job.setStatus(JobStatus.OUT_FOR_DELIVERY);
+                    job.setUpdatedAt(Instant.now());
+                    return jobs.save(job);
+                })
+                .map(ApiResponse::ok)
+                .doOnSuccess(job -> log.info("Job marked as out for delivery: jobId={}", jobId))
+                .switchIfEmpty(Mono.just(ApiResponse.error("Job not found")));
+    }
+
+    public Mono<ApiResponse<Job>> markAsDelivered(String jobId) {
+        log.info("Marking job as delivered: jobId={}", jobId);
+        return jobs.findById(jobId)
+                .flatMap(job -> {
+                    job.setStatus(JobStatus.DELIVERED);
+                    job.setUpdatedAt(Instant.now());
+                    if (job.getCompletedAt() == null) {
+                        job.setCompletedAt(Instant.now());
+                    }
+                    return jobs.save(job);
+                })
+                .map(ApiResponse::ok)
+                .doOnSuccess(job -> log.info("Job marked as delivered: jobId={}", jobId))
+                .switchIfEmpty(Mono.just(ApiResponse.error("Job not found")));
+    }
+
+    public Mono<ApiResponse<Job>> markAsFailed(String jobId) {
+        log.info("Marking job as failed: jobId={}", jobId);
+        return jobs.findById(jobId)
+                .flatMap(job -> {
+                    job.setStatus(JobStatus.FAILED);
+                    job.setUpdatedAt(Instant.now());
+                    if (job.getCompletedAt() == null) {
+                        job.setCompletedAt(Instant.now());
+                    }
+                    return jobs.save(job);
+                })
+                .map(ApiResponse::ok)
+                .doOnSuccess(job -> log.info("Job marked as failed: jobId={}", jobId))
+                .switchIfEmpty(Mono.just(ApiResponse.error("Job not found")));
+    }
+
+    public Mono<ApiResponse<Job>> markAsCancelled(String jobId) {
+        log.info("Marking job as cancelled: jobId={}", jobId);
+        return jobs.findById(jobId)
+                .flatMap(job -> {
+                    job.setStatus(JobStatus.CANCELLED);
+                    job.setUpdatedAt(Instant.now());
+                    if (job.getCompletedAt() == null) {
+                        job.setCompletedAt(Instant.now());
+                    }
+                    return jobs.save(job);
+                })
+                .map(ApiResponse::ok)
+                .doOnSuccess(job -> log.info("Job marked as cancelled: jobId={}", jobId))
+                .switchIfEmpty(Mono.just(ApiResponse.error("Job not found")));
+    }
+
+    public Mono<ApiResponse<Job>> markAsReturned(String jobId) {
+        log.info("Marking job as returned: jobId={}", jobId);
+        return jobs.findById(jobId)
+                .flatMap(job -> {
+                    job.setStatus(JobStatus.RETURNED);
+                    job.setUpdatedAt(Instant.now());
+                    if (job.getCompletedAt() == null) {
+                        job.setCompletedAt(Instant.now());
+                    }
+                    return jobs.save(job);
+                })
+                .map(ApiResponse::ok)
+                .doOnSuccess(job -> log.info("Job marked as returned: jobId={}", jobId))
                 .switchIfEmpty(Mono.just(ApiResponse.error("Job not found")));
     }
 }
