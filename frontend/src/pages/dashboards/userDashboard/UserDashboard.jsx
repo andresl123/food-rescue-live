@@ -2,7 +2,10 @@
 import React, { useEffect, useState } from "react";
 import { jwtDecode } from "jwt-decode";
 import UserLayout from "../../../layout/UserLayout";
+
+// role components
 import DonorDashboard from "../../../components/dashboards/donor/DonorDashboard";
+import ReceiverDashboard from "../../dashboards/receiver/ReceiverDashboard";
 
 export default function UserDashboard() {
   const [role, setRole] = useState(null);
@@ -42,19 +45,26 @@ export default function UserDashboard() {
     );
   }
 
-  return (
-    <UserLayout role={role}>
-      {role === "DONOR" && <DonorDashboard />}
-      {role === "RECEIVER" && (
-        <div className="text-center text-secondary mt-5">
-          Receiver Dashboard coming soon…
-        </div>
-      )}
-      {role === "COURIER" && (
-        <div className="text-center text-secondary mt-5">
-          Courier Dashboard coming soon…
-        </div>
-      )}
-    </UserLayout>
-  );
+  const renderByRole = () => {
+    switch (role) {
+      case "DONOR":
+        return <DonorDashboard />;
+      case "RECEIVER":
+        return <ReceiverDashboard />;
+      case "COURIER":
+        return (
+          <div className="text-center text-secondary mt-5">
+            Courier Dashboard coming soon…
+          </div>
+        );
+      default:
+        return (
+          <div className="text-center text-danger mt-5">
+            Invalid or missing role
+          </div>
+        );
+    }
+  };
+
+  return <UserLayout role={role}>{renderByRole()}</UserLayout>;
 }

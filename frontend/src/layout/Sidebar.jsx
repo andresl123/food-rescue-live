@@ -1,106 +1,155 @@
-// src/layout/Sidebar.jsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { NavLink } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 
-export default function Sidebar({ activeTab, setActiveTab, role }) {
-  const [collapsed, setCollapsed] = useState(false);
+export default function Sidebar({
+  collapsed,
+  setCollapsed,
+  navbarHeight = 64,
+  expandedWidth = 260,
+  collapsedWidth = 88,
+  sidebarRef,
+}) {
+  const [role, setRole] = useState("USER");
+
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    if (token) {
+      try {
+        const d = jwtDecode(token);
+        setRole((d.roles?.[0] || "USER").toUpperCase());
+      } catch {}
+    }
+  }, []);
+
+  /** ---------------- Role → Nav items map ---------------- */
+  const baseItems = [
+    { path: "/dashboard", label: "Dashboard", icon: "bi-grid" },
+  ];
+
+  const roleNavMap = {
+    COURIER: [
+      { path: "/orders", label: "Previous Orders", icon: "bi-clock-history" },
+      { path: "/profile", label: "Profile", icon: "bi-person" },
+    ],
+    RECEIVER: [
+      { path: "/profile", label: "Profile", icon: "bi-person" },
+      { path: "/requests", label: "My Requests", icon: "bi-basket" },
+      { path: "/delivery", label: "Delivery Update", icon: "bi-truck" },
+      { path: "/orders", label: "Previous Orders", icon: "bi-clock-history" },
+    ],
+    DONOR: [
+      { path: "/profile", label: "Profile", icon: "bi-person" },
+      { path: "/lots", label: "My Lots", icon: "bi-box-seam" },
+      { path: "/bulk-import", label: "Bulk Import", icon: "bi-cloud-upload" },
+    ],
+    DEFAULT: [
+      { path: "/profile", label: "Profile", icon: "bi-person" },
+    ],
+  };
 
   const items = [
-    { key: "dashboard", label: "Dashboard", icon: "bi-grid" },
-    ...(role === "DONOR"
-      ? [{ key: "foodItems", label: "Food Items", icon: "bi-egg-fried" }]
-      : []),
-    { key: "profile", label: "Profile", icon: "bi-person" },
+    ...baseItems,
+    ...(roleNavMap[role] ?? roleNavMap.DEFAULT),
   ];
+
+  const handleLogout = async () => {
+    const accessToken = localStorage.getItem("accessToken");
+    const refreshToken = localStorage.getItem("refreshToken");
+    try {
+      await fetch("http://localhost:8080/api/v1/auth/logout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+          "X-Refresh-Token": refreshToken || "",
+        },
+      });
+    } catch {}
+    // localStorage.removeItem("accessToken");
+    // localStorage.removeItem("refreshToken");
+    // window.location.href = "/authentication";
+  };
+
+  // Expand sidebar on any click inside it while collapsed.
+  const handleRootMouseDown = (e) => {
+    if (!collapsed) return;
+    if (e.target.closest('[data-action="logout"]')) return;
+    setCollapsed(false);
+    if (e.target.closest("a, button")) e.preventDefault();
+    e.stopPropagation();
+  };
 
   return (
     <aside
-      className="d-flex flex-column border-end"
+      ref={sidebarRef}
+      onMouseDown={handleRootMouseDown}
+      aria-expanded={!collapsed}
+      title={collapsed ? "Expand sidebar" : undefined}
       style={{
-        width: collapsed ? "84px" : "250px",
-        height: "100vh",
-        backgroundColor: "#ffffff",
-        transition: "width 0.3s ease",
-        overflow: "hidden",
+        position: "fixed",
+        top: "var(--navbar-h)",
+        left: 0,
+        height: `calc(100vh - var(--navbar-h))`,
+        width: collapsed ? `${collapsedWidth}px` : `${expandedWidth}px`,
+        backgroundColor: "#fff",
+        borderRight: "1px solid rgba(0,0,0,.1)",
+        transition: "width 0.25s ease",
+        zIndex: 1050,
+        cursor: collapsed ? "pointer" : "default",
+        userSelect: "none",
       }}
+      className="d-flex flex-column"
     >
-      {/* ---------- Header ---------- */}
-      <div
-        className="d-flex align-items-center justify-content-between px-3 py-3 border-bottom"
-        style={{
-          backgroundColor: "#fff",
-        }}
-      >
-        {!collapsed && (
-          <h5
-            className="fw-bold mb-0"
-            style={{ color: "#111827", fontSize: "1.1rem" }}
+      <nav className="flex-grow-1 py-3">
+        {items.map((it, i) => (
+          <NavLink
+            key={i}
+            to={it.path}
+            end
+            tabIndex={collapsed ? -1 : 0}
+            className={({ isActive }) =>
+              `d-flex align-items-center text-decoration-none mb-2 ${
+                isActive ? "text-white" : "text-secondary"
+              }`
+            }
+            style={({ isActive }) => ({
+              height: 48,
+              borderRadius: 10,
+              transition: "all 0.25s ease",
+              padding: collapsed ? "0 12px" : "0 18px",
+              margin: "0 12px",
+              justifyContent: collapsed ? "center" : "flex-start",
+              fontWeight: isActive ? 600 : 500,
+              backgroundColor: isActive ? "#111827" : "transparent",
+              pointerEvents: collapsed ? "none" : "auto",
+            })}
           >
-            Food Rescue Live
-          </h5>
-        )}
+            <i
+              className={`bi ${it.icon}`}
+              style={{ fontSize: "1.2rem", marginRight: collapsed ? 0 : 12 }}
+            />
+            {!collapsed && (
+              <span className="fw-medium" style={{ fontSize: "0.95rem" }}>
+                {it.label}
+              </span>
+            )}
+          </NavLink>
+        ))}
+      </nav>
+
+      <div className="border-top p-2 d-flex justify-content-center">
         <button
-          className="btn btn-light border-0 p-1"
-          onClick={() => setCollapsed(!collapsed)}
-          style={{
-            background: "transparent",
-            color: "#6b7280",
-          }}
+          className="btn btn-link text-danger d-flex align-items-center gap-2 px-2"
+          data-action="logout"
+          onClick={handleLogout}
+          style={{ textDecoration: "none", fontWeight: 600 }}
+          title="Logout"
         >
-          <i
-            className={`bi ${
-              collapsed ? "bi-chevron-right" : "bi-chevron-left"
-            }`}
-          ></i>
+          <i className="bi bi-box-arrow-right" />
+          {!collapsed && <span>Logout</span>}
         </button>
       </div>
-
-      {/* ---------- Navigation ---------- */}
-      <nav className="flex-grow-1 mt-3 px-3">
-        {items.map((it) => {
-          const isActive = activeTab === it.key;
-          return (
-            <button
-              key={it.key}
-              onClick={() => setActiveTab(it.key)}
-              className="d-flex align-items-center border-0"
-              style={{
-                width: "100%",
-                height: "46px",
-                marginBottom: "6px",
-                borderRadius: "10px",
-                backgroundColor: isActive ? "#111827" : "transparent",
-                color: isActive ? "#ffffff" : "#6b7280",
-                fontWeight: isActive ? 600 : 500,
-                justifyContent: collapsed ? "center" : "flex-start",
-                transition: "background-color 0.2s ease, color 0.2s ease",
-                cursor: "pointer",
-                padding: collapsed ? "0" : "0 16px",
-                boxSizing: "border-box",
-              }}
-            >
-              <i
-                className={`bi ${it.icon}`}
-                style={{
-                  fontSize: "1.15rem",
-                  marginRight: collapsed ? 0 : 12,
-                  color: "inherit",
-                }}
-              />
-              {!collapsed && (
-                <span
-                  style={{
-                    fontSize: "0.95rem",
-                    color: "inherit",
-                  }}
-                >
-                  {it.label}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </nav>
     </aside>
   );
 }

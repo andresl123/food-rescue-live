@@ -2,11 +2,13 @@ package com.foodrescue.lots.service;
 
 import com.foodrescue.lots.dto.LotCreateRequest;
 import com.foodrescue.lots.dto.LotUpdateRequest;
+import com.foodrescue.lots.entity.Category;
 import com.foodrescue.lots.entity.Lot;
+import com.foodrescue.lots.entity.Tag;
 import com.foodrescue.lots.exception.AccessDeniedException;
 import com.foodrescue.lots.exception.LotNotFoundException;
-import com.foodrescue.lots.repository.LotRepository;
 import com.foodrescue.lots.repository.FoodItemRepository;
+import com.foodrescue.lots.repository.LotRepository;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
@@ -14,8 +16,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Instant;
-import java.util.Collection;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class LotService {
@@ -30,9 +32,10 @@ public class LotService {
 
     // REUSABLE SECURITY CHECK METHOD
     private Mono<Lot> checkLotAdminOrOwnership(String lotId, Mono<Authentication> authMono) {
-        // Combine fetching the user auth and the lot
-        return authMono.zipWith(lotRepository.findById(lotId)
-                        .switchIfEmpty(Mono.error(new LotNotFoundException("Lot with ID " + lotId + " not found."))))
+        return authMono.zipWith(
+                        lotRepository.findById(lotId)
+                                .switchIfEmpty(Mono.error(new LotNotFoundException("Lot with ID " + lotId + " not found.")))
+                )
                 .flatMap(tuple -> {
                     Authentication authentication = tuple.getT1();
                     Lot lot = tuple.getT2();
@@ -40,11 +43,11 @@ public class LotService {
                     Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
 
                     boolean isAdmin = authorities.stream()
-                            .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ADMIN"));
+                            .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ADMIN")
+                                    || grantedAuthority.getAuthority().equals("ROLE_ADMIN"));
 
-                    // --- THE CORE LOGIC: Allow if ADMIN OR if DONOR owns the lot ---
                     if (isAdmin || lot.getUserId().equals(userId)) {
-                        return Mono.just(lot); // Authorized, return the lot
+                        return Mono.just(lot);
                     } else {
                         return Mono.error(new AccessDeniedException("You do not have permission to modify this lot."));
                     }
@@ -52,34 +55,43 @@ public class LotService {
     }
 
     public Mono<Lot> createLot(LotCreateRequest request, String donorId) {
+        // Default category if none provided
+        Category category = Optional.ofNullable(request.getCategory())
+                .orElse(Category.OTHER);
+
+        // Clean + de-dup tags (null-safe)
+        List<Tag> tags = Optional.ofNullable(request.getTags())
+                .orElseGet(List::of)
+                .stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .limit(3)
+                .toList();
+
         Lot newLot = Lot.builder()
                 .lotId(UUID.randomUUID().toString())
                 .userId(donorId)
                 .description(request.getDescription())
                 .imageUrl(request.getImageUrl())
-                .addressId(request.getAddressId())  // ✅ Add this line
+                .addressId(request.getAddressId())
                 .totalItems(0)
                 .createdAt(Instant.now())
                 .status("ACTIVE")
+                .category(category)
+                .tags(tags)
                 .build();
 
         return lotRepository.save(newLot);
     }
 
-
-
     public Flux<Lot> getAllLotsForAdmin(Mono<Authentication> authMono) {
-        // Use flatMapMany to switch from a Mono<Authentication> to a Flux<Lot>
         return authMono.flatMapMany(authentication -> {
-            // Check if the user's authorities list contains the ADMIN role.
             boolean isAdmin = authentication.getAuthorities().stream()
-                    .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ADMIN"));
-
+                    .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ADMIN")
+                            || grantedAuthority.getAuthority().equals("ROLE_ADMIN"));
             if (isAdmin) {
-                // If user is an admin, fetch all lots from the repository.
                 return lotRepository.findAll();
             } else {
-                // If not an admin, return a Flux that immediately signals an error.
                 return Flux.error(new AccessDeniedException("You must be an admin to view all lots."));
             }
         });
@@ -88,23 +100,41 @@ public class LotService {
     public Mono<Lot> updateLot(String lotId, LotUpdateRequest request, Mono<Authentication> authMono) {
         return checkLotAdminOrOwnership(lotId, authMono)
                 .flatMap(lot -> {
+                    // description
                     if (request.getDescription() != null && request.getDescription().isBlank()) {
                         return Mono.error(new IllegalArgumentException("Description cannot be blank."));
                     }
                     if (request.getDescription() != null) {
                         lot.setDescription(request.getDescription());
                     }
+
+                    // status
                     if (request.getStatus() != null) {
                         lot.setStatus(request.getStatus());
                     }
+
+                    // image
                     if (request.getImageUrl() != null) {
                         lot.setImageUrl(request.getImageUrl());
                     }
+
+                    // ✅ NEW: category
+                    if (request.getCategory() != null) {
+                        lot.setCategory(request.getCategory());
+                    }
+
+                    if (request.getTags() != null) {
+                        List<Tag> cleaned = request.getTags().stream()
+                                .filter(Objects::nonNull)
+                                .distinct()
+                                .limit(3)
+                                .collect(Collectors.toList());
+                        lot.setTags(cleaned);
+                    }
+
                     return lotRepository.save(lot);
                 });
     }
-
-
 
     public Mono<Void> deleteLot(String lotId, Mono<Authentication> authMono) {
         return checkLotAdminOrOwnership(lotId, authMono)
@@ -114,12 +144,49 @@ public class LotService {
     public Flux<Lot> getLotsForPrincipal(Mono<Authentication> authMono) {
         return authMono.flatMapMany(auth -> {
             boolean isAdmin = auth.getAuthorities().stream()
-                    .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority())); // note ROLE_ prefix
+                    .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()) || "ADMIN".equals(a.getAuthority()));
             if (isAdmin) {
                 return lotRepository.findAll();
             }
             String userId = auth.getName();
             return lotRepository.findByUserId(userId);
         });
+    }
+
+    // Methods for Receiver Dashboard
+
+    public Mono<Lot> getLotById(String lotId) {
+        return lotRepository.findById(lotId)
+                .switchIfEmpty(Mono.error(new LotNotFoundException(
+                        "Lot with ID " + lotId + " not found."
+                )));
+    }
+
+    /**
+     * Dashboard-style listing: anyone can see, page/size.
+     */
+    public Mono<Map<String, Object>> getLotsPaged(int page, int size) {
+        int skip = page * size;
+
+        // only OPEN lots
+        Mono<List<Lot>> lotsMono = lotRepository.findAll()
+                .filter(lot -> "OPEN".equalsIgnoreCase(lot.getStatus()))
+                .skip(skip)
+                .take(size)
+                .collectList();
+
+        // total should also count only OPEN lots
+        Mono<Long> totalMono = lotRepository.findAll()
+                .filter(lot -> "OPEN".equalsIgnoreCase(lot.getStatus()))
+                .count();
+
+        return Mono.zip(lotsMono, totalMono)
+                .map(tuple -> Map.of(
+                        "success", true,
+                        "page", page,
+                        "size", size,
+                        "totalElements", tuple.getT2(),
+                        "data", tuple.getT1()
+                ));
     }
 }

@@ -96,6 +96,10 @@ public class UserService {
                 .map(this::toResponse);
     }
 
-
+    public Mono<String> getDefaultAddressId(String userId) {
+        return repo.findById(userId)
+                .switchIfEmpty(Mono.error(new IllegalArgumentException("User not found")))
+                .map(User::getDefaultAddressId);
+    }
 
 }

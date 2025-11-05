@@ -55,7 +55,22 @@ public class UserController {
                 .map(ApiResponse::ok);
     }
 
-
+    @GetMapping("/{id}/default-address")
+    public Mono<Map<String, Object>> getDefaultAddressId(@PathVariable String id) {
+        return service.getDefaultAddressId(id)
+                .map(addrId -> {
+                    Map<String, Object> resp = new java.util.HashMap<>();
+                    resp.put("success", true);
+                    resp.put("defaultAddressId", addrId);
+                    return resp;
+                })
+                .onErrorResume(ex -> {
+                    Map<String, Object> err = new java.util.HashMap<>();
+                    err.put("success", false);
+                    err.put("message", ex.getMessage());
+                    return Mono.just(err);
+                });
+    }
 }
 
 

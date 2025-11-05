@@ -38,6 +38,7 @@ public class User extends Auditable {
     @Indexed(unique = true, sparse = true)
     private String phoneNumber;
 
+    @Getter
     private String defaultAddressId;
 
     @Builder.Default
