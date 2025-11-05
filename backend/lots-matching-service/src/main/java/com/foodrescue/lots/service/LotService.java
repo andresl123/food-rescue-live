@@ -168,12 +168,17 @@ public class LotService {
     public Mono<Map<String, Object>> getLotsPaged(int page, int size) {
         int skip = page * size;
 
-        Mono<java.util.List<Lot>> lotsMono = lotRepository.findAll()
+        // only OPEN lots
+        Mono<List<Lot>> lotsMono = lotRepository.findAll()
+                .filter(lot -> "OPEN".equalsIgnoreCase(lot.getStatus()))
                 .skip(skip)
                 .take(size)
                 .collectList();
 
-        Mono<Long> totalMono = lotRepository.count();
+        // total should also count only OPEN lots
+        Mono<Long> totalMono = lotRepository.findAll()
+                .filter(lot -> "OPEN".equalsIgnoreCase(lot.getStatus()))
+                .count();
 
         return Mono.zip(lotsMono, totalMono)
                 .map(tuple -> Map.of(
