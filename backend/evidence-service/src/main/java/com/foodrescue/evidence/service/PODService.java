@@ -1,9 +1,6 @@
 package com.foodrescue.evidence.service;
 
-import com.foodrescue.evidence.entity.Job;
 import com.foodrescue.evidence.entity.POD;
-import com.foodrescue.evidence.repository.JobRepository;
-import com.foodrescue.evidence.repository.OrderRepository;
 import com.foodrescue.evidence.repository.PODRepository;
 import com.foodrescue.evidence.web.request.PODCreateRequest;
 import com.foodrescue.evidence.web.request.VerificationRequest;
@@ -15,7 +12,6 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.time.Instant;
 import java.time.LocalDate;
 
 @Service

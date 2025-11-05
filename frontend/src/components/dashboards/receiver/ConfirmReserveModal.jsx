@@ -1,4 +1,3 @@
-// components/dashboards/receiver/ConfirmReserveModal.jsx
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import "./css/LotDetailsModal.css"; // reuse same shell styles
@@ -9,13 +8,11 @@ export default function ConfirmReserveModal({ lot, show, onCancel, onConfirm }) 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  // Always call hooks — never inside conditionals
   useEffect(() => {
     const prev = document.body.style.overflow;
     if (show) document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prev;
-      // reset state when modal closes
       setSubmitting(false);
       setError("");
     };

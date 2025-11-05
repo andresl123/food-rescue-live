@@ -1,9 +1,13 @@
 import React, { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./css/LotFlipCard.css";
 import LotDetailsModal from "./LotDetailsModal";
+import ConfirmReserveModal from "./ConfirmReserveModal";
 
 export default function LotFlipCard({ lot, front }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false);           // details modal
+  const [confirmOpen, setConfirmOpen] = useState(false); // confirm modal
+  const navigate = useNavigate();
 
   const items = useMemo(() => {
     if (Array.isArray(lot?.items) && lot.items.length) return lot.items;
@@ -11,15 +15,27 @@ export default function LotFlipCard({ lot, front }) {
     if (!desc) return [];
     const candidates = desc
       .split(/\n|,|•|–|-|\u2022/g)
-      .map(s => s.trim())
+      .map((s) => s.trim())
       .filter(Boolean);
-    return candidates.filter(s => s.length <= 40).slice(0, 15);
+    return candidates.filter((s) => s.length <= 40).slice(0, 15);
   }, [lot]);
 
+  // this gets called from LotDetailsModal -> "Reserve this lot"
   const onReserve = () => {
-    // Plug your action here (toast, API call, etc.)
-    // For now we just close:
+    // close details modal
     setOpen(false);
+    // open confirm modal
+    setConfirmOpen(true);
+  };
+
+  // this gets called from ConfirmReserveModal AFTER API success
+  const handleConfirmSuccess = () => {
+    setConfirmOpen(false);
+    // go to dashboard and refresh
+    window.location.href = "/dashboard";
+    // if you prefer react-router-only:
+    // navigate("/dashboard", { replace: true });
+    // navigate(0);
   };
 
   return (
@@ -33,7 +49,7 @@ export default function LotFlipCard({ lot, front }) {
           {/* FRONT */}
           <div className="frl-flip-face frl-flip-front">{front}</div>
 
-          {/* BACK (no tags here now) */}
+          {/* BACK */}
           <div className="frl-flip-face frl-flip-back">
             <div className="frl-back-hero">
               <div className="d-flex align-items-center justify-content-between">
@@ -82,12 +98,20 @@ export default function LotFlipCard({ lot, front }) {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Details modal */}
       <LotDetailsModal
         lot={lot}
         show={open}
         onClose={() => setOpen(false)}
         onReserve={onReserve}
+      />
+
+      {/* Confirm modal that actually hits the API */}
+      <ConfirmReserveModal
+        lot={lot}
+        show={confirmOpen}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={handleConfirmSuccess}
       />
     </>
   );

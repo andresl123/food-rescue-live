@@ -86,8 +86,6 @@ const DEFAULT_FILTERS = Object.freeze({
   "Lot Type": null,
 });
 
-// ---------------------------------------------------------------
-
 export default function ReceiverDashboard() {
   const navigate = useNavigate();
 
@@ -114,9 +112,7 @@ export default function ReceiverDashboard() {
         setLoading(true);
         setErr(null);
         const data = await bffFetch("/api/r_dashboard/dashboard");
-        console.log(data);
         if (!ignore) {
-          // normalize each lot so items is always an array and totalItems is correct
           const normalized = (Array.isArray(data) ? data : []).map((lot) => {
             const itemsArr = Array.isArray(lot.items) ? lot.items : [];
             const total =
@@ -218,15 +214,18 @@ export default function ReceiverDashboard() {
     setShowDetails(true);
   };
 
+  // from LotDetailsModal "Reserve this lot"
   const handleReserveClick = (lot) => {
     setShowDetails(false);
     setConfirmLot(lot);
     setShowConfirm(true);
   };
 
+  // from ConfirmReserveModal AFTER API success
   const handleConfirmYes = () => {
     setShowConfirm(false);
-    navigate("/dashboard");
+    // IMPORTANT: force real reload so dashboard refetches
+    window.location.href = "/dashboard";
   };
 
   return (

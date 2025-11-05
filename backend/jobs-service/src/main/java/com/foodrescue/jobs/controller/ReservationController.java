@@ -25,12 +25,11 @@ public class ReservationController {
 
         return requestMono
                 .flatMap(req -> reservationService.reserveLot(req, receiverId))
-                .map(r -> new ReservationResponse(r.order(), r.job(), r.pod()));
+                .map(r -> new ReservationResponse(r.order(), r.job()));
     }
 
     public record ReservationResponse(
             Object order,
-            Object job,
-            Object pod
+            Object job
     ) {}
 }

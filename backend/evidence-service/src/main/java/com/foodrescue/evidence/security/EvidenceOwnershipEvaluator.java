@@ -1,10 +1,5 @@
 package com.foodrescue.evidence.security;
 
-import com.foodrescue.evidence.entity.Job;
-import com.foodrescue.evidence.entity.Order;
-import com.foodrescue.evidence.entity.POD;
-import com.foodrescue.evidence.repository.JobRepository;
-import com.foodrescue.evidence.repository.OrderRepository;
 import com.foodrescue.evidence.repository.PODRepository;
 import com.foodrescue.security.ownership.OwnershipEvaluator;
 import lombok.RequiredArgsConstructor;
