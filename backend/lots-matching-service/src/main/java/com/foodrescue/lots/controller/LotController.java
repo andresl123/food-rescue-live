@@ -2,6 +2,7 @@ package com.foodrescue.lots.controller;
 
 import com.foodrescue.lots.dto.LotCreateRequest;
 import com.foodrescue.lots.dto.LotUpdateRequest;
+import com.foodrescue.lots.dto.UpdateLotStatusRequest;
 import com.foodrescue.lots.entity.Lot;
 import com.foodrescue.lots.repository.LotRepository;
 import com.foodrescue.lots.service.LotService;
@@ -11,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -101,6 +103,17 @@ public class LotController {
                         "success", true,
                         "data", lot
                 ));
+    }
+
+    @PatchMapping("/{lotId}/status")
+    public Mono<Lot> updateLotStatus(@PathVariable String lotId,
+                                     @RequestBody UpdateLotStatusRequest request) {
+        return lotRepository.findById(lotId)
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Lot not found")))
+                .flatMap(lot -> {
+                    lot.setStatus(request.getStatus());
+                    return lotRepository.save(lot);
+                });
     }
 
 }
