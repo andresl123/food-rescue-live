@@ -3,6 +3,7 @@ import SignupPage from "../pages/signup/SignupPage";
 import CourierVerificationPage from "../pages/CourierVerificationPage";
 import CourierDashboard from "../pages/CourierDashboard";
 
+import UserDashboard from "../pages/dashboards/userDashboard/UserDashboard";
 
 function AppRoutes() {
   return (
@@ -13,6 +14,7 @@ function AppRoutes() {
         <Route path="/courier-verification" element={<CourierVerificationPage />} />
         <Route path="/courier-dashboard" element={<CourierDashboard />} />
         {/* <Route path="/jobs" element={<JobsPage />} /> */}
+        <Route path="/dashboard" element={<UserDashboard />} />
       </Routes>
     </BrowserRouter>
   );

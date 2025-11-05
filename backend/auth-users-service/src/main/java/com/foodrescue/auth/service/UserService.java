@@ -7,6 +7,8 @@ import com.foodrescue.auth.web.response.UserResponse;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
+import java.util.Optional;
+import java.util.Set;
 import reactor.core.scheduler.Schedulers;
 
 @Service
@@ -46,7 +48,10 @@ public class UserService {
                         .categoryId(req.categoryId())
                         .phoneNumber(req.phoneNumber())
                         .defaultAddressId(req.defaultAddressId())
-                        .roles(req.roles() == null || req.roles().isEmpty() ? null : req.roles())
+                        .roles(Optional.ofNullable(req.roles())
+                                .filter(r -> !r.isEmpty())
+                                .orElse(Set.of(req.categoryId()))
+                        )
                         .build()
                 )
                 .flatMap(repo::save)

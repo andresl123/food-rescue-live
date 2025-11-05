@@ -19,6 +19,9 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 import reactor.core.publisher.Mono;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.server.reactive.ServerHttpResponse;
+import java.nio.charset.StandardCharsets;
 
 import java.security.KeyFactory;
 import java.security.interfaces.RSAPublicKey;
@@ -39,6 +42,15 @@ public class SecurityConfig {
         this.authConverter = authConverter;
     }
 
+    private Mono<Void> writeJson(ServerHttpResponse res, HttpStatus status, String body) {
+        res.setStatusCode(status);
+        res.getHeaders().set("Content-Type", "application/json");
+        // Get the response buffer factory and wrap the body string (encoded in UTF-8)
+        var buf = res.bufferFactory().wrap(body.getBytes(StandardCharsets.UTF_8));
+        // Write the buffer to the response and return the completion signal
+        return res.writeWith(Mono.just(buf));
+    }
+
     @Bean
     public SecurityWebFilterChain springSecurityFilterChain(
             ServerHttpSecurity http,
@@ -55,11 +67,24 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.POST, "/api/password/reset/**").permitAll()
                         .pathMatchers("/actuator/health", "/v3/api-docs/**", "/swagger-ui/**").permitAll()
                         .pathMatchers(HttpMethod.POST, "/api/v1/lots").hasRole("DONOR")
+                        .pathMatchers(HttpMethod.PUT, "/api/v1/lots/{lotId}").hasRole("DONOR") // Allow updating lots
+                        .pathMatchers(HttpMethod.DELETE, "/api/v1/lots/{lotId}").hasRole("DONOR") // Allow deleting lots
+                        .pathMatchers(HttpMethod.POST, "/api/v1/lots/{lotId}/items").hasRole("DONOR") // Allow adding items
+                        .pathMatchers(HttpMethod.PUT, "/api/v1/lots/{lotId}/items/{itemId}").hasRole("DONOR") // Allow updating items
+                        .pathMatchers(HttpMethod.DELETE, "/api/v1/lots/{lotId}/items/{itemId}").hasRole("DONOR") // Allow deleting items
                         .anyExchange().authenticated()
                 )
-                .oauth2ResourceServer(oauth2 -> oauth2
-                        // --- FIX #1 (cont.): Use the injected beans ---
-                        .jwt(jwt -> jwt.jwtAuthenticationConverter(authConverter).jwtDecoder(jwtDecoder))
+                .oauth2ResourceServer(oauth -> oauth
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(authConverter).jwtDecoder(jwtDecoder)) // This part validates the token
+
+                        // --- THIS IS THE HANDLER FOR INCORRECT/MISSING TOKENS ---
+                        .authenticationEntryPoint((exchange, ex) ->
+                                writeJson(exchange.getResponse(), HttpStatus.UNAUTHORIZED, // Returns 401 status
+                                        "{\"success\":false,\"message\":\"unauthorized\"}")) // Returns this JSON body
+
+                        .accessDeniedHandler((exchange, ex) -> // This handles valid tokens with insufficient permissions (403)
+                                writeJson(exchange.getResponse(), HttpStatus.FORBIDDEN,
+                                        "{\"success\":false,\"message\":\"forbidden\"}"))
                 )
                 .build();
     }

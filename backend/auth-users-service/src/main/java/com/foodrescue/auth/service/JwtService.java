@@ -19,6 +19,7 @@ import java.time.Instant;
 import java.util.Date;
 import java.util.Map;
 import java.util.UUID;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Getter
@@ -65,7 +66,7 @@ public class JwtService {
                     .jwtID(jti)
                     .claim("typ", "access")
                     .claim("email", user.getEmail())
-                    .claim("roles", user.getRoles())
+                    .claim("roles", List.of(user.getCategoryId()))
                     .claim("status", user.getStatus())
                     .build();
 
