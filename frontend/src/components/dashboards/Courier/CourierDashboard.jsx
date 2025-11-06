@@ -80,7 +80,7 @@ const myJobsData = [
   }
 ];
 
-export default function CourierDashboard() {
+export default function CourierDashboard({ onShowPOD }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [availableJobs, setAvailableJobs] = useState([]);
@@ -349,26 +349,24 @@ export default function CourierDashboard() {
   const handleConfirmPickup = (jobId) => {
     const job = myJobs.find((j) => j.id === jobId);
     if (job) {
-      setConfirmationDialog({
-        open: true,
-        type: "pickup",
-        jobId,
-        name: job.donorName,
-      });
-      navigate('/courier-verification', { state: { jobData: job, verificationType: 'pickup' } });
+      // Call POD component via callback if provided, otherwise navigate
+      if (onShowPOD) {
+        onShowPOD(job, 'pickup');
+      } else {
+        navigate('/courier-verification', { state: { jobData: job, verificationType: 'pickup' } });
+      }
     }
   };
 
   const handleConfirmDelivery = (jobId) => {
     const job = myJobs.find((j) => j.id === jobId);
     if (job) {
-      setConfirmationDialog({
-        open: true,
-        type: "delivery",
-        jobId,
-        name: job.recipientName,
-      });
-      navigate('/courier-verification', { state: { jobData: job, verificationType: 'delivery' } });
+      // Call POD component via callback if provided, otherwise navigate
+      if (onShowPOD) {
+        onShowPOD(job, 'delivery');
+      } else {
+        navigate('/courier-verification', { state: { jobData: job, verificationType: 'delivery' } });
+      }
     }
   };
 
