@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
- import { getLots, getFoodItemsByLot } from "../../../services/lotService";
+import { getLots, getFoodItemsByLot } from "../../../services/lotService";
+import { getUserProfile } from "../../../services/loginServices";
 import { jwtDecode } from "jwt-decode";
 import CreateLotModal from "./CreateLotModal";
 import FoodItemModal from "./FoodItemModal";
@@ -24,8 +25,8 @@ export default function DonorDashboard() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedLot, setSelectedLot] = useState(null);
   const [selectedTabList, setSelectedTabList] = useState("All");
-    const [searchTerm, setSearchTerm] = useState("");
-    const [selectedStatusFilter, setSelectedStatusFilter] = useState("All Lots");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState("All Lots");
 
 
   // -------------------- HANDLERS --------------------
@@ -39,34 +40,40 @@ export default function DonorDashboard() {
     setShowFoodModal(true);
   };
 
-  // -------------------- JWT DECODE --------------------
+  // -------------------- FETCH USER PROFILE --------------------
   useEffect(() => {
-    const token = localStorage.getItem("accessToken");
-    if (token) {
+    const fetchUserData = async () => {
       try {
-        const decoded = jwtDecode(token);
-        setUser({
-          name: decoded.email?.split("@")[0] || "User",
-          role: decoded.roles?.[0] || "",
-        });
+        const result = await getUserProfile();
+
+        if (result.success && result.data) {
+          console.log("User profile in donor dashboard:", result.data);
+          setUser({
+            name: result.data.email?.split("@")[0] || "User",
+            role: result.data.role || result.data.roles?.[0] || "",
+          });
+        } else {
+          console.error("Failed to fetch user info:", result.message);
+        }
       } catch (err) {
-        console.error("Invalid token:", err);
+        console.error("Error fetching user info:", err);
       }
-    }
+    };
+
+    fetchUserData();
   }, []);
+
 
   // -------------------- FETCH LOTS --------------------
 
-    const normalizeStatus = (status) => status?.toLowerCase().trim();
-
+  const normalizeStatus = (status) => status?.toLowerCase().trim();
 
   const fetchLots = async () => {
     setLoading(true);
     setError("");
 
     try {
-      const token = localStorage.getItem("accessToken");
-      const response = await getLots(token);
+      const response = await getLots();
 
       if (!response.success || !Array.isArray(response.data)) {
         setError("Failed to load donor dashboard.");

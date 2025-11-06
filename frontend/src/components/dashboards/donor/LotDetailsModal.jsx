@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import FoodItemModal from "./FoodItemModal";
 import { getFoodItemsByLot } from "../../../services/lotService";
+import { getAddressById } from "../../../services/addressService";
 
 export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
   const [showFoodItemModal, setShowFoodItemModal] = useState(false);
@@ -16,17 +17,14 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
 useEffect(() => {
   const fetchAddress = async () => {
     if (!currentLot?.addressId) return;
-    const token = localStorage.getItem("accessToken");
     try {
-      const res = await fetch(`http://localhost:8080/api/v1/addresses/${currentLot.addressId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (data?.data) setAddress(data.data);
+      const data = await getAddressById(currentLot.addressId);
+      if (data) setAddress(data);
     } catch (err) {
       console.error("Error fetching lot address:", err);
     }
   };
+
   fetchAddress();
 }, [currentLot]);
 

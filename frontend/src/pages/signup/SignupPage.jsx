@@ -11,7 +11,7 @@ import ResetPasswordForm from "../../components/resetpassword/ResetPasswordForm"
 // Import all necessary service functions
 import { createUser } from "../../services/signupServices";
 import { createAddress } from "../../services/addressService";
-import { loginUser } from "../../services/loginServices";
+// import { loginUser } from "../../services/loginServices";
 import signupImage from "../../assets/signupPage.png";
 import "./SignupPage.css";
 
@@ -73,22 +73,23 @@ export default function SignupPage() {
     }
   };
 
-  const handleLoginSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    const loadingToast = toast.loading("Logging in...");
-    const result = await loginUser(loginFormData);
-    if (result.success) {
-      toast.success("Login successful!");
-      localStorage.setItem("accessToken", result.data.access);
-      localStorage.setItem("refreshToken", result.data.refresh);
-      setTimeout(() => navigate("/dashboard"), 1000);
-    } else {
-      toast.error(result.message || "Invalid email or password.");
-    }
-    setIsLoading(false);
-    toast.dismiss(loadingToast);
-  };
+//   const handleLoginSubmit = async (e) => {
+//     e.preventDefault();
+//     setIsLoading(true);
+//     console.log("login page used")
+//     const loadingToast = toast.loading("Logging in...");
+//     const result = await loginUser(loginFormData);
+//     if (result.success) {
+//       toast.success("Login successful!");
+//       //localStorage.setItem("accessToken", result.data.access);
+//       //localStorage.setItem("refreshToken", result.data.refresh);
+//       setTimeout(() => navigate("/dashboard"), 1000);
+//     } else {
+//       toast.error(result.message || "Invalid email or password.");
+//     }
+//     setIsLoading(false);
+//     toast.dismiss(loadingToast);
+//   };
 
   // --- DYNAMIC FORM RENDERER ---
   const renderForm = () => {
@@ -111,11 +112,11 @@ export default function SignupPage() {
       default:
         return (
           <LoginForm
-            formData={loginFormData}
-            onChange={handleLoginChange}
-            onSubmit={handleLoginSubmit}
+//             formData={loginFormData}
+//             onChange={handleLoginChange}
+//             onSubmit={handleLoginSubmit}
             onForgotPasswordClick={() => setView("resetPassword")}
-            isLoading={isLoading}
+//             isLoading={isLoading}
           />
         );
     }

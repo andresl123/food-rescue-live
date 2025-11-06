@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
-import { jwtDecode } from "jwt-decode";
+import { getUserProfile, logoutUser } from "../services/loginServices";
 
 export default function Sidebar({
   collapsed,
@@ -12,15 +12,34 @@ export default function Sidebar({
 }) {
   const [role, setRole] = useState("USER");
 
-  useEffect(() => {
-    const token = localStorage.getItem("accessToken");
-    if (token) {
-      try {
-        const d = jwtDecode(token);
-        setRole((d.roles?.[0] || "USER").toUpperCase());
-      } catch {}
+useEffect(() => {
+  const fetchUserRole = async () => {
+    try {
+      const result = await getUserProfile();
+      if (result.success && result.data?.role) {
+        setRole((result.data.role || "USER").toUpperCase());
+      } else {
+        console.error("Failed to fetch user role");
+        setRole("USER");
+      }
+    } catch (err) {
+      console.error("Error fetching role:", err);
+      setRole("USER");
     }
-  }, []);
+  };
+
+  fetchUserRole();
+}, []);
+
+//   useEffect(() => {
+//     const token = localStorage.getItem("accessToken");
+//     if (token) {
+//       try {
+//         const d = jwtDecode(token);
+//         setRole((d.roles?.[0] || "USER").toUpperCase());
+//       } catch {}
+//     }
+//   }, []);
 
   /** ---------------- Role → Nav items map ---------------- */
   const baseItems = [
@@ -40,7 +59,7 @@ export default function Sidebar({
     ],
     DONOR: [
       { path: "/profile", label: "Profile", icon: "bi-person" },
-      { path: "/lots", label: "My Lots", icon: "bi-box-seam" },
+      { path: "/food-items", label: "My Food Items", icon: "bi-box-seam" },
       { path: "/bulk-import", label: "Bulk Import", icon: "bi-cloud-upload" },
     ],
     DEFAULT: [
@@ -53,23 +72,36 @@ export default function Sidebar({
     ...(roleNavMap[role] ?? roleNavMap.DEFAULT),
   ];
 
-  const handleLogout = async () => {
-    const accessToken = localStorage.getItem("accessToken");
-    const refreshToken = localStorage.getItem("refreshToken");
+const handleLogout = async () => {
     try {
-      await fetch("http://localhost:8080/api/v1/auth/logout", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-          "X-Refresh-Token": refreshToken || "",
-        },
-      });
-    } catch {}
-    // localStorage.removeItem("accessToken");
-    // localStorage.removeItem("refreshToken");
-    // window.location.href = "/authentication";
+      const result = await logoutUser();
+      if (result.success) {
+        window.location.href = "/authentication"; // redirect to login
+      } else {
+        console.error("Logout failed:", result.message);
+      }
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
   };
+
+//   const handleLogout = async () => {
+//     const accessToken = localStorage.getItem("accessToken");
+//     const refreshToken = localStorage.getItem("refreshToken");
+//     try {
+//       await fetch("http://localhost:8080/api/v1/auth/logout", {
+//         method: "POST",
+//         headers: {
+//           "Content-Type": "application/json",
+//           Authorization: `Bearer ${accessToken}`,
+//           "X-Refresh-Token": refreshToken || "",
+//         },
+//       });
+//     } catch {}
+//     // localStorage.removeItem("accessToken");
+//     // localStorage.removeItem("refreshToken");
+//     // window.location.href = "/authentication";
+//   };
 
   // Expand sidebar on any click inside it while collapsed.
   const handleRootMouseDown = (e) => {

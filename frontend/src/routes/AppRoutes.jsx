@@ -5,6 +5,7 @@ import CourierVerificationPage from "../pages/CourierVerificationPage";
 import ProfilePage from "../pages/common/ProfilePage";
 import RescueOrdersPage from "../pages/receiver/RescueOrdersPage";
 import ordersData from "../mock/orders.json";
+import FoodItemList from "../components/dashboards/donor/FoodItemList";
 
 function AppRoutes() {
   return (
@@ -16,6 +17,7 @@ function AppRoutes() {
         <Route path="/dashboard" element={<UserDashboard />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/orders" element={<RescueOrdersPage data={ordersData} />} />
+        <Route path="/food-items" element={<FoodItemList />} />
       </Routes>
     </BrowserRouter>
   );

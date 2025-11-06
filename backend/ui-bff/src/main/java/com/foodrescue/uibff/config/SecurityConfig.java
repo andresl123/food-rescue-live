@@ -39,6 +39,8 @@ public class SecurityConfig {
                 .authorizeExchange(ex -> ex
                         .pathMatchers(HttpMethod.OPTIONS).permitAll()
                         .pathMatchers("/api/auth/login", "/api/auth/refresh", "/api/auth/logout").permitAll()
+                        .pathMatchers("/api/addresses").permitAll()
+                        .pathMatchers("/api/users").permitAll()
                         .pathMatchers("/api/auth/jwks", "/.well-known/jwks.json").permitAll()
                         .pathMatchers("/actuator/**").permitAll()
                         .anyExchange().authenticated()

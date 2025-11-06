@@ -3,6 +3,9 @@ import { jwtDecode } from "jwt-decode";
 import { createLot, addFoodItem } from "../../../services/lotService";
 import { createAddress } from "../../../services/addressService";
 import { addAddressToUser } from "../../../services/loginServices";
+import { getUserProfile } from "../../../services/loginServices";
+import { getUserById } from "../../../services/loginServices";
+import { getAddressById } from "../../../services/addressService";
 import FoodItemModal from "./FoodItemModal";
 import toast from "react-hot-toast";
 
@@ -69,39 +72,38 @@ export default function CreateLotModal({ show, onClose, onLotCreated }) {
     }
   };
 
-  // ---------- Fetch Addresses on Open ----------
   useEffect(() => {
     if (!show) return;
 
-    const token = localStorage.getItem("accessToken");
-    if (!token) return;
-
-    const { sub: userId } = jwtDecode(token);
-    console.log("👤 Logged in user ID:", userId);
-
     (async () => {
       try {
-        const userRes = await fetch(`http://localhost:8080/api/v1/users/${userId}`);
-        const userData = await userRes.json();
-        const user = userData.data || userData;
-
-        let allAddresses = [];
-
-        // fetch default address
-        if (user.defaultAddressId) {
-          const res = await fetch(`http://localhost:8080/api/v1/addresses/${user.defaultAddressId}`);
-          const addrData = await res.json();
-          if (addrData?.data) allAddresses.push({ ...addrData.data, isDefault: true });
+        // Step 1: Fetch current logged-in user
+        const meResult = await getUserProfile();
+        if (!meResult.success || !meResult.data?.userId) {
+          console.error("Failed to retrieve current user info");
+          return;
         }
 
-        // fetch other addresses
+        const userId = meResult.data.userId;
+        console.log("Logged in user ID:", userId);
+
+        // Step 2: Get user details
+        const user = await getUserById(userId);
+        let allAddresses = [];
+
+        // Step 3: Default address
+        if (user.defaultAddressId) {
+          const defaultAddr = await getAddressById(user.defaultAddressId);
+          if (defaultAddr) allAddresses.push({ ...defaultAddr, isDefault: true });
+        }
+
+        // Step 4: Other addresses
         if (Array.isArray(user.moreAddresses) && user.moreAddresses.length > 0) {
           const others = await Promise.all(
             user.moreAddresses.map(async (id) => {
               try {
-                const res = await fetch(`http://localhost:8080/api/v1/addresses/${id}`);
-                const data = await res.json();
-                return data.data || null;
+                const addr = await getAddressById(id);
+                return addr || null;
               } catch {
                 return null;
               }
@@ -113,10 +115,60 @@ export default function CreateLotModal({ show, onClose, onLotCreated }) {
         setAddresses(allAddresses);
         setSelectedAddressId(allAddresses[0]?._id || allAddresses[0]?.id || null);
       } catch (err) {
-        console.error("❌ Error fetching addresses:", err);
+        console.error("Error fetching addresses:", err);
       }
     })();
   }, [show]);
+
+
+  // ---------- Fetch Addresses on Open ----------
+//   useEffect(() => {
+//     if (!show) return;
+//
+//     const token = localStorage.getItem("accessToken");
+//     if (!token) return;
+//
+//     const { sub: userId } = jwtDecode(token);
+//     console.log("👤 Logged in user ID:", userId);
+//
+//     (async () => {
+//       try {
+//         const userRes = await fetch(`http://localhost:8080/api/v1/users/${userId}`);
+//         const userData = await userRes.json();
+//         const user = userData.data || userData;us
+//
+//         let allAddresses = [];
+//
+//         // fetch default address
+//         if (user.defaultAddressId) {
+//           const res = await fetch(`http://localhost:8080/api/v1/addresses/${user.defaultAddressId}`);
+//           const addrData = await res.json();
+//           if (addrData?.data) allAddresses.push({ ...addrData.data, isDefault: true });
+//         }
+//
+//         // fetch other addresses
+//         if (Array.isArray(user.moreAddresses) && user.moreAddresses.length > 0) {
+//           const others = await Promise.all(
+//             user.moreAddresses.map(async (id) => {
+//               try {
+//                 const res = await fetch(`http://localhost:8080/api/v1/addresses/${id}`);
+//                 const data = await res.json();
+//                 return data.data || null;
+//               } catch {
+//                 return null;
+//               }
+//             })
+//           );
+//           allAddresses.push(...others.filter(Boolean));
+//         }
+//
+//         setAddresses(allAddresses);
+//         setSelectedAddressId(allAddresses[0]?._id || allAddresses[0]?.id || null);
+//       } catch (err) {
+//         console.error("❌ Error fetching addresses:", err);
+//       }
+//     })();
+//   }, [show]);
 
   // ---------- Upload Image ----------
   const handleImageUpload = async (e) => {
@@ -146,25 +198,42 @@ export default function CreateLotModal({ show, onClose, onLotCreated }) {
   };
 
   // ---------- Add New Address ----------
+
   const handleAddAddress = async () => {
-    if (!newAddress.street || !newAddress.city || !newAddress.postalCode) {
+    if (
+      !newAddress.street ||
+      !newAddress.city ||
+      !newAddress.province ||
+      !newAddress.country ||
+      !newAddress.postalCode
+    ) {
       toast.error("Please fill all required fields");
       return;
     }
 
     try {
       setAddingAddress(true);
+
+      // 1️⃣ Create the new address through BFF
       const created = await createAddress(newAddress);
+      if (!created) throw new Error("Address creation failed");
 
-      const token = localStorage.getItem("accessToken");
-      const { sub: userId } = jwtDecode(token);
+      // 2️⃣ Get logged-in user info (from /api/me)
+      const profile = await getUserProfile();
+      if (!profile.success || !profile.data?.userId) {
+        throw new Error("Could not fetch current user");
+      }
 
+      const userId = profile.data.userId;
+
+      // 3️⃣ Link address to that user
       await addAddressToUser(userId, created.id || created._id, false);
 
-      // add to UI list below default
+      // 4️⃣ Update local UI state
       setAddresses((prev) => [...prev, created]);
       setSelectedAddressId(created._id || created.id);
 
+      // 5️⃣ Reset form
       setNewAddress({
         street: "",
         city: "",
@@ -175,11 +244,47 @@ export default function CreateLotModal({ show, onClose, onLotCreated }) {
 
       toast.success("New address added!");
     } catch (err) {
+      console.error("Error adding address:", err);
       toast.error("Failed to add address");
     } finally {
       setAddingAddress(false);
     }
   };
+
+//   const handleAddAddress = async () => {
+//     if (!newAddress.street || !newAddress.city || !newAddress.postalCode) {
+//       toast.error("Please fill all required fields");
+//       return;
+//     }
+//
+//     try {
+//       setAddingAddress(true);
+//       const created = await createAddress(newAddress);
+//
+//       const token = localStorage.getItem("accessToken");
+//       const { sub: userId } = jwtDecode(token);
+//
+//       await addAddressToUser(userId, created.id || created._id, false);
+//
+//       // add to UI list below default
+//       setAddresses((prev) => [...prev, created]);
+//       setSelectedAddressId(created._id || created.id);
+//
+//       setNewAddress({
+//         street: "",
+//         city: "",
+//         province: "",
+//         country: "",
+//         postalCode: "",
+//       });
+//
+//       toast.success("New address added!");
+//     } catch (err) {
+//       toast.error("Failed to add address");
+//     } finally {
+//       setAddingAddress(false);
+//     }
+//   };
 
   // ---------- Create Lot ----------
   const handleCreateLot = async () => {
