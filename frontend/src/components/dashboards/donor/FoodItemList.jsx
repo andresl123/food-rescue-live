@@ -18,13 +18,13 @@ export default function FoodItemsList() {
   useEffect(() => {
     const fetchLots = async () => {
       try {
-        const token = localStorage.getItem("accessToken");
-        if (!token) {
-          toast.error("No access token found. Please log in again.");
-          return;
-        }
+//         const token = localStorage.getItem("accessToken");
+//         if (!token) {
+//           toast.error("No access token found. Please log in again.");
+//           return;
+//         }
 
-        const response = await getLots(token);
+        const response = await getLots();
         if (response?.success) {
           setLots(response.data);
         } else {

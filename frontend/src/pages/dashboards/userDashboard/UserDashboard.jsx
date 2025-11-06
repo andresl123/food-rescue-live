@@ -1,32 +1,34 @@
 // src/pages/dashboards/userDashboard/UserDashboard.jsx
 import React, { useEffect, useState } from "react";
-import { jwtDecode } from "jwt-decode";
 import UserLayout from "../../../layout/UserLayout";
 
 // role components
 import DonorDashboard from "../../../components/dashboards/donor/DonorDashboard";
 import ReceiverDashboard from "../../dashboards/receiver/ReceiverDashboard";
+import { getUserProfile } from "../../../services/loginServices";
 
 export default function UserDashboard() {
   const [role, setRole] = useState(null);
+  const [email, setEmail] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("accessToken");
-    if (token) {
-      try {
-        const decoded = jwtDecode(token);
-        const userRole = decoded.roles?.[0] || null;
-        console.log("✅ Decoded token role:", userRole);
-        setRole(userRole);
-      } catch (err) {
-        console.error("❌ Invalid token:", err);
-      }
-    } else {
-      console.warn("⚠️ No token found in localStorage");
-    }
-    setLoading(false);
-  }, []);
+      const fetchUserData = async () => {
+        const result = await getUserProfile();
+
+        if (result.success && result.data) {
+          console.log("✅ User profile:", result.data);
+          setRole(result.data.role || result.data.roles?.[0] || null);
+          setEmail(result.data.email || null);
+        } else {
+          console.error("❌ Failed to fetch profile:", result.message);
+        }
+
+        setLoading(false);
+      };
+
+      fetchUserData();
+    }, []);
 
   if (loading) {
     return (

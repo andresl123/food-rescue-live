@@ -48,7 +48,11 @@ export default function EditFoodItemModal({ show, lotId, foodItem, onClose, onIt
   if (!show) return null;
 
   return (
-    <div className="modal fade show d-block" tabIndex="-1" role="dialog">
+    <div className="modal fade show d-block" tabIndex="-1" role="dialog"
+    style={{
+        backgroundColor: "rgba(0, 0, 0, 0.25)",
+        zIndex: 1055,
+      }}>
       <div className="modal-dialog modal-dialog-centered modal-md" role="document">
         <div
           className="modal-content border-0 shadow-lg"

@@ -15,6 +15,8 @@ import java.net.ConnectException;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 
+//@CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
+
 @RestController
 @RequestMapping("/api")
 public class ApiGatewayController {
@@ -29,6 +31,7 @@ public class ApiGatewayController {
      */
     private final WebClient webClient;
 
+    @Value("${services.auth.base-url:}")          private String authBase;
     @Value("${services.jobs.base-url:}")          private String jobsBase;
     @Value("${services.evidence.base-url:}")      private String evidenceBase;
     @Value("${services.orgs.base-url:}")          private String orgsBase;
@@ -186,4 +189,33 @@ public class ApiGatewayController {
         String downstreamPath = afterApi.replaceFirst("^/lots", "/api/v1/lots");
         return forward(lotsBase, exchange, downstreamPath, body, contentType);
     }
+
+    @RequestMapping(
+            path = "/addresses/**",
+            method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.PATCH, RequestMethod.DELETE}
+    )
+    public Mono<ResponseEntity<byte[]>> addresses(@RequestBody(required = false) String body,
+                                                  @RequestHeader(name = "Content-Type", required = false) MediaType contentType,
+                                                  ServerWebExchange exchange) {
+        // /api/addresses/... → /api/v1/addresses/...
+        String incoming = exchange.getRequest().getURI().getPath();
+        String afterApi = incoming.replaceFirst("^/api", "");
+        String downstreamPath = afterApi.replaceFirst("^/addresses", "/api/v1/addresses");
+        return forward(authBase, exchange, downstreamPath, body, contentType);
+    }
+
+    @RequestMapping(
+            path = "/users/**",
+            method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.PATCH, RequestMethod.DELETE}
+    )
+    public Mono<ResponseEntity<byte[]>> users(@RequestBody(required = false) String body,
+                                              @RequestHeader(name = "Content-Type", required = false) MediaType contentType,
+                                              ServerWebExchange exchange) {
+        // /api/users/... → /api/v1/users/...
+        String incoming = exchange.getRequest().getURI().getPath();
+        String afterApi = incoming.replaceFirst("^/api", "");
+        String downstreamPath = afterApi.replaceFirst("^/users", "/api/v1/users");
+        return forward(authBase, exchange, downstreamPath, body, contentType);
+    }
+
 }

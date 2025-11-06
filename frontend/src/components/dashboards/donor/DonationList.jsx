@@ -1,9 +1,38 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dropdown } from "react-bootstrap";
 import LotDetailsModal from "./LotDetailsModal"; // ✅ import the modal
 
 export default function DonationList({ donations, onAddItem, onEditLot }) {
   const [selectedLot, setSelectedLot] = useState(null);
+  const [addressMap, setAddressMap] = useState({});
+
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      const token = localStorage.getItem("accessToken");
+      if (!token || !donations?.length) return;
+
+      const newMap = {};
+      await Promise.all(
+        donations.map(async (lot) => {
+          if (lot.addressId && !addressMap[lot.addressId]) {
+            try {
+              const res = await fetch(`http://localhost:8080/api/v1/addresses/${lot.addressId}`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              const addrData = await res.json();
+              if (addrData?.data) newMap[lot.addressId] = addrData.data;
+            } catch (err) {
+              console.error("Error fetching address for lot:", lot.lotId, err);
+            }
+          }
+        })
+      );
+      setAddressMap((prev) => ({ ...prev, ...newMap }));
+    };
+
+    fetchAddresses();
+  }, [donations]);
+
 
   const handleViewDetails = (lot) => setSelectedLot(lot);
 
@@ -76,8 +105,8 @@ export default function DonationList({ donations, onAddItem, onEditLot }) {
               <div
                 className="rounded-3 me-3 overflow-hidden"
                 style={{
-                  width: "70px",
-                  height: "70px",
+                  width: "110px",
+                  height: "110px",
                   backgroundColor: "#f3f4f6",
                   display: "flex",
                   alignItems: "center",
@@ -106,50 +135,63 @@ export default function DonationList({ donations, onAddItem, onEditLot }) {
                 <h6 className="fw-semibold mb-1 text-dark">
                   {lot.description || "Untitled Lot"}
                 </h6>
-                <div className="text-muted small">
-                  {lot.totalItems || 0} items •{" "}
-                  {new Date(lot.created_at || lot.createdAt).toLocaleDateString()}
+
+                {/* ✅ REPLACE THIS PART */}
+                <div className="text-muted small d-flex flex-column gap-1 mt-1">
+                  <div>
+                    <i className="bi bi-box-seam me-2"></i>
+                    {lot.totalItems || 0} items
+                  </div>
+                  <div>
+                    <i className="bi bi-calendar3 me-2"></i>
+                    {new Date(lot.created_at || lot.createdAt).toLocaleDateString()}
+                  </div>
+                  {lot.addressId && addressMap[lot.addressId] && (
+                    <div>
+                      <i className="bi bi-geo-alt-fill me-2"></i>
+                      {`${addressMap[lot.addressId].street || ""}, ${addressMap[lot.addressId].city || ""}, ${addressMap[lot.addressId].state || ""} ${addressMap[lot.addressId].postalCode || ""}`}
+                    </div>
+                  )}
                 </div>
+                {/* ✅ END OF NEW SECTION */}
+
                 <span
                   className={`badge rounded-pill mt-2 px-3 py-1 fw-semibold`}
                   style={{
                     fontSize: "0.75rem",
                     backgroundColor:
                       lot.status?.toLowerCase() === "active"
-                        ? "#dcfce7" // light green bg
+                        ? "#dcfce7"
                         : lot.status?.toLowerCase() === "pending"
-                        ? "#fff7ed" // orange bg (same as expiring soon)
+                        ? "#fff7ed"
                         : lot.status?.toLowerCase() === "expiring_soon"
-                        ? "#f97316" // solid orange bg
+                        ? "#f97316"
                         : lot.status?.toLowerCase() === "inactive"
-                        ? "#000000" // black bg
+                        ? "#000000"
                         : lot.status?.toLowerCase() === "delivered"
-                        ? "#dbeafe" // light blue bg
+                        ? "#dbeafe"
                         : "#f3f4f6",
-
                     color:
                       lot.status?.toLowerCase() === "active"
-                        ? "#166534" // dark green text
+                        ? "#166534"
                         : lot.status?.toLowerCase() === "pending"
-                        ? "#b45309" // dark orange text (same as expiring soon)
+                        ? "#b45309"
                         : lot.status?.toLowerCase() === "expiring_soon"
-                        ? "#ffffff" // white text for orange bg
+                        ? "#ffffff"
                         : lot.status?.toLowerCase() === "inactive"
-                        ? "#ffffff" // white text for black bg
+                        ? "#ffffff"
                         : lot.status?.toLowerCase() === "delivered"
-                        ? "#1e3a8a" // deep blue text
+                        ? "#1e3a8a"
                         : "#6b7280",
-
                     fontWeight: 600,
                     letterSpacing: "0.5px",
                     textTransform: "uppercase",
                   }}
-
                 >
                   {lot.status || "N/A"}
                 </span>
-
               </div>
+
             </div>
 
             {/* Right Section (Total + Dropdown) */}

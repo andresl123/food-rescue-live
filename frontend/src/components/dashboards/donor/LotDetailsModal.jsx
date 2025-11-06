@@ -1,15 +1,33 @@
 import React, { useEffect, useState } from "react";
 import FoodItemModal from "./FoodItemModal";
 import { getFoodItemsByLot } from "../../../services/lotService";
+import { getAddressById } from "../../../services/addressService";
 
 export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
   const [showFoodItemModal, setShowFoodItemModal] = useState(false);
   const [currentLot, setCurrentLot] = useState(lot); // keep local copy of lot
+  const [address, setAddress] = useState(null);
+
 
   // ✅ Sync modal when selected lot changes
   useEffect(() => {
     setCurrentLot(lot);
   }, [lot]);
+
+useEffect(() => {
+  const fetchAddress = async () => {
+    if (!currentLot?.addressId) return;
+    try {
+      const data = await getAddressById(currentLot.addressId);
+      if (data) setAddress(data);
+    } catch (err) {
+      console.error("Error fetching lot address:", err);
+    }
+  };
+
+  fetchAddress();
+}, [currentLot]);
+
 
   // ✅ Refresh food items when a new one is added
   const handleItemAdded = async () => {
@@ -133,8 +151,11 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
                   </h6>
                   <p className="mb-1 text-muted small">
                     <i className="bi bi-geo-alt me-1"></i>
-                    {currentLot.location || "Green Valley Community Garden"}
+                    {address
+                      ? `${address.street || ""}, ${address.city || ""}, ${address.state || ""} ${address.postalCode || ""}`
+                      : "Address not available"}
                   </p>
+
                   <p className="mb-0 text-muted small">
                     <i className="bi bi-calendar-event me-1"></i>
                     Expires: {currentLot.expiry || "3d left"}

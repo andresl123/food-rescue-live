@@ -3,14 +3,12 @@ const BFF_BASE_URL = "http://localhost:8090";
 
 export async function getLots() {
   try {
-    const token = localStorage.getItem("accessToken");
-    if (!token) {
-      return { success: false, message: "No authentication token found." };
-    }
-
-    const response = await fetch(`${BASE_URL}/lots`, {
+    const response = await fetch(`${BFF_BASE_URL}/api/lots`, {
       method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+              "Content-Type": "application/json",
+            },
+      credentials: "include",
     });
 
     if (response.status === 401) {
@@ -34,42 +32,6 @@ export async function getLots() {
     return { success: false, message: error.message };
   }
 }
-
-// export async function createLot(lotData) {
-//   try {
-//     const token = localStorage.getItem("accessToken");
-//     if (!token) {
-//       return { success: false, message: "No authentication token found." };
-//     }
-//
-//     const response = await fetch(`${BASE_URL}/lots`, {
-//       method: "POST",
-//       headers: {
-//         "Content-Type": "application/json",
-//         Authorization: `Bearer ${token}`,
-//       },
-//       body: JSON.stringify(lotData),
-//     });
-//
-//     const data = await response.json();
-//
-//     if (response.status === 401 || response.status === 403) {
-//       return { success: false, message: data.message || "Unauthorized or Forbidden" };
-//     }
-//
-//     if (!response.ok) {
-//       let errorMessage = data.message || "Failed to create lot.";
-//       throw new Error(errorMessage);
-//     }
-//
-//     return { success: true, data };
-//   } catch (error) {
-//     console.error("Create Lot Error:", error);
-//     return { success: false, message: error.message };
-//   }
-// }
-
-
 
 export async function createLot(lotData) {
   try {
@@ -105,18 +67,13 @@ export async function createLot(lotData) {
 
 export async function addFoodItem(lotId, itemData) {
   try {
-    const token = localStorage.getItem("accessToken");
-    if (!token) {
-      return { success: false, message: "No authentication token found." };
-    }
-
-    const response = await fetch(`${BASE_URL}/lots/${lotId}/items`, {
+    const response = await fetch(`${BFF_BASE_URL}/api/lots/${lotId}/items`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(itemData),
+      credentials: "include",
     });
 
     const data = await response.json();
@@ -140,9 +97,12 @@ export async function addFoodItem(lotId, itemData) {
 // Fetch items for a specific lot
 export async function getFoodItemsByLot(lotId) {
   try {
-    const token = localStorage.getItem("accessToken");
-    const res = await fetch(`http://localhost:8081/api/v1/lots/${lotId}/items`, {
-      headers: { Authorization: `Bearer ${token}` },
+    const res = await fetch(`${BFF_BASE_URL}/api/lots/${lotId}/items`, {
+      headers: {
+              "Content-Type": "application/json",
+            },
+    // THIS is the key so the browser sends the HttpOnly cookies to the BFF
+      credentials: "include",
     });
 
     if (!res.ok) throw new Error("Failed to fetch food items");
@@ -157,41 +117,77 @@ export async function getFoodItemsByLot(lotId) {
 
 export async function updateLot(lotId, lotData) {
   try {
-    const token = localStorage.getItem("accessToken");
-    if (!token) return { success: false, message: "No token found" };
+    console.log("Updating lot:", lotId);
 
-    const response = await fetch(`http://localhost:8081/api/v1/lots/${lotId}`, {
+    const response = await fetch(`${BFF_BASE_URL}/api/lots/${lotId}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
       },
+      credentials: "include",
       body: JSON.stringify(lotData),
     });
 
-    const data = await response.json();
-    if (!response.ok)
-      throw new Error(data.message || "Failed to update lot");
+    const text = await response.text();
+    console.log("Raw response:", text);
 
-    return { success: true, data };
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      parsed = { raw: text };
+    }
+
+    if (!response.ok) {
+      console.error("Lot update failed:", parsed);
+      throw new Error(parsed.message || `Failed to update lot: ${response.status}`);
+    }
+
+    console.log("Lot updated successfully:", parsed);
+    return { success: true, data: parsed.data || parsed };
   } catch (error) {
     console.error("Update Lot Error:", error);
     return { success: false, message: error.message };
   }
 }
 
+// export async function updateLot(lotId, lotData) {
+//   try {
+//     const token = localStorage.getItem("accessToken");
+//     if (!token) return { success: false, message: "No token found" };
+//
+//     const response = await fetch(`http://localhost:8081/api/v1/lots/${lotId}`, {
+//       method: "PUT",
+//       headers: {
+//         "Content-Type": "application/json",
+//         Authorization: `Bearer ${token}`,
+//       },
+//       body: JSON.stringify(lotData),
+//     });
+//
+//     const data = await response.json();
+//     if (!response.ok)
+//       throw new Error(data.message || "Failed to update lot");
+//
+//     return { success: true, data };
+//   } catch (error) {
+//     console.error("Update Lot Error:", error);
+//     return { success: false, message: error.message };
+//   }
+// }
+
 export async function updateFoodItem(lotId, itemId, itemData) {
   try {
-    const token = localStorage.getItem("accessToken");
-    if (!token) return { success: false, message: "No token found" };
+//     const token = localStorage.getItem("accessToken");
+//     if (!token) return { success: false, message: "No token found" };
 
-    const response = await fetch(`${BASE_URL}/lots/${lotId}/items/${itemId}`, {
+    const response = await fetch(`${BFF_BASE_URL}/api/lots/${lotId}/items/${itemId}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(itemData),
+      credentials: "include",
     });
 
     const data = await response.json();
