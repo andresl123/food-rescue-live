@@ -19,8 +19,6 @@ import java.time.LocalDate;
 public class PODService {
     
     private final PODRepository podRepository;
-    private final JobRepository jobRepository;
-    private final OrderRepository orderRepository;
     
     public Mono<ApiResponse<PODResponse>> create(PODCreateRequest request) {
         return podRepository.save(POD.builder()
