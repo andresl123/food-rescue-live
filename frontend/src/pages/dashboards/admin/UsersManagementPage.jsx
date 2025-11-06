@@ -9,6 +9,9 @@ const UsersManagementPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // ADD NEW STATE FOR SEARCH
+    const [searchQuery, setSearchQuery] = useState("");
+
   // --- Modal States ---
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
@@ -151,8 +154,15 @@ const UsersManagementPage = () => {
     }
   };
 
+  // --- 2. CREATE A FILTERED LIST ---
+  // This derived state filters users based on the search query
+  const filteredUsers = users.filter(user =>
+    user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   // --- Render Table Body ---
-  const renderTableBody = () => {
+const renderTableBody = () => {
     if (isLoading) {
       return (
         <tr>
@@ -167,6 +177,7 @@ const UsersManagementPage = () => {
         </tr>
       );
     }
+    // Check if the initial fetch returned no users
     if (users.length === 0) {
       return (
         <tr>
@@ -174,9 +185,19 @@ const UsersManagementPage = () => {
         </tr>
       );
     }
+    // Check if the filter returned no users
+    if (filteredUsers.length === 0) {
+      return (
+        <tr>
+          <td colSpan="6" style={{ textAlign: 'center' }}>
+            No users match your search.
+          </td>
+        </tr>
+      );
+    }
 
-    return users.map((user) => {
-      // Display first role as primary, or categoryId if roles are empty
+    // Map over the FILTERED list
+    return filteredUsers.map((user) => {
       const primaryRole = user.roles && user.roles.length > 0 ? user.roles[0] : (user.categoryId || 'user');
 
       return (
@@ -223,7 +244,12 @@ const UsersManagementPage = () => {
 
         <div className="search-bar">
           <i className="bi bi-search"></i>
-          <input type="text" placeholder="Search users..." />
+          <input
+            type="text"
+            placeholder="Search users by name or email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
 
         <div className="table-container">

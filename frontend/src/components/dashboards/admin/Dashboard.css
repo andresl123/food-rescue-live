@@ -314,9 +314,18 @@
     text-transform: capitalize;
 }
 
-.role-admin { background-color: #111827; color: #ffffff; }
-.role-volunteer { background-color: #eef2ff; color: #4338ca; }
-.role-recipient { background-color: #fef3c7; color: #92400e; }
+.role-admin {
+    background-color: #388e3c; /* Dark Green */
+    color: #ffffff;
+}
+.role-volunteer { /* For DONOR */
+    background-color: #303f9f; /* Dark Indigo */
+    color: #ffffff;
+}
+.role-recipient {
+    background-color: #fbc02d; /* Dark Yellow */
+    color: #212121;
+}
 
 .status-active {
     background-color: #bbdefb; /* Darker blue */
@@ -349,70 +358,19 @@
 
 /* --- New Lot Status Styles (Option 2) --- */
 
-.status-open {
-    background-color: #c8e6c9; /* Darker green */
-    color: #1b5e20;
-}
-
-.status-closed {
-    background-color: #e0e0e0; /* Darker gray */
-    color: #212121;
-}
-.status-empty {
-    background-color: #ffcdd2; /* Darker red */
-    color: #b71c1c;
-}
-
 .capacity-bar-inner {
     height: 100%;
     background-color: #22c55e; /* Green color for the bar */
     border-radius: 4px;
 }
 
-.status-full {
-    background-color: #c5cae9; /* Darker indigo */
-    color: #1a237e;
-}
-
-/* --- Food Items Management Page Styles --- */
-
-/* New Status Badge Styles */
-.status-fresh {
-    background-color: #388e3c; /* Even darker, solid green */
-    color: #ffffff; /* White text for high contrast */
-}
-
-.status-expiring_soon {
-    background-color: #fbc02d; /* Even darker amber/yellow */
-    color: #3e2723; /* Dark brown text for high contrast */
-}
 /* --- Orders & POD Page Styles --- */
-
-/* New Status Badge Styles */
-.status-completed {
-    background-color: #bdbdbd; /* Darker gray */
-    color: #212121;
-}
-.status-processing {
-    background-color: #90caf9; /* Darker blue */
-    color: #0d47a1;
-}
-.status-pending {
-    background-color: #ffe082; /* Darker amber */
-    color: #ff6f00;
-}
 
 /* OTP Code Styling */
 .otp-code {
     font-family: 'Courier New', Courier, monospace;
     font-weight: 600;
     letter-spacing: 1px;
-}
-
-/* Style for DELIVERED */
-.status-delivered {
-    background-color: #a5d6a7; /* Darker green */
-    color: #1b5e20;
 }
 
 .modal-overlay {
@@ -542,10 +500,6 @@
   opacity: 0.7;
 }
 
-.status-expired {
-    background-color: #d32f2f; /* Even darker, solid red */
-    color: #ffffff; /* White text for high contrast */
-}
 /* --- User Role Badge Styles --- */
 
 .role-admin {
@@ -561,12 +515,61 @@
     color: #92400e;
 }
 .role-user {
-    background-color: #e5e7eb; /* Gray */
-    color: #374151;
+    background-color: #616161; /* Dark Gray */
+    color: #ffffff;
 }
 
-/* New Status Styles for Users */
-.status-suspended {
-    background-color: #ffcdd2; /* Red */
-    color: #b71c1c;
+/* --- Darker, High-Contrast Badge Styles --- */
+
+/* === Role Badges === */
+.role-admin {
+    background-color: #388e3c; /* Dark Green */
+    color: #ffffff;
+}
+.role-volunteer { /* For DONOR */
+    background-color: #303f9f; /* Dark Indigo */
+    color: #ffffff;
+}
+.role-recipient {
+    background-color: #fbc02d; /* Dark Yellow */
+    color: #212121;
+}
+.role-user {
+    background-color: #616161; /* Dark Gray */
+    color: #ffffff;
+}
+
+/* === Status Badges === */
+.status-active,
+.status-open,
+.status-fresh,
+.status-delivered {
+    background-color: #388e3c; /* Dark Green */
+    color: #ffffff;
+}
+
+.status-inactive,
+.status-empty,
+.status-suspended,
+.status-expired {
+    background-color: #d32f2f; /* Dark Red */
+    color: #ffffff;
+}
+
+.status-expiring_soon,
+.status-pending {
+    background-color: #fbc02d; /* Dark Yellow */
+    color: #212121;
+}
+
+.status-processing {
+    background-color: #1976d2; /* Dark Blue */
+    color: #ffffff;
+}
+
+.status-full,
+.status-closed,
+.status-completed {
+    background-color: #616161; /* Dark Gray */
+    color: #ffffff;
 }

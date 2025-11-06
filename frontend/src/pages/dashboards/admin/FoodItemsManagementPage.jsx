@@ -11,6 +11,8 @@ const FoodItemsManagementPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const [searchQuery, setSearchQuery] = useState("");
+
   // --- Modal States ---
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [currentItem, setCurrentItem] = useState(null);
@@ -174,8 +176,26 @@ const handleEditSubmit = async (e) => {
     }
   };
 
+  // CREATE A FILTERED LIST
+const filteredFoodItems = foodItems.filter(item => {
+    const query = searchQuery.toLowerCase();
+    const lotName = getLotName(item.lotId).toLowerCase();
+
+    // Calculate status to make it searchable
+    const status = calculateStatus(item.expiryDate).toLowerCase();
+    // Replace underscore for easier searching
+    const searchableStatus = status.replace('_', ' ');
+
+    return (
+      item.itemName.toLowerCase().includes(query) ||
+      item.category.toLowerCase().includes(query) ||
+      lotName.includes(query) ||
+      searchableStatus.includes(query) // <-- ADDED STATUS SEARCH
+    );
+  });
+
   // --- Render Table Body ---
-  const renderTableBody = () => {
+const renderTableBody = () => {
     if (isLoading) {
       return (
         <tr>
@@ -186,12 +206,11 @@ const handleEditSubmit = async (e) => {
     if (error) {
       return (
         <tr>
-          <td colSpan="7" style={{ textAlign: 'center', color: 'red' }}>
-            Error: {error}
-          </td>
+          <td colSpan="7" style={{ textAlign: 'center' }}>Error: {error}</td>
         </tr>
       );
     }
+    // Check if initial fetch returned no items
     if (foodItems.length === 0) {
       return (
         <tr>
@@ -199,8 +218,19 @@ const handleEditSubmit = async (e) => {
         </tr>
       );
     }
+    // Check if the filter returned no items
+    if (filteredFoodItems.length === 0) {
+      return (
+        <tr>
+          <td colSpan="7" style={{ textAlign: 'center' }}>
+            No items match your search.
+          </td>
+        </tr>
+      );
+    }
 
-    return foodItems.map((item) => {
+    // Map over the FILTERED list
+    return filteredFoodItems.map((item) => {
       const status = calculateStatus(item.expiryDate);
       const lotName = getLotName(item.lotId);
 
@@ -247,9 +277,15 @@ const handleEditSubmit = async (e) => {
           </button>
         </header>
 
+        {/* SEARCH INPUT */}
         <div className="search-bar">
           <i className="bi bi-search"></i>
-          <input type="text" placeholder="Search food items..." />
+          <input
+            type="text"
+            placeholder="Search by name, category, lot, or status..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
 
         <div className="table-container">

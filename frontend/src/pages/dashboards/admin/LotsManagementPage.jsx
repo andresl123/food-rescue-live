@@ -10,6 +10,8 @@ const LotsManagementPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
+    const [searchQuery, setSearchQuery] = useState("");
+
   // --- State for Edit Modal ---
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentLot, setCurrentLot] = useState(null);
@@ -114,7 +116,16 @@ const LotsManagementPage = () => {
     return `badge status-${status.toLowerCase()}`;
   };
 
-  // --- Helper to render the table body ---
+  // Filters lots based on the description
+const filteredLots = lots.filter(lot => {
+    const query = searchQuery.toLowerCase();
+    return (
+      lot.description.toLowerCase().includes(query) ||
+      lot.status.toLowerCase().includes(query)
+    );
+  });
+
+  // --- 4. UPDATE RENDER LOGIC ---
   const renderTableBody = () => {
     if (isLoading) {
       return (
@@ -126,12 +137,11 @@ const LotsManagementPage = () => {
     if (error) {
       return (
         <tr>
-          <td colSpan="5" style={{ textAlign: 'center', color: 'red' }}>
-            Error: {error}
-          </td>
+          <td colSpan="5" style={{ textAlign: 'center' }}>Error: {error}</td>
         </tr>
       );
     }
+    // Check if initial fetch returned no lots
     if (lots.length === 0) {
       return (
         <tr>
@@ -139,12 +149,21 @@ const LotsManagementPage = () => {
         </tr>
       );
     }
+    // Check if the filter returned no lots
+    if (filteredLots.length === 0) {
+      return (
+        <tr>
+          <td colSpan="5" style={{ textAlign: 'center' }}>
+            No lots match your search.
+          </td>
+        </tr>
+      );
+    }
 
-    // Render the data
-    return lots.map((lot) => {
-      // **UPDATED:** Only apply class if CLOSED or INACTIVE
+    // Map over the FILTERED list
+    return filteredLots.map((lot) => {
       const rowClass =
-        lot.status === 'CLOSED' || lot.status === 'INACTIVE'
+        lot.status === 'CLOSED' || lot.status === 'EMPTY'
           ? 'lot-unavailable'
           : '';
 
@@ -187,9 +206,15 @@ const LotsManagementPage = () => {
           </button>
         </header>
 
+    {/* SEARCH INPUT */}
         <div className="search-bar">
           <i className="bi bi-search"></i>
-          <input type="text" placeholder="Search lots..." />
+          <input
+            type="text"
+            placeholder="Search by description or status..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
 
         <div className="table-container">
