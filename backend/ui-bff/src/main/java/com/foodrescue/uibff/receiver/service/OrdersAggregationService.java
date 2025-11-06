@@ -54,7 +54,6 @@ public class OrdersAggregationService {
                             + ", completed=" + resp.completed().size());
                 })
                 .flatMap(flat -> {
-
                     Mono<List<UiOrder>> currentMono = Flux.fromIterable(flat.current())
                             .flatMap(order -> fetchDetailsAndAggregate(order, authHeader))
                             .collectList();
@@ -69,13 +68,12 @@ public class OrdersAggregationService {
 
     private Mono<UiOrder> fetchDetailsAndAggregate(JobOrderRow order, String authHeader) {
 
-        final String lotId = order.lot_id();
+        final String lotId = order.lot_id();  // 👈 we'll forward this to UI
         final String lotUrl = lotsBaseUrl + "/api/v1/lots/" + lotId;
         final String lotItemsUrl = lotsBaseUrl + "/api/v1/lots/" + lotId + "/items";
 
         System.out.println("\n[BFF] ==== aggregating order " + order.id() + " (lot=" + lotId + ") ====");
 
-        // 0) LOT CALL – note: your service returns { success, data: { ...actual lot... } }
         Mono<LotEnvelope> lotEnvMono = webClient.get()
                 .uri(lotUrl)
                 .headers(h -> h.set(HttpHeaders.AUTHORIZATION, authHeader))
@@ -87,12 +85,8 @@ public class OrdersAggregationService {
                             + ", lotId=" + (d != null ? d.getLotId() : null)
                             + ", userId(donor?)=" + (d != null ? d.getUserId() : null));
                 })
-                .doOnError(err -> {
-                    System.out.println("[BFF][ERR] GET " + lotUrl + " -> " + err.getMessage());
-                })
                 .onErrorReturn(new LotEnvelope(false, null));
 
-        // 1) LOT ITEMS
         Mono<List<FoodItemDto>> itemsMono = webClient.get()
                 .uri(lotItemsUrl)
                 .headers(h -> h.set(HttpHeaders.AUTHORIZATION, authHeader))
@@ -103,7 +97,6 @@ public class OrdersAggregationService {
                 .doOnNext(list -> System.out.println("[BFF] items count for lot " + lotId + " = " + list.size()))
                 .onErrorReturn(List.of());
 
-        // 2) DONOR ADDRESS
         String donorAddrUrl = authBaseUrl + "/api/v1/addresses/" + order.donor_address();
         Mono<AddressEnvelope> donorAddrMono = webClient.get()
                 .uri(donorAddrUrl)
@@ -113,7 +106,6 @@ public class OrdersAggregationService {
                 .doOnNext(a -> System.out.println("[BFF] GET " + donorAddrUrl + " -> success=" + a.success()))
                 .onErrorReturn(new AddressEnvelope(false, null));
 
-        // 3) RECIPIENT USER
         String recipientUserUrl = authBaseUrl + "/api/v1/users/" + order.receiver_id();
         Mono<UserEnvelope> recipientUserMono = webClient.get()
                 .uri(recipientUserUrl)
@@ -123,7 +115,6 @@ public class OrdersAggregationService {
                 .doOnNext(u -> System.out.println("[BFF] GET " + recipientUserUrl + " -> name=" + (u.data() != null ? u.data().name() : "null")))
                 .onErrorReturn(new UserEnvelope(false, null));
 
-        // 4) RECIPIENT ADDRESS
         String recipientAddrUrl = authBaseUrl + "/api/v1/addresses/" + order.recipient_address();
         Mono<AddressEnvelope> recipientAddrMono = webClient.get()
                 .uri(recipientAddrUrl)
@@ -133,7 +124,6 @@ public class OrdersAggregationService {
                 .doOnNext(a -> System.out.println("[BFF] GET " + recipientAddrUrl + " -> success=" + a.success()))
                 .onErrorReturn(new AddressEnvelope(false, null));
 
-        // 5) COURIER
         Mono<UserEnvelope> courierMono;
         if ("To be assigned".equalsIgnoreCase(order.courier_id())) {
             System.out.println("[BFF] courier is 'To be assigned' in job response");
@@ -149,9 +139,8 @@ public class OrdersAggregationService {
                     .onErrorReturn(new UserEnvelope(false, null));
         }
 
-        // now that we have the lot envelope, we can get donor userId from lot.data.userId
         return lotEnvMono.flatMap(lotEnv -> {
-            LotDto lotDto = lotEnv.data();   // 👈 actual lot here
+            LotDto lotDto = lotEnv.data();
             String donorUserId = (lotDto != null) ? lotDto.getUserId() : null;
 
             Mono<UserEnvelope> donorUserMono;
@@ -207,6 +196,7 @@ public class OrdersAggregationService {
 
                 System.out.println("[BFF] Built UiOrder for order=" + order.id());
 
+                // 👇 ADDED lotId HERE
                 return new UiOrder(
                         order.id(),
                         formatUiDate(order.date()),
@@ -214,7 +204,8 @@ public class OrdersAggregationService {
                         donor,
                         recipient,
                         uiItems,
-                        courier
+                        courier,
+                        lotId              // <--- NEW FIELD
                 );
             });
         });
@@ -237,6 +228,9 @@ public class OrdersAggregationService {
         StringBuilder sb = new StringBuilder();
         if (a.street() != null) sb.append(a.street());
         if (a.city() != null) sb.append(", ").append(a.city());
+        if (a.state() != null) sb.append(", ").append(a.state());
+        if (a.postalCode() != null) sb.append(", ").append(a.postalCode());
+        if (a.country() != null) sb.append(", ").append(a.country());
         return sb.toString();
     }
 
@@ -244,13 +238,11 @@ public class OrdersAggregationService {
     public static class LotEnvelope {
         private boolean success;
         private LotDto data;
-
         public LotEnvelope() {}
         public LotEnvelope(boolean success, LotDto data) {
             this.success = success;
             this.data = data;
         }
-
         public boolean success() { return success; }
         public void setSuccess(boolean success) { this.success = success; }
         public LotDto data() { return data; }
@@ -261,8 +253,7 @@ public class OrdersAggregationService {
     public static class LotDto {
         private String lotId;
         private String userId;
-        private String addressId; // in case you need it later
-
+        private String addressId;
         public String getLotId() { return lotId; }
         public void setLotId(String lotId) { this.lotId = lotId; }
         public String getUserId() { return userId; }

@@ -1,13 +1,57 @@
 // pages/RescueOrdersPage.jsx
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import UserLayout from "../../layout/UserLayout";
 import RescueOrderCard from "../../components/orders/RescueOrderCard";
+import OrderDetailsModal from "../../components/orders/OrderDetailsModal"; // ⬅️ new
 import "bootstrap/dist/css/bootstrap.min.css";
 
-export default function RescueOrdersPage({ data }) {
-  // data shape:
-  // { current:[order...], completed:[order...] }
-  const [tab, setTab] = useState("completed"); // default like screenshot
+const BFF_BASE_URL = "http://localhost:8090";
+
+export default function RescueOrdersPage() {
+  const [tab, setTab] = useState("completed");
+  const [data, setData] = useState({ current: [], completed: [] });
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+
+  // NEW: modal state
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      setLoading(true);
+      setErr("");
+      try {
+        const res = await fetch(`${BFF_BASE_URL}/api/ui/orders`, {
+          method: "GET",
+          credentials: "include", // send cookies (httpOnly access_token)
+          headers: {
+            Accept: "application/json",
+          },
+        });
+
+        if (!res.ok) {
+          const msg = await res.text();
+          setErr(msg || "Failed to load orders");
+          setLoading(false);
+          return;
+        }
+
+        const json = await res.json();
+        setData({
+          current: json.current || [],
+          completed: json.completed || [],
+        });
+      } catch (e) {
+        console.error("orders fetch error", e);
+        setErr("Network error fetching orders");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, []);
 
   const { currentCount, completedCount, list } = useMemo(() => {
     const current = data?.current ?? [];
@@ -15,13 +59,14 @@ export default function RescueOrdersPage({ data }) {
     return {
       currentCount: current.length,
       completedCount: completed.length,
-      list: tab === "current" ? current : completed
+      list: tab === "current" ? current : completed,
     };
   }, [data, tab]);
 
   const onViewDetails = (order) => {
-    // hook up your modal/route here
-    console.log("view", order.id);
+    // open modal with this order
+    setSelectedOrder(order);
+    setShowModal(true);
   };
 
   return (
@@ -41,6 +86,7 @@ export default function RescueOrdersPage({ data }) {
             <button
               className={`pill-btn ${tab === "current" ? "active" : ""}`}
               onClick={() => setTab("current")}
+              disabled={loading}
             >
               <span className="pill-badge">
                 <i className="bi bi-clock-history"></i>
@@ -53,6 +99,7 @@ export default function RescueOrdersPage({ data }) {
             <button
               className={`pill-btn ${tab === "completed" ? "active" : ""}`}
               onClick={() => setTab("completed")}
+              disabled={loading}
             >
               <span className="pill-badge">
                 <i className="bi bi-leaf"></i>
@@ -65,11 +112,28 @@ export default function RescueOrdersPage({ data }) {
           </div>
         </div>
 
+        {/* States */}
+        {loading && <p>Loading orders…</p>}
+        {err && !loading && <p className="text-danger">{err}</p>}
+
         {/* Cards */}
-        {list.map((o) => (
-          <RescueOrderCard key={o.id} order={o} onView={onViewDetails} />
-        ))}
+        {!loading &&
+          !err &&
+          list.map((o) => (
+            <RescueOrderCard key={o.id} order={o} onView={onViewDetails} />
+          ))}
+
+        {!loading && !err && list.length === 0 && (
+          <p className="text-muted text-center mt-4">No orders in this tab.</p>
+        )}
       </div>
+
+      {/* NEW: modal render */}
+      <OrderDetailsModal
+        show={showModal}
+        onClose={() => setShowModal(false)}
+        order={selectedOrder}
+      />
     </UserLayout>
   );
 }

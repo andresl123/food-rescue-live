@@ -9,5 +9,6 @@ public record UiOrder(
         UiParty donor,
         UiParty recipient,
         List<UiItem> items,
-        UiCourier courier
+        UiCourier courier,
+        String lotId
 ) {}
