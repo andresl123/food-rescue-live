@@ -46,8 +46,10 @@ public class FoodItemService {
 
                     boolean isAdmin = authorities.stream()
                             .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ROLE_ADMIN"));
+                    boolean isReceiver = authorities.stream()
+                            .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ROLE_RECEIVER"));
 
-                    if (isAdmin || lot.getUserId().equals(userId)) {
+                    if (isAdmin || isReceiver || lot.getUserId().equals(userId)) {
                         return Mono.just(lot); // Authorized
                     } else {
                         return Mono.error(new AccessDeniedException("You do not have permission to access items in this lot."));

@@ -115,18 +115,33 @@ public class    SecurityConfig {
     }
 
     // --- THIS BEAN PROVIDES THE CORS CONFIGURATION ---
+//    @Bean
+//    CorsConfigurationSource corsConfigurationSource() {
+//        CorsConfiguration configuration = new CorsConfiguration();
+//        // Allow requests from your React app's development server
+//        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
+//        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+//        configuration.setAllowedHeaders(List.of("*"));
+//        configuration.setAllowCredentials(true);
+//        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+//        source.registerCorsConfiguration("/**", configuration);
+//        return source;
+//    }
+
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Allow requests from your React app's development server
         configuration.setAllowedOrigins(List.of("http://localhost:5173"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")); // ✅ Added PATCH
         configuration.setAllowedHeaders(List.of("*"));
+        configuration.setExposedHeaders(List.of("*")); // ✅ Important for WebFlux
         configuration.setAllowCredentials(true);
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
+
 
     private Mono<Void> writeJson(ServerHttpResponse res, HttpStatus status, String body) {
         res.setStatusCode(status);

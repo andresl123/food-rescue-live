@@ -1,4 +1,5 @@
 const BASE_URL = "http://localhost:8081/api/v1";
+const BFF_BASE_URL = "http://localhost:8090";
 
 export async function getLots() {
   try {
@@ -34,31 +35,65 @@ export async function getLots() {
   }
 }
 
+// export async function createLot(lotData) {
+//   try {
+//     const token = localStorage.getItem("accessToken");
+//     if (!token) {
+//       return { success: false, message: "No authentication token found." };
+//     }
+//
+//     const response = await fetch(`${BASE_URL}/lots`, {
+//       method: "POST",
+//       headers: {
+//         "Content-Type": "application/json",
+//         Authorization: `Bearer ${token}`,
+//       },
+//       body: JSON.stringify(lotData),
+//     });
+//
+//     const data = await response.json();
+//
+//     if (response.status === 401 || response.status === 403) {
+//       return { success: false, message: data.message || "Unauthorized or Forbidden" };
+//     }
+//
+//     if (!response.ok) {
+//       let errorMessage = data.message || "Failed to create lot.";
+//       throw new Error(errorMessage);
+//     }
+//
+//     return { success: true, data };
+//   } catch (error) {
+//     console.error("Create Lot Error:", error);
+//     return { success: false, message: error.message };
+//   }
+// }
+
+
+
 export async function createLot(lotData) {
   try {
-    const token = localStorage.getItem("accessToken");
-    if (!token) {
-      return { success: false, message: "No authentication token found." };
-    }
-
-    const response = await fetch(`${BASE_URL}/lots`, {
+    const response = await fetch(`${BFF_BASE_URL}/api/lots`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(lotData),
+      // THIS is the key so the browser sends the HttpOnly cookies to the BFF
+      credentials: "include",
     });
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
 
     if (response.status === 401 || response.status === 403) {
-      return { success: false, message: data.message || "Unauthorized or Forbidden" };
+      return {
+        success: false,
+        message: data.message || "Unauthorized or Forbidden",
+      };
     }
 
     if (!response.ok) {
-      let errorMessage = data.message || "Failed to create lot.";
-      throw new Error(errorMessage);
+      throw new Error(data.message || "Failed to create lot.");
     }
 
     return { success: true, data };
