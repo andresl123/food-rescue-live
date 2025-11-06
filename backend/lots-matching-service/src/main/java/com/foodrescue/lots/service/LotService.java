@@ -170,14 +170,14 @@ public class LotService {
 
         // only OPEN lots
         Mono<List<Lot>> lotsMono = lotRepository.findAll()
-                .filter(lot -> "OPEN".equalsIgnoreCase(lot.getStatus()))
+                .filter(lot -> "ACTIVE".equalsIgnoreCase(lot.getStatus()))
                 .skip(skip)
                 .take(size)
                 .collectList();
 
         // total should also count only OPEN lots
         Mono<Long> totalMono = lotRepository.findAll()
-                .filter(lot -> "OPEN".equalsIgnoreCase(lot.getStatus()))
+                .filter(lot -> "ACTIVE".equalsIgnoreCase(lot.getStatus()))
                 .count();
 
         return Mono.zip(lotsMono, totalMono)

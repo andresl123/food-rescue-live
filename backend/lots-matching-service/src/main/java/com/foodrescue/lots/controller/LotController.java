@@ -32,7 +32,7 @@ public class LotController {
 
     /** ADMIN can view everything */
     @GetMapping("/all")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','RECEIVER')")
     public Flux<Lot> getAllLots(Mono<Authentication> authenticationMono) {
         return lotService.getAllLotsForAdmin(authenticationMono);
     }

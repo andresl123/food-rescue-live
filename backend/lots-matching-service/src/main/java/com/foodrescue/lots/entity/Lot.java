@@ -17,7 +17,6 @@ import java.util.List;
 public class Lot {
 
     @Id
-    @Field("lot_id")
     private String lotId;
 
     @Field("donor_id")
