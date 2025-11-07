@@ -3,6 +3,7 @@ import Sidebar from '../../../components/dashboards/admin/Sidebar';
 // Import all three functions
 import { getAllLots, updateLot, deleteLot } from '../../../services/lotService';
 import '../../../components/dashboards/admin/Dashboard.css';
+import { Status } from '../../../assets/statusValues';
 import toast from 'react-hot-toast';
 
 const LotsManagementPage = () => {
@@ -163,11 +164,7 @@ const LotsManagementPage = () => {
     }
 
     return filteredLots.map((lot) => {
-      const rowClass =
-        lot.status === 'CLOSED' || lot.status === 'EMPTY'
-          ? 'lot-unavailable'
-          : '';
-
+        const rowClass = lot.status === Status.INACTIVE ? 'row-inactive' : '';
       return (
         <tr key={lot.lotId} className={rowClass}>
           <td>{lot.description}</td>
@@ -230,7 +227,7 @@ const LotsManagementPage = () => {
       </main>
 
       {/* --- Edit Modal --- */}
-      {isModalOpen && (
+{isModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content">
             <h2>Edit Lot</h2>
@@ -255,13 +252,13 @@ const LotsManagementPage = () => {
                   onChange={handleFormChange}
                   required
                 >
-                  <option value="OPEN">OPEN</option>
-                  <option value="CLOSED">CLOSED</option>
-                  <option value="EMPTY">EMPTY</option>
+                  <option value={Status.ACTIVE}>{Status.ACTIVE}</option>
+                  <option value={Status.INACTIVE}>{Status.INACTIVE}</option>
+                  <option value={Status.EXPIRING_SOON}>{Status.EXPIRING_SOON}</option>
                 </select>
               </div>
               <div className="modal-actions">
-                <button type="button" className="btn-cancel" onClick={handleCloseModal}>
+                <button typeT="button" className="btn-cancel" onClick={handleCloseModal}>
                   Cancel
                 </button>
                 <button type="submit" className="btn-submit">

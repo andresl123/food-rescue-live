@@ -1,6 +1,7 @@
 import React from 'react';
 import Sidebar from '../../../components/dashboards/admin/Sidebar';
 import '../../../components/dashboards/admin/Dashboard.css';
+import { Status } from '../../../assets/statusValues';
 
 const OrdersAndPODPage = () => {
   // Dummy data for the orders table

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '../../../components/dashboards/admin/Sidebar';
 import { getAllUsers, updateUser, deleteUser } from '../../../services/userService'; // <-- Import new service
 import '../../../components/dashboards/admin/Dashboard.css';
+import { Status } from '../../../assets/statusValues';
 import toast from 'react-hot-toast';
 
 const UsersManagementPage = () => {
@@ -197,10 +198,10 @@ const renderTableBody = () => {
     return filteredUsers.map((user) => {
       const primaryRole = user.roles && user.roles.length > 0 ? user.roles[0] : (user.categoryId || 'USER');
 
-      // The stray code that was here has been removed.
+      const rowClass = user.status === Status.INACTIVE ? 'row-inactive' : '';
 
       return (
-        <tr key={user.id}>
+        <tr key={user.id} className={rowClass}>
           <td>{user.name}</td>
           <td>{user.email}</td>
           <td>
@@ -310,7 +311,6 @@ const renderTableBody = () => {
                 >
                   <option value="ACTIVE">ACTIVE</option>
                   <option value="INACTIVE">INACTIVE</option>
-                  <option value="SUSPENDED">SUSPENDED</option>
                 </select>
               </div>
 

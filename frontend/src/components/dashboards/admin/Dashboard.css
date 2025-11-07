@@ -328,12 +328,12 @@
 }
 
 .status-active {
-    background-color: #bbdefb; /* Darker blue */
-    color: #0d47a1;
+    background-color: #388e3c; /* Dark Green */
+    color: #ffffff;
 }
 .status-inactive {
-    background-color: #ffcdd2; /* Darker red */
-    color: #b71c1c;
+    background-color: #d32f2f; /* Dark Red */
+    color: #ffffff;
 }
 
 /* Action Icons */
@@ -540,11 +540,15 @@
 }
 
 /* === Status Badges === */
+.status-fresh {
+    background-color: #388e3c; /* Dark Green */
+    color: #ffffff;
+}
+
 .status-active,
 .status-open,
-.status-fresh,
 .status-delivered {
-    background-color: #388e3c; /* Dark Green */
+    background-color: #1976d2; /* Dark Blue */
     color: #ffffff;
 }
 
@@ -556,9 +560,9 @@
     color: #ffffff;
 }
 
-.status-expiring_soon,
-.status-pending {
-    background-color: #fbc02d; /* Dark Yellow */
+.status-pending,
+.status-expiring_soon {
+    background-color: #fbc02d;
     color: #212121;
 }
 
@@ -582,5 +586,17 @@
 
 /* Make sure the badge is also faded */
 .item-expired .badge {
+  opacity: 0.7;
+}
+
+/* --- Style for inactive (strikethrough) rows --- */
+
+.row-inactive {
+  text-decoration: line-through;
+  color: #9ca3af; /* Faded gray text */
+}
+
+/* Make sure the badge is also faded */
+.row-inactive .badge {
   opacity: 0.7;
 }
