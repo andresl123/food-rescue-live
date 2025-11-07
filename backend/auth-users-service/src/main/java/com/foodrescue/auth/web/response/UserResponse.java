@@ -2,6 +2,7 @@ package com.foodrescue.auth.web.response;
 
 import java.time.Instant;
 import java.util.Set;
+import java.util.List;
 
 public record UserResponse(
         String id,
@@ -10,6 +11,7 @@ public record UserResponse(
         String categoryId,
         String phoneNumber,
         String defaultAddressId,
+        List<String> moreAddresses,
         Set<String> roles,
         String status,
         Instant createdAt,
