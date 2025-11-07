@@ -194,8 +194,7 @@ const LotsManagementPage = () => {
   };
 
   return (
-    <div className="dashboard-container">
-      <Sidebar />
+    <>
       <main className="main-content">
         <header className="page-header">
           <div>
@@ -316,7 +315,7 @@ const LotsManagementPage = () => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 

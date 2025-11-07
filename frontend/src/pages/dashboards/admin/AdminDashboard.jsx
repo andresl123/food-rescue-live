@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import Sidebar from '../../../components/dashboards/admin/Sidebar';
 import StatCard from '../../../components/dashboards/admin/StatCard';
 import '../../../components/dashboards/admin/Dashboard.css';
 
@@ -72,8 +71,6 @@ const AdminDashboard = () => {
   const loadingValue = '...';
 
   return (
-    <div className="dashboard-container">
-      <Sidebar />
       <main className="main-content">
         <header className="main-header">
           <h1>Dashboard Overview</h1>
@@ -145,7 +142,6 @@ const AdminDashboard = () => {
           </div>
         </div>
       </main>
-    </div>
   );
 };
 

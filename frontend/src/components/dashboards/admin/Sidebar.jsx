@@ -8,16 +8,13 @@ const Sidebar = () => {
     { path: "/admin-users", icon: "bi-people-fill", label: "Users" },
     { path: "/admin-lots", icon: "bi-box-seam-fill", label: "Lots" },
     { path: "/admin-food-items", icon: "bi-egg-fried", label: "Food Items" },
-    { path: "/admin-orders", icon: "bi-cart-check-fill", label: "Orders & POD" },,
+    { path: "/admin-orders", icon: "bi-cart-check-fill", label: "Orders & POD" },
   ];
 
   return (
     <aside className="sidebar">
-      <div className="sidebar-header">
-        <h2>Food Rescue Live</h2>
-        <p>Admin Dashboard</p>
-      </div>
-      <nav className="sidebar-nav">
+      {/* The header is now removed from here */}
+      <nav className="sidebar-nav" style={{ marginTop: '20px' }}> {/* Added margin-top */}
         <ul>
           {navItems.map((item, index) => (
             <li key={index}>

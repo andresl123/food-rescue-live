@@ -228,8 +228,7 @@ const renderTableBody = () => {
   };
 
   return (
-    <div className="dashboard-container">
-      <Sidebar />
+    <>
       <main className="main-content">
         <header className="page-header">
           <div>
@@ -266,7 +265,7 @@ const renderTableBody = () => {
       </main>
 
       {/* --- Edit Modal --- */}
-{isEditModalOpen && (
+        {isEditModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content">
             <h2>Edit User</h2>
@@ -370,7 +369,7 @@ const renderTableBody = () => {
           </div>
         </div>
       )}
-    </div>
+  </>
   );
 };
 

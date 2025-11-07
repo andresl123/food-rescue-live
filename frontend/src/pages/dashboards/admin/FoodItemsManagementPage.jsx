@@ -267,8 +267,7 @@ return filteredFoodItems.map((item) => {
   };
 
   return (
-    <div className="dashboard-container">
-      <Sidebar />
+    <>
       <main className="main-content">
         <header className="page-header">
           <div>
@@ -402,7 +401,7 @@ return filteredFoodItems.map((item) => {
           </div>
         </div>
       )}
-    </div>
+  </>
   );
 };
 

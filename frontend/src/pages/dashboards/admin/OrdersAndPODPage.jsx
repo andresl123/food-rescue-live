@@ -17,8 +17,6 @@ const OrdersAndPODPage = () => {
   };
 
   return (
-    <div className="dashboard-container">
-      <Sidebar />
       <main className="main-content">
         <header className="page-header">
           <div>
@@ -70,7 +68,6 @@ const OrdersAndPODPage = () => {
           </table>
         </div>
       </main>
-    </div>
   );
 };
 
