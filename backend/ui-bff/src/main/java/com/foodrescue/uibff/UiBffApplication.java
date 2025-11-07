@@ -6,8 +6,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class UiBffApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(UiBffApplication.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(UiBffApplication.class, args);
+    }
 
 }

@@ -9,18 +9,16 @@ const LotsManagementPage = () => {
   const [lots, setLots] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
-    const [searchQuery, setSearchQuery] = useState("");
-
-  // --- State for Edit Modal ---
+  // --- Modal States ---
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentLot, setCurrentLot] = useState(null);
   const [formData, setFormData] = useState({ description: '', status: '' });
 
-  // --- State for Delete Modal ---
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [lotToDelete, setLotToDelete] = useState(null);
-  const [deleteConfirmText, setDeleteConfirmText] = useState(""); // State for confirmation text
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
   // --- Data fetching ---
   useEffect(() => {
@@ -40,7 +38,7 @@ const LotsManagementPage = () => {
     fetchLots();
   }, []);
 
-  // --- Edit Modal Handlers ---
+  // --- Modal Handlers ---
   const handleOpenModal = (lot) => {
     setCurrentLot(lot);
     setFormData({ description: lot.description, status: lot.status });
@@ -61,17 +59,25 @@ const LotsManagementPage = () => {
     }));
   };
 
+  // --- THIS IS THE FUNCTION TO CHECK ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!currentLot) return;
+
     const toastId = toast.loading('Updating lot...');
     try {
+      // 1. API call returns the *updated* lot object
       const updatedLot = await updateLot(currentLot.lotId, formData);
+      console.log("API response (updatedLot):", updatedLot);
+
+      // 2. THIS IS THE LINE THAT REFRESHES THE LIST
+      // It finds the old lot in the state and replaces it with the new one
       setLots((prevLots) =>
         prevLots.map((lot) =>
           lot.lotId === updatedLot.lotId ? updatedLot : lot
         )
       );
+
       toast.success('Lot updated successfully!', { id: toastId });
       handleCloseModal();
     } catch (err) {
@@ -83,20 +89,18 @@ const LotsManagementPage = () => {
   // --- Delete Modal Handlers ---
   const handleOpenDeleteModal = (lot) => {
     setLotToDelete(lot);
-    setDeleteConfirmText(""); // Reset confirmation text
+    setDeleteConfirmText("");
     setIsDeleteModalOpen(true);
   };
 
   const handleCloseDeleteModal = () => {
     setLotToDelete(null);
-    setDeleteConfirmText(""); // Reset confirmation text
+    setDeleteConfirmText("");
     setIsDeleteModalOpen(false);
   };
 
-  // Hard Delete Handler
   const handleHardDelete = async () => {
     if (!lotToDelete || deleteConfirmText !== 'delete') return;
-
     const toastId = toast.loading('Deleting lot permanently...');
     try {
       await deleteLot(lotToDelete.lotId);
@@ -111,13 +115,13 @@ const LotsManagementPage = () => {
     }
   };
 
-  // Helper function to get badge class for status
+  // --- Badge Class Helper ---
   const getStatusBadgeClass = (status) => {
     return `badge status-${status.toLowerCase()}`;
   };
 
-  // Filters lots based on the description
-const filteredLots = lots.filter(lot => {
+  // --- Filtered List ---
+  const filteredLots = lots.filter(lot => {
     const query = searchQuery.toLowerCase();
     return (
       lot.description.toLowerCase().includes(query) ||
@@ -125,7 +129,7 @@ const filteredLots = lots.filter(lot => {
     );
   });
 
-  // --- 4. UPDATE RENDER LOGIC ---
+  // --- Render Table Body ---
   const renderTableBody = () => {
     if (isLoading) {
       return (
@@ -141,7 +145,6 @@ const filteredLots = lots.filter(lot => {
         </tr>
       );
     }
-    // Check if initial fetch returned no lots
     if (lots.length === 0) {
       return (
         <tr>
@@ -149,7 +152,6 @@ const filteredLots = lots.filter(lot => {
         </tr>
       );
     }
-    // Check if the filter returned no lots
     if (filteredLots.length === 0) {
       return (
         <tr>
@@ -160,7 +162,6 @@ const filteredLots = lots.filter(lot => {
       );
     }
 
-    // Map over the FILTERED list
     return filteredLots.map((lot) => {
       const rowClass =
         lot.status === 'CLOSED' || lot.status === 'EMPTY'
@@ -206,7 +207,6 @@ const filteredLots = lots.filter(lot => {
           </button>
         </header>
 
-    {/* SEARCH INPUT */}
         <div className="search-bar">
           <i className="bi bi-search"></i>
           <input
@@ -233,7 +233,7 @@ const filteredLots = lots.filter(lot => {
         </div>
       </main>
 
-      {/* --- The Update Modal --- */}
+      {/* --- Edit Modal --- */}
       {isModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -265,11 +265,7 @@ const filteredLots = lots.filter(lot => {
                 </select>
               </div>
               <div className="modal-actions">
-                <button
-                  type="button"
-                  className="btn-cancel"
-                  onClick={handleCloseModal}
-                >
+                <button type="button" className="btn-cancel" onClick={handleCloseModal}>
                   Cancel
                 </button>
                 <button type="submit" className="btn-submit">
@@ -281,7 +277,7 @@ const filteredLots = lots.filter(lot => {
         </div>
       )}
 
-      {/* --- Delete Confirmation Modal (UPDATED) --- */}
+      {/* --- Delete Modal --- */}
       {isDeleteModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -311,12 +307,11 @@ const filteredLots = lots.filter(lot => {
               >
                 Cancel
               </button>
-
               <button
                 type="button"
                 className="btn-hard-delete"
                 onClick={handleHardDelete}
-                disabled={deleteConfirmText !== 'delete'} // Button is disabled until user types "delete"
+                disabled={deleteConfirmText !== 'delete'}
               >
                 Delete Permanently
               </button>

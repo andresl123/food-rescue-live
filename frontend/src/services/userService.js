@@ -1,25 +1,15 @@
-const BASE_URL = "http://localhost:8080"; // Your API base URL
-
-/**
- * A helper function to get the auth token.
- */
-const getAuthToken = () => {
-  return localStorage.getItem('accessToken');
-};
+const BFF_BASE_URL = "http://localhost:8090";
 
 /**
  * Fetches all users (Admin only).
  */
 export const getAllUsers = async () => {
-  const accessToken = getAuthToken();
-  if (!accessToken) throw new Error("Authentication token not found.");
-
-  const response = await fetch(`${BASE_URL}/api/v1/users`, {
+  const response = await fetch(`${BFF_BASE_URL}/api/users`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${accessToken}`,
     },
+    credentials: "include",
   });
 
   if (!response.ok) {
@@ -39,16 +29,14 @@ export const getAllUsers = async () => {
  * @param {object} updateData - An object with { roles, status }.
  */
 export const updateUser = async (userId, updateData) => {
-  const accessToken = getAuthToken();
-  if (!accessToken) throw new Error("Authentication token not found.");
 
-  const response = await fetch(`${BASE_URL}/api/v1/users/${userId}`, {
+  const response = await fetch(`${BFF_BASE_URL}/api/users/${userId}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${accessToken}`,
     },
     body: JSON.stringify(updateData),
+    credentials: "include",
   });
 
   if (!response.ok) {
@@ -67,14 +55,12 @@ export const updateUser = async (userId, updateData) => {
  * @param {string} userId - The ID of the user to delete.
  */
 export const deleteUser = async (userId) => {
-  const accessToken = getAuthToken();
-  if (!accessToken) throw new Error("Authentication token not found.");
 
-  const response = await fetch(`${BASE_URL}/api/v1/users/${userId}`, {
+  const response = await fetch(`${BFF_BASE_URL}/api/users/${userId}`, {
     method: 'DELETE',
     headers: {
-      'Authorization': `Bearer ${accessToken}`,
     },
+    credentials: "include",
   });
 
   // A 204 No Content response is a successful delete

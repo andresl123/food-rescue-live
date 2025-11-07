@@ -1,26 +1,17 @@
-const BASE_URL = "http://localhost:8081"; // Your API base URL
-
-/**
- * A helper function to get the auth token.
- */
-const getAuthToken = () => {
-  return localStorage.getItem('accessToken');
-};
+const BFF_BASE_URL = "http://localhost:8090";
 
 /**
  * Fetches ALL food items from ALL lots (for Admin).
  */
 export const getAllFoodItems = async () => {
-  const accessToken = getAuthToken();
-  if (!accessToken) throw new Error("Authentication token not found.");
 
   // This is the new endpoint you created
-  const response = await fetch(`${BASE_URL}/api/v1/lots/items/all`, {
+  const response = await fetch(`${BFF_BASE_URL}/api/lots/items/all`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${accessToken}`,
     },
+    credentials: "include",
   });
 
   if (!response.ok) {
@@ -36,16 +27,14 @@ export const getAllFoodItems = async () => {
  * @param {object} updateData - The form data
  */
 export const updateFoodItem = async (lotId, itemId, updateData) => {
-  const accessToken = getAuthToken();
-  if (!accessToken) throw new Error("Authentication token not found.");
 
-  const response = await fetch(`${BASE_URL}/api/v1/lots/${lotId}/items/${itemId}`, {
+  const response = await fetch(`${BFF_BASE_URL}/api/lots/${lotId}/items/${itemId}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${accessToken}`,
     },
     body: JSON.stringify(updateData),
+    credentials: "include",
   });
 
   if (!response.ok) {
@@ -60,14 +49,11 @@ export const updateFoodItem = async (lotId, itemId, updateData) => {
  * @param {string} itemId - The Item ID
  */
 export const deleteFoodItem = async (lotId, itemId) => {
-  const accessToken = getAuthToken();
-  if (!accessToken) throw new Error("Authentication token not found.");
-
-  const response = await fetch(`${BASE_URL}/api/v1/lots/${lotId}/items/${itemId}`, {
+  const response = await fetch(`${BFF_BASE_URL}/api/lots/${lotId}/items/${itemId}`, {
     method: 'DELETE',
     headers: {
-      'Authorization': `Bearer ${accessToken}`,
     },
+    credentials: "include",
   });
 
   if (response.status === 204) {
