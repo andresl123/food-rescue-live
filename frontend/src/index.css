@@ -2,29 +2,139 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Global styles for Courier Dashboard alignment */
-html, body {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  height: 100%;
-  box-sizing: border-box;
-  overflow-x: hidden;
+/* === FoodRescueLive dropdown + controls theme === */
+:root{
+  --frl-text: #111827;
+  --frl-muted: #6b7280;
+  --frl-border: #e5e7eb;
+  --frl-surface: #ffffff;
+  --frl-surface-2: #f5f7fb;
+  --frl-surface-3: #eef2f6;
+  --frl-shadow: 0 8px 24px rgba(17, 24, 39, .08), 0 2px 6px rgba(17, 24, 39, .06);
 }
 
-#root {
+/* ---------- Dropdown Buttons ---------- */
+.frl-dd .frl-btn {
   width: 100%;
-  min-height: 100vh;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  background: var(--frl-surface-2);
+  color: var(--frl-text);
+  border: 1px solid var(--frl-border);
+  border-radius: 12px;
+  padding: .55rem .9rem;
+  font-weight: 600;
+  letter-spacing: .2px;
+  transition: background .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.frl-dd .frl-btn:hover { background: var(--frl-surface-3); }
+.frl-dd .frl-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(17,24,39,.12);
 }
 
-* {
-  box-sizing: border-box;
+/* First dropdown = explicit white */
+.frl-dd .frl-btn-white {
+  background: var(--frl-surface);
+  border-color: var(--frl-border);
+}
+.frl-dd .frl-btn-white:hover { background: var(--frl-surface-2); }
+
+/* Chevron rotation */
+.frl-dd .frl-chev { transition: transform .18s ease; }
+.frl-dd .frl-btn[aria-expanded="true"] .frl-chev { transform: rotate(180deg); }
+
+/* ---------- Dropdown Menu ---------- */
+.frl-dd .frl-menu {
+  border: 1px solid var(--frl-border);
+  border-radius: 12px;
+  background: var(--frl-surface);
+  padding: .35rem;
+  margin-top: .4rem;
+  min-width: 100%;
+  box-shadow: var(--frl-shadow);
+  z-index: 1201;
 }
 
-.container-fluid {
-  width: 100%;
-  padding-right: 15px;
-  padding-left: 15px;
-  margin-right: auto;
-  margin-left: auto;
+/* Items */
+.frl-dd .dropdown-item {
+  border-radius: 8px;
+  padding: .5rem .6rem;
+  color: var(--frl-text);
+  font-weight: 500;
+}
+.frl-dd .dropdown-item:hover { background: var(--frl-surface-2); }
+.frl-dd .dropdown-item.active,
+.frl-dd .dropdown-item:active {
+  color: var(--frl-text) !important;
+  background: var(--frl-surface-3) !important;
+}
+
+/* ---------- Animations ---------- */
+@keyframes frlPopIn {
+  from { opacity: 0; transform: translateY(4px) scale(.98); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+.frl-pop { animation: frlPopIn .18s ease-out; }
+
+/* Reset button animation (enter) */
+@keyframes frlSlideIn {
+  from { opacity: 0; transform: translateX(8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.frl-appear { animation: frlSlideIn .25s ease both; }
+
+/* Reset button look */
+.frl-reset-btn { border-radius: 12px; font-weight: 600; }
+
+/* Utility: remove extra right padding on XL when needed */
+@media (min-width: 1200px) {
+  .pe-xl-0 { padding-right: 0 !important; }
+}
+
+/* =========================================================
+   Inline Reset slot: search + 2 dropdowns + (animated) slot
+   ========================================================= */
+.frl-controls{
+  display:flex;
+  align-items:stretch;
+  gap:.75rem;                /* similar to Bootstrap g-3 */
+  margin-bottom:1rem;        /* same as mb-3 */
+}
+.frl-controls-main{
+  flex:1 1 auto;
+  min-width:0;               /* prevent overflow in flex children */
+}
+
+/* slot that expands when filters are dirty */
+.frl-reset-slot{
+  flex:0 0 0px;
+  width:0;
+  overflow:hidden;
+  transition: width .25s ease, flex-basis .25s ease;
+}
+
+/* when dirty -> reserve 124px for the button (adjustable) */
+.frl-controls.show-reset .frl-reset-slot{
+  flex-basis:124px;
+  width:124px;
+}
+
+/* below XL: stack with full-width reset under controls */
+@media (max-width:1199.98px){
+  .frl-controls{ flex-direction:column; }
+  .frl-reset-slot{
+    flex-basis:auto;
+    width:100%;
+  }
+  .frl-controls.show-reset .frl-reset-slot{ width:100%; }
+}
+
+.app-footer{
+  margin-top: 20px;
+  border-top: 1px solid #eef0f3;
+  padding: 12px 16px;
+  background: #fff;
 }

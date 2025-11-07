@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import java.util.Optional;
 import java.util.Set;
+import java.util.ArrayList;
 import reactor.core.scheduler.Schedulers;
 
 @Service
@@ -71,4 +72,34 @@ public class UserService {
                 u.getStatus(), u.getCreatedAt(), u.getUpdatedAt()
         );
     }
+
+    public Mono<UserResponse> addAddressToUser(String userId, String addressId, boolean setAsDefault) {
+        return repo.findById(userId)
+                .flatMap(user -> {
+                    // initialize array if empty
+                    if (user.getMoreAddresses() == null) {
+                        user.setMoreAddresses(new ArrayList<>());
+                    }
+
+                    // add address only if not already present
+                    if (!user.getMoreAddresses().contains(addressId)) {
+                        user.getMoreAddresses().add(addressId);
+                    }
+
+                    // optionally set as default
+                    if (setAsDefault) {
+                        user.setDefaultAddressId(addressId);
+                    }
+
+                    return repo.save(user);
+                })
+                .map(this::toResponse);
+    }
+
+    public Mono<String> getDefaultAddressId(String userId) {
+        return repo.findById(userId)
+                .switchIfEmpty(Mono.error(new IllegalArgumentException("User not found")))
+                .map(User::getDefaultAddressId);
+    }
+
 }

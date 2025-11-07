@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Row, Col, Card, Button, Badge, Modal, Spinner } from 'react-bootstrap';
 import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { jwtDecode } from 'jwt-decode';
+
+const JOBS_API_BASE = import.meta.env.VITE_JOBS_SERVICE_URL ?? "http://localhost:8083/api/v1/jobs";
+const JOBS_USER_NAME_ENDPOINT = `${JOBS_API_BASE}/users`;
 
 // Mock data for available jobs
 const availableJobsData = [
@@ -88,7 +91,7 @@ export default function CourierDashboard({ onShowPOD }) {
   const [activeTab, setActiveTab] = useState("available");
   const [loading, setLoading] = useState(true);
   const [loadingAccept, setLoadingAccept] = useState(false);
-  const [user, setUser] = useState({ name: "Alex" });
+  const [user, setUser] = useState({ name: "Alex", id: null, email: "" });
   
   const [confirmationDialog, setConfirmationDialog] = useState({
     open: false,
@@ -110,15 +113,157 @@ export default function CourierDashboard({ onShowPOD }) {
     rating: 4.9,
   });
 
+  const addressCacheRef = useRef({});
+  const orderCacheRef = useRef({});
+  const userCacheRef = useRef({});
+
+  const formatAddress = (address) => {
+    if (!address) {
+      return "Address not available";
+    }
+    const { street, city, state, postalCode, country } = address;
+    return [street, city, state, postalCode, country].filter(Boolean).join(", ");
+  };
+
+  const fetchOrderDetails = async (orderId) => {
+    if (!orderId) return null;
+    if (orderCacheRef.current[orderId]) {
+      return orderCacheRef.current[orderId];
+    }
+    try {
+      const response = await fetch(`${JOBS_API_BASE}/orders/details/${orderId}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch order ${orderId}`);
+      }
+      const payload = await response.json();
+      if (payload?.success && payload?.data) {
+        orderCacheRef.current[orderId] = payload.data;
+        return payload.data;
+      }
+    } catch (error) {
+      console.error('Error fetching order details:', error);
+    }
+    return null;
+  };
+
+  const fetchAddressById = async (addressId) => {
+    if (!addressId) return null;
+    if (addressCacheRef.current[addressId]) {
+      return addressCacheRef.current[addressId];
+    }
+    try {
+      const response = await fetch(`${JOBS_API_BASE}/address/${addressId}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch address ${addressId}`);
+      }
+      const payload = await response.json();
+      if (payload?.success && payload?.data) {
+        addressCacheRef.current[addressId] = payload.data;
+        return payload.data;
+      }
+    } catch (error) {
+      console.error('Error fetching address:', error);
+    }
+    return null;
+  };
+
+  const fetchUserNameById = async (userId) => {
+    if (!userId) return null;
+    if (userCacheRef.current[userId]) {
+      return userCacheRef.current[userId];
+    }
+
+    try {
+      const response = await fetch(`${JOBS_USER_NAME_ENDPOINT}/${userId}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch user ${userId}`);
+      }
+      const payload = await response.json();
+      if (payload?.success && payload?.data) {
+        const name = payload.data.name;
+        userCacheRef.current[userId] = name;
+        return name;
+      }
+    } catch (error) {
+      console.error('Error fetching user name:', error);
+    }
+    return null;
+  };
+
+  const fetchAndSetCourierFullName = async (courierId) => {
+    try {
+      const courierName = await fetchUserNameById(courierId);
+      if (courierName) {
+        setUser((prev) => ({ ...prev, name: courierName }));
+      }
+    } catch (error) {
+      console.error('Failed to fetch courier full name:', error);
+    }
+  };
+
+  const enrichJobWithAddresses = async (job) => {
+    if (!job?.orderId) {
+      return job;
+    }
+
+    try {
+      const orderDetails = await fetchOrderDetails(job.orderId);
+      if (!orderDetails) {
+        return job;
+      }
+
+      const { pickupAddressId, deliveryAddressId, receiverId } = orderDetails;
+      const [pickupAddress, deliveryAddress] = await Promise.all([
+        fetchAddressById(pickupAddressId),
+        fetchAddressById(deliveryAddressId),
+      ]);
+
+      const receiverName = receiverId ? await fetchUserNameById(receiverId) : null;
+
+      return {
+        ...job,
+        pickupAddressId,
+        deliveryAddressId,
+        receiverId: receiverId ?? job.receiverId,
+        donorAddress: pickupAddress ? formatAddress(pickupAddress) : job.donorAddress,
+        recipientAddress: deliveryAddress ? formatAddress(deliveryAddress) : job.recipientAddress,
+        recipientName: receiverName || job.recipientName || `Recipient for ${job.orderId}`,
+        pickupAddress,
+        deliveryAddress,
+        receiverName,
+      };
+    } catch (error) {
+      console.error('Failed to enrich job with addresses:', error);
+      return job;
+    }
+  };
+
+  const enrichJobsBatch = async (jobs) => {
+    if (!Array.isArray(jobs) || jobs.length === 0) {
+      return jobs;
+    }
+    return Promise.all(jobs.map(enrichJobWithAddresses));
+  };
+
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
     if (token) {
       try {
         const decoded = jwtDecode(token);
+        const derivedName = decoded.email?.split("@")[0] || decoded.name || "Alex";
+        const derivedId = decoded.userId || decoded.id || decoded.sub || decoded.uid || null;
+        const derivedEmail = decoded.email || "";
+
         setUser({
-          name: decoded.email?.split("@")[0] || "Alex",
-          email: decoded.email || "",
+          name: derivedName,
+          email: derivedEmail,
+          id: derivedId,
         });
+
+        if (derivedId) {
+          localStorage.setItem("courierId", derivedId);
+          fetchAndSetCourierFullName(derivedId);
+        }
       } catch (err) {
         console.error("Invalid token:", err);
       }
@@ -128,14 +273,18 @@ export default function CourierDashboard({ onShowPOD }) {
   // Get courier ID from localStorage or use a default (you may want to get this from auth)
   const getCourierId = () => {
     // For now, using a placeholder. In production, get from auth context or localStorage
-    return localStorage.getItem('courierId') || 'COURIER-001';
+    return (
+      user.id ||
+      localStorage.getItem('courierId') ||
+      null
+    );
   };
 
   // Fetch available jobs from API
   const fetchAvailableJobs = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:8083/api/v1/jobs/available');
+      const response = await fetch(`${JOBS_API_BASE}/available`);
       if (!response.ok) {
         throw new Error('Failed to fetch available jobs');
       }
@@ -164,12 +313,14 @@ export default function CourierDashboard({ onShowPOD }) {
         urgency: "medium"
       }));
       
-      setAvailableJobs(mappedJobs);
+      const enrichedJobs = await enrichJobsBatch(mappedJobs);
+      setAvailableJobs(enrichedJobs);
     } catch (error) {
       console.error('Error fetching available jobs:', error);
       toast.error('Failed to load available jobs. Using mock data.');
       // Fallback to mock data on error
-      setAvailableJobs(availableJobsData);
+      const enrichedFallback = await enrichJobsBatch(availableJobsData);
+      setAvailableJobs(enrichedFallback);
     } finally {
       setLoading(false);
     }
@@ -179,7 +330,13 @@ export default function CourierDashboard({ onShowPOD }) {
   const fetchMyJobs = async () => {
     try {
       const courierId = getCourierId();
-      const response = await fetch(`http://localhost:8083/api/v1/jobs/courier/${courierId}`);
+      if (!courierId) {
+        toast.error("Unable to determine courier ID. Please sign in again.", {
+          duration: 4000,
+        });
+        return;
+      }
+      const response = await fetch(`${JOBS_API_BASE}/courier/${courierId}`);
       if (!response.ok) {
         throw new Error('Failed to fetch my jobs');
       }
@@ -215,7 +372,8 @@ export default function CourierDashboard({ onShowPOD }) {
         job.status !== 'CANCELLED' && 
         job.status !== 'RETURNED'
       );
-      setMyJobs(activeJobs);
+      const enrichedMyJobs = await enrichJobsBatch(activeJobs);
+      setMyJobs(enrichedMyJobs);
     } catch (error) {
       console.error('Error fetching my jobs:', error);
       // Don't show error toast for my jobs, just keep empty array
@@ -265,10 +423,22 @@ export default function CourierDashboard({ onShowPOD }) {
     try {
       setLoadingAccept(true);
       const courierId = getCourierId();
+      if (!courierId) {
+        toast.error("Unable to determine courier ID. Please sign in again.", {
+          duration: 4000,
+        });
+        return;
+      }
+      if (!courierId) {
+        toast.error("Unable to determine courier ID. Please sign in again.", {
+          duration: 4000,
+        });
+        return;
+      }
       
       // Call the assign-courier API
       const response = await fetch(
-        `http://localhost:8083/api/v1/jobs/${jobId}/assign-courier/${courierId}`,
+        `${JOBS_API_BASE}/${jobId}/assign-courier/${courierId}`,
         {
           method: 'PUT',
           headers: {
@@ -322,9 +492,10 @@ export default function CourierDashboard({ onShowPOD }) {
         recipientName: job.recipientName || `Recipient for ${job.orderId}`,
         recipientAddress: job.recipientAddress || "Address will be fetched from order service"
       };
-      
-      setMyJobs([acceptedJob]);
-      setAvailableJobs(availableJobs.filter((j) => j.id !== jobId));
+
+      const enrichedAcceptedJob = await enrichJobWithAddresses(acceptedJob);
+      setMyJobs([enrichedAcceptedJob]);
+      setAvailableJobs((prev) => prev.filter((j) => j.id !== jobId));
       
       // Refresh available jobs to reflect the change
       await fetchAvailableJobs();
@@ -391,7 +562,7 @@ export default function CourierDashboard({ onShowPOD }) {
     try {
       // Call the unassign-courier API to remove courier_id from the job
       const response = await fetch(
-        `http://localhost:8083/api/v1/jobs/${cancelDialog.jobId}/unassign-courier`,
+        `${JOBS_API_BASE}/${cancelDialog.jobId}/unassign-courier`,
         {
           method: 'PUT',
           headers: {
@@ -735,7 +906,6 @@ export default function CourierDashboard({ onShowPOD }) {
             type="button"
             className="btn flex-fill"
             onClick={() => setActiveTab("available")}
-            disabled={myJobs.length > 0}
             style={{
               background: activeTab === "available" ? '#fff' : 'transparent',
               color: activeTab === "available" ? '#111827' : '#6b7280',

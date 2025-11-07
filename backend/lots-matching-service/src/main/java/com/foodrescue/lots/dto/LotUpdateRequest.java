@@ -1,14 +1,21 @@
 package com.foodrescue.lots.dto;
 
-import jakarta.validation.constraints.NotBlank;
+import com.foodrescue.lots.entity.Category;
+import com.foodrescue.lots.entity.Tag;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
+
+import java.util.List;
 
 @Data
 public class LotUpdateRequest {
 
-    @NotBlank(message = "Description cannot be blank.")
     private String description;
-
-    @NotBlank(message = "Status cannot be blank.") // Consider adding validation for allowed statuses (e.g., OPEN, CLOSED)
     private String status;
+    private String imageUrl;
+
+    private Category category;
+
+    @Size(max = 3, message = "At most 3 tags are allowed.")
+    private List<Tag> tags;
 }

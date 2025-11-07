@@ -1,8 +1,12 @@
 package com.foodrescue.jobs.controller;
 
+import com.foodrescue.jobs.entity.OrderDocument;
 import com.foodrescue.jobs.model.Job;
 import com.foodrescue.jobs.service.JobService;
+import com.foodrescue.jobs.web.response.AddressDto;
 import com.foodrescue.jobs.web.response.ApiResponse;
+import com.foodrescue.jobs.web.response.UserDto;
+import com.foodrescue.jobs.web.response.UserNameDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -30,6 +34,26 @@ public class JobController {
     @GetMapping
     public Flux<Job> getAll() {
         return service.getAllJobs();
+    }
+
+    @GetMapping("/orders/details/{orderId}")
+    public Mono<ResponseEntity<ApiResponse<OrderDocument>>> getOrderDetails(@PathVariable String orderId) {
+        return service.getOrderById(orderId).map(ResponseEntity::ok);
+    }
+
+    @GetMapping("/orders/details/{orderId}/receiver")
+    public Mono<ResponseEntity<ApiResponse<UserDto>>> getOrderReceiver(@PathVariable String orderId) {
+        return service.getReceiverForOrder(orderId).map(ResponseEntity::ok);
+    }
+
+    @GetMapping("/users/{userId}")
+    public Mono<ResponseEntity<ApiResponse<UserNameDto>>> getUserById(@PathVariable String userId) {
+        return service.getUserById(userId).map(ResponseEntity::ok);
+    }
+
+    @GetMapping("/address/{addressId}")
+    public Mono<ResponseEntity<ApiResponse<AddressDto>>> getAddressById(@PathVariable String addressId) {
+        return service.getAddressById(addressId).map(ResponseEntity::ok);
     }
 
     // Specific routes must come before path variable routes

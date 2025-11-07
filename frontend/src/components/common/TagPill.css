@@ -1,0 +1,40 @@
+/* Base pill */
+.frl-tag{
+  display: inline-flex;           /* or inline-grid (see below) */
+  align-items: center;            /* vertical center */
+  justify-content: center;        /* horizontal center */
+  vertical-align: middle;         /* aligns nicely with neighbors inline */
+  line-height: 1;                 /* kill inherited tall line height */
+  padding: .36rem .66rem;         /* equal top/bottom for visual centering */
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: .82rem;
+  letter-spacing: .1px;
+  color: #fff;
+  background: #475569;
+  border: 1px solid transparent;
+  box-shadow: none;
+}
+
+/* --- Solid, flat colors (match your reference) --- */
+.tag--vegan        { background:#10B981; }  /* emerald-500 */
+.tag--vegetarian   { background:#22C55E; }  /* green-500  */
+.tag--glutenfree   { background:#14B8A6; }  /* teal-500   */
+.tag--organic      { background:#0E9F6E; }  /* green-600  */
+.tag--kid          { background:#3B82F6; }  /* blue-500   */
+.tag--local        { background:#8B5CF6; }  /* violet-500 */
+.tag--nutfree      { background:#EF4444; }  /* red-500    */
+.tag--dairyfree    { background:#06B6D4; }  /* cyan-500   */
+
+/* “Ready to eat” per your screenshot: soft gray with dark text */
+.tag--ready {
+  background:#E5E7EB;           /* gray-200 */
+  color:#111827;                /* near-black */
+  border-color:#E5E7EB;
+}
+
+/* Default / unknown */
+.tag--default     { background:#64748B; }   /* slate-500 */
+
+/* Optional: tiny hover lift (very subtle) */
+.frl-tag:hover { filter: brightness(1.03); }

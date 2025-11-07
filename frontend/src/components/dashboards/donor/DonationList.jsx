@@ -1,72 +1,243 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { Dropdown } from "react-bootstrap";
+import LotDetailsModal from "./LotDetailsModal"; // ✅ import the modal
 
-export default function DonationList({ donations, onAddItem }) {
-  const statusColor = {
-    Pending: "warning",
-    "Picked Up": "info",
-    Delivered: "success",
-  };
+export default function DonationList({ donations, onAddItem, onEditLot }) {
+  const [selectedLot, setSelectedLot] = useState(null);
+  const [addressMap, setAddressMap] = useState({});
+
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      const token = localStorage.getItem("accessToken");
+      if (!token || !donations?.length) return;
+
+      const newMap = {};
+      await Promise.all(
+        donations.map(async (lot) => {
+          if (lot.addressId && !addressMap[lot.addressId]) {
+            try {
+              const res = await fetch(`http://localhost:8080/api/v1/addresses/${lot.addressId}`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              const addrData = await res.json();
+              if (addrData?.data) newMap[lot.addressId] = addrData.data;
+            } catch (err) {
+              console.error("Error fetching address for lot:", lot.lotId, err);
+            }
+          }
+        })
+      );
+      setAddressMap((prev) => ({ ...prev, ...newMap }));
+    };
+
+    fetchAddresses();
+  }, [donations]);
+
+
+  const handleViewDetails = (lot) => setSelectedLot(lot);
+
+  if (!donations || donations.length === 0) {
+    return (
+      <div
+        className="d-flex flex-column align-items-center justify-content-center py-5 text-muted"
+        style={{
+          backgroundColor: "#fafafa",
+          borderRadius: "12px",
+          border: "1px dashed #d1d5db",
+        }}
+      >
+        <i className="bi bi-box-seam mb-2" style={{ fontSize: "2rem" }}></i>
+        <p className="mb-0 fw-semibold">No lots created yet</p>
+        <small>Create your first donation lot to get started</small>
+      </div>
+    );
+  }
 
   return (
-    <div className="card bg-secondary bg-opacity-10 border-0 shadow-sm text-light">
-      <div className="card-body">
-        <h5 className="card-title mb-3">Recent Donations</h5>
+    <>
+    <style>
+      {`
+        .dropdown-toggle::after {
+          display: none !important;
+          content: none !important;
+        }
 
-        <div className="table-responsive">
-          <table className="table table-dark table-hover align-middle mb-0">
-            <thead>
-              <tr className="text-muted">
-                <th>Lot ID</th>
-                <th>Description</th>
-                <th>Status</th>
-                <th>Total Items</th>
-                <th>Created At</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
+        /* Custom scrollbar for DonationList */
+        .d-flex.flex-column.gap-3::-webkit-scrollbar {
+          width: 6px;
+        }
+        .d-flex.flex-column.gap-3::-webkit-scrollbar-thumb {
+          background-color: #d1d5db; /* light gray */
+          border-radius: 4px;
+        }
+        .d-flex.flex-column.gap-3::-webkit-scrollbar-thumb:hover {
+          background-color: #9ca3af; /* darker gray on hover */
+        }
+      `}
+    </style>
 
-            <tbody>
-              {donations.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="text-center text-secondary">
-                    No donations yet.
-                  </td>
-                </tr>
-              ) : (
-                donations.map((lot, index) => (
-                  <tr key={index}>
-                    <td>{lot.id || lot.lotId}</td>
-                    <td>{lot.description}</td>
-                    <td>
-                      <span
-                        className={`badge bg-${
-                          statusColor[lot.status] || "secondary"
-                        }`}
-                      >
-                        {lot.status}
-                      </span>
-                    </td>
-                    <td>{lot.totalItems}</td>
-                    <td>
-                      {lot.createdAt
-                        ? new Date(lot.createdAt).toLocaleString()
-                        : "—"}
-                    </td>
-                    <td>
-                      <button
-                        className="btn btn-sm btn-outline-success"
-                        onClick={() => onAddItem(lot.id || lot.lotId)}
-                      >
-                        + Add Food Item
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+      <div className="d-flex flex-column gap-3"
+          style={{
+              maxHeight: "460px", // ~4 cards tall (adjust if your cards are taller/shorter)
+              overflowY: "auto",
+              paddingRight: "6px",
+            }}
+        >
+        {donations.map((lot) => (
+          <div
+            key={lot.lotId}
+            className="d-flex align-items-center justify-content-between shadow-sm p-3 bg-white rounded-4"
+            style={{
+              border: "1px solid #e5e7eb",
+              transition: "all 0.2s ease-in-out",
+              cursor: "pointer",
+            }}
+            onClick={() => handleViewDetails(lot)}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.backgroundColor = "#f9fafb")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.backgroundColor = "#ffffff")
+            }
+          >
+            {/* Left Section */}
+            <div className="d-flex align-items-center">
+              <div
+                className="rounded-3 me-3 overflow-hidden"
+                style={{
+                  width: "110px",
+                  height: "110px",
+                  backgroundColor: "#f3f4f6",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {lot.imageUrl ? (
+                  <img
+                    src={lot.imageUrl}
+                    alt={lot.description || "Lot"}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : (
+                  <i
+                    className="bi bi-image text-secondary"
+                    style={{ fontSize: "1.5rem" }}
+                  ></i>
+                )}
+              </div>
+
+              <div>
+                <h6 className="fw-semibold mb-1 text-dark">
+                  {lot.description || "Untitled Lot"}
+                </h6>
+
+                {/* ✅ REPLACE THIS PART */}
+                <div className="text-muted small d-flex flex-column gap-1 mt-1">
+                  <div>
+                    <i className="bi bi-box-seam me-2"></i>
+                    {lot.totalItems || 0} items
+                  </div>
+                  <div>
+                    <i className="bi bi-calendar3 me-2"></i>
+                    {new Date(lot.created_at || lot.createdAt).toLocaleDateString()}
+                  </div>
+                  {lot.addressId && addressMap[lot.addressId] && (
+                    <div>
+                      <i className="bi bi-geo-alt-fill me-2"></i>
+                      {`${addressMap[lot.addressId].street || ""}, ${addressMap[lot.addressId].city || ""}, ${addressMap[lot.addressId].state || ""} ${addressMap[lot.addressId].postalCode || ""}`}
+                    </div>
+                  )}
+                </div>
+                {/* ✅ END OF NEW SECTION */}
+
+                <span
+                  className={`badge rounded-pill mt-2 px-3 py-1 fw-semibold`}
+                  style={{
+                    fontSize: "0.75rem",
+                    backgroundColor:
+                      lot.status?.toLowerCase() === "active"
+                        ? "#dcfce7"
+                        : lot.status?.toLowerCase() === "pending"
+                        ? "#fff7ed"
+                        : lot.status?.toLowerCase() === "expiring_soon"
+                        ? "#f97316"
+                        : lot.status?.toLowerCase() === "inactive"
+                        ? "#000000"
+                        : lot.status?.toLowerCase() === "delivered"
+                        ? "#dbeafe"
+                        : "#f3f4f6",
+                    color:
+                      lot.status?.toLowerCase() === "active"
+                        ? "#166534"
+                        : lot.status?.toLowerCase() === "pending"
+                        ? "#b45309"
+                        : lot.status?.toLowerCase() === "expiring_soon"
+                        ? "#ffffff"
+                        : lot.status?.toLowerCase() === "inactive"
+                        ? "#ffffff"
+                        : lot.status?.toLowerCase() === "delivered"
+                        ? "#1e3a8a"
+                        : "#6b7280",
+                    fontWeight: 600,
+                    letterSpacing: "0.5px",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {lot.status || "N/A"}
+                </span>
+              </div>
+
+            </div>
+
+            {/* Right Section (Total + Dropdown) */}
+            <div
+              className="d-flex align-items-center gap-3"
+              onClick={(e) => e.stopPropagation()} // prevents modal open when using dropdown
+            >
+              <small className="text-muted">Total: {lot.totalItems || 0}</small>
+
+              <Dropdown align="end">
+                <Dropdown.Toggle
+                  as="button"
+                  className="btn btn-light border-0 rounded-circle p-2 dropdown-toggle-no-caret"
+                  style={{ width: "38px", height: "38px" }}
+                >
+                  <i className="bi bi-three-dots-vertical"></i>
+                </Dropdown.Toggle>
+
+                <Dropdown.Menu>
+                  <Dropdown.Item
+                    onClick={() => onAddItem(lot.lotId)}
+                  >
+                    Add Item
+                  </Dropdown.Item>
+                  <Dropdown.Item
+                    onClick={() => onEditLot(lot)}
+                  >
+                    Edit Lot
+                  </Dropdown.Item>
+
+                </Dropdown.Menu>
+              </Dropdown>
+
+            </div>
+          </div>
+        ))}
       </div>
-    </div>
+
+      {/* Lot Details Modal */}
+      {selectedLot && (
+        <LotDetailsModal
+          show={true}
+          lot={selectedLot}
+          onClose={() => setSelectedLot(null)}
+        />
+      )}
+    </>
   );
 }

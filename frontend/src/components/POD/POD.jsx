@@ -28,6 +28,9 @@ function getVerificationConfig(type) {
 const EVIDENCE_API_BASE =
   import.meta.env.VITE_EVIDENCE_SERVICE_URL ?? "http://localhost:8082";
 
+const JOBS_API_BASE =
+  import.meta.env.VITE_JOBS_SERVICE_URL ?? "http://localhost:8083/api/v1/jobs";
+
 export default function POD({
   jobData,
   verificationType = "delivery",
@@ -55,11 +58,6 @@ export default function POD({
       ? jobData?.donorAddress ?? "Donor address unavailable"
       : jobData?.recipientAddress ?? "Recipient address unavailable";
 
-  const verificationId =
-    verificationType === "pickup"
-      ? jobData?.pickupId ?? jobId
-      : jobData?.deliveryId ?? jobId;
-
   const handleOtpChange = (event) => {
     const { value } = event.target;
     const sanitized = value.replace(/\D/g, "").slice(0, 6);
@@ -80,9 +78,7 @@ export default function POD({
     try {
       if (onVerifyOTP) {
         await Promise.resolve(onVerifyOTP(otp, { jobData, verificationType }));
-        toast.success("Verification complete.");
-        setOtp("");
-        onClose?.();
+        await handlePostVerification();
         return;
       }
 
@@ -107,25 +103,63 @@ export default function POD({
 
       const isValid = await response.json();
       if (isValid === true) {
-        toast.success(
-          verificationType === "pickup"
-            ? "Pickup OTP verified successfully."
-            : "Delivery OTP verified successfully."
-        );
-        setOtp("");
-        onClose?.();
+        await handlePostVerification();
       } else {
-        setError("Incorrect OTP. Please try again.");
-        toast.error("Invalid OTP provided.");
+        setError("Incorrect Code. Please try again.");
+        toast.error("Invalid Code provided.");
       }
     } catch (err) {
       console.error("OTP verification failed:", err);
       setError(
         err?.message ?? "Verification failed. Please re-check the OTP and try again."
       );
-      toast.error("Unable to verify OTP. Please try again.");
+      toast.error("Unable to verify Code. Please try again.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handlePostVerification = async () => {
+    try {
+      let jobStatusEndpoint = null;
+      if (verificationType === "pickup") {
+        jobStatusEndpoint = `${JOBS_API_BASE}/${jobId}/pickup`;
+      } else if (verificationType === "delivery") {
+        jobStatusEndpoint = `${JOBS_API_BASE}/${jobId}/delivered`;
+      }
+
+      if (jobStatusEndpoint) {
+        const response = await fetch(jobStatusEndpoint, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(
+            errorText ||
+              `Failed to update job status (${verificationType}) (HTTP ${response.status})`
+          );
+        }
+      }
+
+      toast.success(
+        verificationType === "pickup"
+          ? "Pickup OTP verified successfully."
+          : "Delivery OTP verified successfully."
+      );
+      setOtp("");
+      onClose?.();
+    } catch (error) {
+      console.error("Post verification handler failed:", error);
+      toast.error(
+        error?.message ??
+          (verificationType === "pickup"
+            ? "Pickup verified but status update failed."
+            : "Verification completed but follow-up action failed.")
+      );
     }
   };
 
@@ -230,7 +264,7 @@ export default function POD({
             onClick={() => setActiveMethod("otp")}
           >
             <i className="bi bi-shield-lock me-2" />
-            OTP Verification
+            Verification Code
           </Button>
           <Button
             variant={activeMethod === "qr" ? "dark" : "outline-dark"}
@@ -254,7 +288,7 @@ export default function POD({
               <div className="mb-3">
                 <div className="d-flex justify-content-between align-items-center mb-2">
                   <Form.Label className="fw-semibold mb-0 small">
-                    Enter 6-digit OTP
+                    Enter 6-digit Verification Code
                   </Form.Label>
                   <Button
                     variant="link"
@@ -271,18 +305,15 @@ export default function POD({
                   <Form.Control
                     type="text"
                     inputMode="numeric"
-                    placeholder="••••••"
+                  placeholder="••••••"
                     value={otp}
                     onChange={handleOtpChange}
                     maxLength={6}
                   />
                 </InputGroup>
                 <small className="text-muted">
-                  Share the OTP screen with the {verificationType === "pickup" ? "donor" : "recipient"} to verify the handoff.
+                  Share the code screen with the {verificationType === "pickup" ? "donor" : "recipient"} to verify the handoff.
                 </small>
-                <div className="text-muted small mt-2">
-                  Verification ID: <span className="fw-semibold text-dark">{verificationId}</span>
-                </div>
                 {error && <div className="text-danger small mt-2">{error}</div>}
               </div>
 
@@ -293,7 +324,7 @@ export default function POD({
                 style={{ borderRadius: "10px" }}
                 disabled={submitting}
               >
-                {submitting ? "Verifying..." : "Verify OTP"}
+                {submitting ? "Verifying..." : "Verify Code"}
               </Button>
             </Form>
           </Card.Body>
