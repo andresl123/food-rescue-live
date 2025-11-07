@@ -573,3 +573,14 @@
     background-color: #616161; /* Dark Gray */
     color: #ffffff;
 }
+/* --- Style for expired food items --- */
+
+.item-expired {
+  text-decoration: line-through;
+  color: #9ca3af; /* Faded gray text */
+}
+
+/* Make sure the badge is also faded */
+.item-expired .badge {
+  opacity: 0.7;
+}

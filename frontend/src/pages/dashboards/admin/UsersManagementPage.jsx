@@ -15,10 +15,10 @@ const UsersManagementPage = () => {
   // --- Modal States ---
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-  const [formData, setFormData] = useState({
+const [formData, setFormData] = useState({
     name: '',
     email: '',
-    roles: '',
+    role: '',
     status: '',
   });
 
@@ -66,11 +66,15 @@ const UsersManagementPage = () => {
   // --- Edit Modal Handlers ---
   const handleOpenEditModal = (user) => {
     setCurrentUser(user);
-    // Populate all fields in the modal
+
+    // This logic correctly finds the primary role
+    const primaryRole = user.roles && user.roles.length > 0 ? user.roles[0] : (user.categoryId || 'USER');
+
+    // This logic correctly sets the 'role' (singular) state
     setFormData({
       name: user.name || '',
       email: user.email || '',
-      roles: Array.isArray(user.roles) ? user.roles.join(', ') : '', // Convert array to string for input
+      role: primaryRole,
       status: user.status || ''
     });
     setIsEditModalOpen(true);
@@ -89,22 +93,15 @@ const UsersManagementPage = () => {
     }));
   };
 
-  const handleEditSubmit = async (e) => {
+const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!currentUser) return;
 
-    // Convert roles string back to an array/set
-    const rolesArray = formData.roles.split(',').map(role => role.trim()).filter(Boolean);
-    if (rolesArray.length === 0) {
-      toast.error("Roles cannot be empty.");
-      return;
-    }
-
-    // Build the full updateData object
+    // The formData object now perfectly matches the DTO
     const updateData = {
       name: formData.name,
       email: formData.email,
-      roles: rolesArray,
+      role: formData.role, // <-- CHANGED
       status: formData.status,
     };
 
@@ -120,7 +117,6 @@ const UsersManagementPage = () => {
       handleCloseEditModal();
     } catch (err) {
       console.error(err);
-      // Display the specific backend error (e.g., "Email already in use")
       toast.error(`Error: ${err.message}`, { id: toastId });
     }
   };
@@ -173,6 +169,7 @@ const renderTableBody = () => {
     if (error) {
       return (
         <tr>
+          <img alt="Error loading data" src="https://i.imgur.com/Q2BAa.png" />
           <td colSpan="6" style={{ textAlign: 'center' }}>Error: {error}</td>
         </tr>
       );
@@ -198,7 +195,9 @@ const renderTableBody = () => {
 
     // Map over the FILTERED list
     return filteredUsers.map((user) => {
-      const primaryRole = user.roles && user.roles.length > 0 ? user.roles[0] : (user.categoryId || 'user');
+      const primaryRole = user.roles && user.roles.length > 0 ? user.roles[0] : (user.categoryId || 'USER');
+
+      // The stray code that was here has been removed.
 
       return (
         <tr key={user.id}>
@@ -267,7 +266,7 @@ const renderTableBody = () => {
       </main>
 
       {/* --- Edit Modal --- */}
-      {isEditModalOpen && (
+{isEditModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content">
             <h2>Edit User</h2>
@@ -289,12 +288,19 @@ const renderTableBody = () => {
                 />
               </div>
 
+              {/* --- UPDATED: This is now a dropdown select --- */}
               <div className="form-group">
-                <label htmlFor="roles">Roles (comma-separated)</label>
-                <input
-                  type="text" id="roles" name="roles"
-                  value={formData.roles} onChange={handleFormChange} required
-                />
+                <label htmlFor="role">Role</label>
+                <select
+                  id="role" name="role"
+                  value={formData.role} onChange={handleFormChange} required
+                >
+                  <option value="DONOR">DONOR</option>
+                  <option value="RECIPIENT">RECIPIENT</option>
+                  <option value="ADMIN">ADMIN</option>
+                  <option value="USER">USER</option>
+                  {/* Add any other primary roles you support */}
+                </select>
               </div>
 
               <div className="form-group">

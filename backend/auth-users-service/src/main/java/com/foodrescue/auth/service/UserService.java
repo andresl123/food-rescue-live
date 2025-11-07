@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import reactor.core.scheduler.Schedulers;
 import com.foodrescue.auth.web.request.UserUpdateRequest;
 import reactor.core.publisher.Flux;
+import java.util.Set;
 
 @Service
 public class UserService {
@@ -78,20 +79,15 @@ public class UserService {
         return repo.findById(id)
                 .switchIfEmpty(Mono.error(new IllegalArgumentException("User not found")))
                 .flatMap(user -> {
-                    // Check if email is being changed
                     if (!user.getEmail().equalsIgnoreCase(req.email())) {
-                        // Email is changing, we MUST check for uniqueness
                         return repo.existsByEmail(req.email().toLowerCase())
                                 .flatMap(exists -> {
                                     if (exists) {
-                                        // New email is already taken, throw error
                                         return Mono.error(new IllegalArgumentException("Email already in use."));
                                     }
-                                    // Email is new and unique, proceed with update
                                     return updateAndSaveUser(user, req);
                                 });
                     } else {
-                        // Email is not changing, just update other fields
                         return updateAndSaveUser(user, req);
                     }
                 })
@@ -103,8 +99,11 @@ public class UserService {
      */
     private Mono<User> updateAndSaveUser(User user, UserUpdateRequest req) {
         user.setName(req.name());
-        user.setEmail(req.email().toLowerCase()); // Set new name and email
-        user.setRoles(req.roles());
+        user.setEmail(req.email().toLowerCase());
+
+        user.setRoles(Set.of(req.role()));
+        user.setCategoryId(req.role());
+
         user.setStatus(req.status());
         return repo.save(user);
     }

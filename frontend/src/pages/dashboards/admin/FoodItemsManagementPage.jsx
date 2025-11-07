@@ -230,12 +230,15 @@ const renderTableBody = () => {
     }
 
     // Map over the FILTERED list
-    return filteredFoodItems.map((item) => {
+return filteredFoodItems.map((item) => {
       const status = calculateStatus(item.expiryDate);
       const lotName = getLotName(item.lotId);
 
+      // Add a class if the item is EXPIRED
+      const rowClass = status === 'EXPIRED' ? 'item-expired' : '';
+
       return (
-        <tr key={item.itemId}>
+        <tr key={item.itemId} className={rowClass}>
           <td>{item.itemName}</td>
           <td>{item.category}</td>
           <td>{item.quantity} {item.unitOfMeasure}</td>

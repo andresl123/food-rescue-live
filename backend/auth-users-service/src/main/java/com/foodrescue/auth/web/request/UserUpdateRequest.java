@@ -2,9 +2,7 @@ package com.foodrescue.auth.web.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
-import java.util.Set;
 
 public record UserUpdateRequest(
 
@@ -16,8 +14,8 @@ public record UserUpdateRequest(
         @Email(message = "Must be a valid email format.")
         String email,
 
-        @NotEmpty(message = "Roles cannot be empty.")
-        Set<String> roles,
+        @NotBlank(message = "Role cannot be blank.")
+        String role,
 
         @NotBlank(message = "Status cannot be blank.")
         @Size(max = 50)
