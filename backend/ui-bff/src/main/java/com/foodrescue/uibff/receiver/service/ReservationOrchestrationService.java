@@ -77,7 +77,7 @@ public class ReservationOrchestrationService {
                         webClient.patch()
                                 .uri(lotsBaseUrl + "/api/v1/lots/{lotId}/status", lotId)
                                 .headers(h -> h.set("Authorization", bearer))
-                                .bodyValue(new LotStatusUpdate("RESERVED"))
+                                .bodyValue(new LotStatusUpdate("PENDING"))
                                 .retrieve()
                                 .bodyToMono(Void.class)
                                 // ignore the body, just return original reservation
