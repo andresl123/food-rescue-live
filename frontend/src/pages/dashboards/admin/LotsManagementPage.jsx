@@ -202,9 +202,6 @@ const LotsManagementPage = () => {
             <h1>Lots Management</h1>
             <p>Manage storage lots and facilities</p>
           </div>
-          <button className="add-user-btn">
-            <i className="bi bi-plus-lg"></i> Add Lot
-          </button>
         </header>
 
         <div className="search-bar">

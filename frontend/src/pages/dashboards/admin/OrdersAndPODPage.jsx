@@ -25,9 +25,6 @@ const OrdersAndPODPage = () => {
             <h1>Orders & Proof of Delivery (POD)</h1>
             <p>Manage orders, deliveries and OTP verification</p>
           </div>
-          <button className="add-user-btn">
-            <i className="bi bi-plus-lg"></i> Add Order
-          </button>
         </header>
 
         <div className="search-bar">

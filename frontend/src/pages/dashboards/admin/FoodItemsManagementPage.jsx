@@ -272,9 +272,6 @@ const renderTableBody = () => {
             <h1>Food Items Management</h1>
             <p>Manage food inventory and stock</p>
           </div>
-          <button className="add-user-btn">
-            <i className="bi bi-plus-lg"></i> Add Food Item
-          </button>
         </header>
 
         {/* SEARCH INPUT */}

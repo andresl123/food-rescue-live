@@ -237,9 +237,6 @@ const renderTableBody = () => {
             <h1>Users Management</h1>
             <p>Manage user accounts and roles</p>
           </div>
-          <button className="add-user-btn">
-            <i className="bi bi-plus-lg"></i> Add User
-          </button>
         </header>
 
         <div className="search-bar">
