@@ -1,0 +1,97 @@
+/* Full-screen overlay anchored to viewport */
+.frl-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1080;
+}
+
+/* Dimmed background */
+.frl-modal__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(17,24,39,.45);
+  backdrop-filter: blur(2px);
+}
+
+/* Absolutely centered dialog (independent of flex/parents) */
+.frl-modal__dialog {
+  position: fixed;                 /* key: fixed to viewport */
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);/* center both axes */
+  width: min(96vw, 1000px);        /* responsive max width */
+  max-height: calc(100vh - 10vh);  /* keep inside viewport */
+  overflow: hidden;                /* round corners */
+  display: flex;
+  flex-direction: column;
+
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 20px 50px rgba(17,24,39,.25), 0 8px 20px rgba(17,24,39,.15);
+  animation: frlModalIn .22s ease;
+}
+
+@keyframes frlModalIn {
+  from { transform: translate(-50%, calc(-50% + 8px)); opacity: 0; }
+  to   { transform: translate(-50%, -50%);             opacity: 1; }
+}
+
+/* Sections */
+.frl-modal__header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--frl-border, #e5e7eb);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.frl-modal__body {
+  padding: 16px;
+  overflow: auto;                  /* scroll body if too tall */
+  flex: 1 1 auto;
+}
+
+.frl-modal__footer {
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--frl-border, #e5e7eb);
+  display: flex;
+  gap: .5rem;
+  justify-content: flex-end;
+}
+
+/* Chips in modal */
+.frl-modal__chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+}
+.frl-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  padding: .45rem .6rem;
+  border-radius: 999px;
+  background: #f5f7fb;
+  color: #111827;
+  border: 1px solid #e5e7eb;
+  font-weight: 500;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* Accent button (theme) */
+.frl-btn-accent {
+  background: #111827;
+  color: #fff;
+  border-radius: 12px;
+  border: 1px solid #111827;
+}
+.frl-btn-accent:hover { background: #0b1220; border-color: #0b1220; }
+
+/* Small screens: edge-to-edge feel but still centered */
+@media (max-width: 575.98px) {
+  .frl-modal__dialog {
+    width: calc(100vw - 1rem);
+    max-height: calc(100vh - 2rem);
+  }
+}

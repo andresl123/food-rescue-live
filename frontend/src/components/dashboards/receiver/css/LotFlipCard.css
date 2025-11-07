@@ -1,0 +1,93 @@
+/* ===== Flip Card Container ===== */
+.frl-flip {
+  perspective: 1200px;
+  position: relative;
+  height: 100%;
+  min-height: 480px;                /* keep both faces consistent */
+  outline: none;                    /* for :focus-visible */
+}
+.frl-flip:focus-visible {
+  box-shadow: 0 0 0 3px rgba(17,24,39,.12);
+  border-radius: 16px;
+}
+
+.frl-flip-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform .5s cubic-bezier(.22,.61,.36,1);
+  will-change: transform;
+  border-radius: 16px;
+}
+
+/* Flip on hover and focus (for keyboard/mobile tap) */
+.frl-flip:hover .frl-flip-inner,
+.frl-flip:focus-within .frl-flip-inner {
+  transform: rotateY(180deg);
+}
+
+.frl-flip-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(17,24,39,.06), 0 2px 6px rgba(17,24,39,.05);
+}
+
+/* FRONT = your existing card markup */
+.frl-flip-front { z-index: 2; }
+
+/* BACK = items list */
+.frl-flip-back {
+  transform: rotateY(180deg);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Back sections */
+.frl-back-hero {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--frl-border, #e5e7eb);
+  background: linear-gradient(180deg, #f8fafc, #ffffff);
+}
+
+.frl-back-body {
+  padding: 16px;
+  overflow: auto;
+  flex: 1 1 auto;
+}
+
+.frl-back-footer {
+  padding: 10px 16px 14px;
+  border-top: 1px dashed var(--frl-border, #e5e7eb);
+  background: #fff;
+}
+
+/* Nice pill chips for items */
+.frl-item-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+}
+.frl-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  padding: .45rem .6rem;
+  border-radius: 999px;
+  background: #f5f7fb;
+  color: #111827;
+  border: 1px solid #e5e7eb;
+  font-weight: 500;
+  white-space: nowrap;
+  min-width: 0;                    /* allow text-truncate */
+}
+
+/* Reduce min-height on very small screens */
+@media (max-width: 575.98px) {
+  .frl-flip { min-height: 420px; }
+}

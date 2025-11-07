@@ -48,20 +48,47 @@ export default function EditFoodItemModal({ show, lotId, foodItem, onClose, onIt
   if (!show) return null;
 
   return (
-    <div className="modal fade show d-block" tabIndex="-1" role="dialog">
-      <div className="modal-dialog modal-dialog-centered" role="document">
-        <div className="modal-content bg-dark text-light border-0 shadow-lg">
-          <div className="modal-header border-0">
-            <h5 className="modal-title fw-bold">Edit Food Item</h5>
-            <button type="button" className="btn-close btn-close-white" onClick={onClose}></button>
+    <div className="modal fade show d-block" tabIndex="-1" role="dialog"
+    style={{
+        backgroundColor: "rgba(0, 0, 0, 0.25)",
+        zIndex: 1055,
+      }}>
+      <div className="modal-dialog modal-dialog-centered modal-md" role="document">
+        <div
+          className="modal-content border-0 shadow-lg"
+          style={{
+            borderRadius: "20px",
+            backgroundColor: "#ffffff",
+            color: "#111827",
+          }}
+        >
+          {/* ---------- HEADER ---------- */}
+          <div className="modal-header border-0 pb-0">
+            <div>
+              <h4 className="fw-bold mb-1" style={{ color: "#111827" }}>
+                Edit Food Item
+              </h4>
+              <p
+                className="text-secondary mb-0"
+                style={{ fontSize: "0.95rem", fontWeight: 400 }}
+              >
+                Make changes to the food item details below
+              </p>
+            </div>
+            <button
+              type="button"
+              className="btn-close"
+              onClick={onClose}
+              style={{ filter: "invert(0.6)" }}
+            ></button>
           </div>
 
+          {/* ---------- FORM ---------- */}
           <form onSubmit={handleEditFoodItemSubmit}>
-            <div className="modal-body">
-
+            <div className="modal-body pt-3">
               {/* Item Name */}
               <div className="mb-3">
-                <label className="form-label text-secondary">Item Name</label>
+                <label className="form-label fw-semibold text-secondary">Item Name</label>
                 <input
                   type="text"
                   className="form-control"
@@ -69,18 +96,30 @@ export default function EditFoodItemModal({ show, lotId, foodItem, onClose, onIt
                   value={formData.itemName}
                   onChange={handleChange}
                   required
+                  style={{
+                    borderRadius: "10px",
+                    height: "46px",
+                    border: "1px solid #d1d5db",
+                    fontSize: "0.95rem",
+                  }}
                 />
               </div>
 
               {/* Category Dropdown */}
               <div className="mb-3">
-                <label className="form-label text-secondary">Category</label>
+                <label className="form-label fw-semibold text-secondary">Category</label>
                 <select
                   className="form-select"
                   name="category"
                   value={formData.category}
                   onChange={handleChange}
                   required
+                  style={{
+                    borderRadius: "10px",
+                    height: "46px",
+                    border: "1px solid #d1d5db",
+                    fontSize: "0.95rem",
+                  }}
                 >
                   <option value="">Select Category</option>
                   <option value="Fruits & Vegetables">Fruits & Vegetables</option>
@@ -94,52 +133,90 @@ export default function EditFoodItemModal({ show, lotId, foodItem, onClose, onIt
 
               {/* Expiry Date */}
               <div className="mb-3">
-                <label className="form-label text-secondary">Expiry Date</label>
+                <label className="form-label fw-semibold text-secondary">Expiry Date</label>
                 <input
                   type="date"
                   className="form-control"
                   name="expiryDate"
                   value={formData.expiryDate}
                   onChange={handleChange}
+                  style={{
+                    borderRadius: "10px",
+                    height: "46px",
+                    border: "1px solid #d1d5db",
+                    fontSize: "0.95rem",
+                  }}
                 />
               </div>
 
-              {/* Quantity */}
-              <div className="mb-3">
-                <label className="form-label text-secondary">Quantity</label>
-                <input
-                  type="number"
-                  className="form-control"
-                  name="quantity"
-                  min="1"
-                  value={formData.quantity}
-                  onChange={handleChange}
-                />
-              </div>
+              {/* Quantity + Unit */}
+              <div className="d-flex gap-3">
+                <div className="flex-grow-1">
+                  <label className="form-label fw-semibold text-secondary">Quantity</label>
+                  <input
+                    type="number"
+                    className="form-control"
+                    name="quantity"
+                    min="1"
+                    value={formData.quantity}
+                    onChange={handleChange}
+                    style={{
+                      borderRadius: "10px",
+                      height: "46px",
+                      border: "1px solid #d1d5db",
+                      fontSize: "0.95rem",
+                    }}
+                  />
+                </div>
 
-              {/* Unit Dropdown */}
-              <div className="mb-3">
-                <label className="form-label text-secondary">Unit of Measure</label>
-                <select
-                  className="form-select"
-                  name="unitOfMeasure"
-                  value={formData.unitOfMeasure}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">Select Unit</option>
-                  <option value="KG">KG</option>
-                  <option value="PCS">PCS</option>
-                  <option value="Litre">Litre</option>
-                </select>
+                <div className="flex-grow-1">
+                  <label className="form-label fw-semibold text-secondary">
+                    Unit of Measure
+                  </label>
+                  <select
+                    className="form-select"
+                    name="unitOfMeasure"
+                    value={formData.unitOfMeasure}
+                    onChange={handleChange}
+                    required
+                    style={{
+                      borderRadius: "10px",
+                      height: "46px",
+                      border: "1px solid #d1d5db",
+                      fontSize: "0.95rem",
+                    }}
+                  >
+                    <option value="">Select Unit</option>
+                    <option value="KG">KG</option>
+                    <option value="PCS">PCS</option>
+                    <option value="Litre">Litre</option>
+                  </select>
+                </div>
               </div>
             </div>
 
-            <div className="modal-footer border-0">
-              <button type="button" className="btn btn-secondary" onClick={onClose}>
+            {/* ---------- FOOTER ---------- */}
+            <div className="modal-footer border-0 pt-0">
+              <button
+                type="button"
+                className="btn btn-outline-secondary fw-semibold"
+                onClick={onClose}
+                style={{
+                  borderRadius: "10px",
+                  padding: "8px 18px",
+                }}
+              >
                 Cancel
               </button>
-              <button type="submit" className="btn btn-success">
+              <button
+                type="submit"
+                className="btn fw-semibold text-white"
+                style={{
+                  backgroundColor: "#111827",
+                  borderRadius: "10px",
+                  padding: "8px 18px",
+                }}
+              >
                 Save Changes
               </button>
             </div>
