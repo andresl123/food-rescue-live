@@ -38,8 +38,9 @@ public class ExcelLotImportService {
                                     .description(r.getDescription())
                                     .status(r.getStatus())
                                     .category(toCategory(r.getCategory()).name())
-                                    .addressId(null)              // 👈 FE will fill this
+                                    .addressId(null)
                                     .tags(buildTagStrings(r))
+                                    .imageUrl(null)
                                     .build())
                             .toList();
 
@@ -72,17 +73,19 @@ public class ExcelLotImportService {
                             .lotId(lotId)
                             .userId(donorUserId)
                             .description(row.getDescription())
-                            .imageUrl("Not Available")               // 👈 always set
-                            .createdAt(java.time.Instant.now())
+                            .imageUrl(row.getImageUrl() != null && !row.getImageUrl().isBlank()
+                                    ? row.getImageUrl()
+                                    : "Not Available")
+                            .createdAt(Instant.now())
                             .status(row.getStatus() != null ? row.getStatus() : "ACTIVE")
-                            .category(toCategory(row.getCategory())) // 👈 now saved
-                            .addressId(row.getAddressId())           // 👈 comes from FE in preview JSON
+                            .category(toCategory(row.getCategory()))
+                            .addressId(row.getAddressId())
                             .totalItems(0)
                             .tags(convertPreviewTags(row.getTags()))
                             .build();
 
                     return lotRepository.save(lot)
-                            .map(saved -> reactor.util.function.Tuples.of(row.getLotKey(), saved));
+                            .map(saved -> Tuples.of(row.getLotKey(), saved));
                 })
                 .collectMap(reactor.util.function.Tuple2::getT1, reactor.util.function.Tuple2::getT2)
                 .flatMap(savedLotsByKey ->

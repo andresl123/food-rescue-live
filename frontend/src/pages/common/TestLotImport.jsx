@@ -1,11 +1,13 @@
 // src/pages/TestLotImportWithAddresses.jsx
 import React, { useRef, useState, useEffect } from "react";
 
-const LOT_SERVICE_BASE = "http://localhost:8081"; // for /import preview/commit
-const ADDRESS_SERVICE_BASE = "http://localhost:8080"; // for /api/v1/addresses/user/{userId}
+const LOT_SERVICE_BASE = "http://localhost:8081";
+const ADDRESS_SERVICE_BASE = "http://localhost:8080";
 const AUTH_TOKEN =
-  "Bearer eyJraWQiOiJCR3FMdC1pa0RCTXBMSmdHN1QtSFA1cGN4cVFFejBjNlcxZGNfLXlFSHY0IiwidHlwIjoiSldUIiwiYWxnIjoiUlMyNTYifQ..."; // <-- your same token
-const USER_ID = "690d2a7946bb798cf6b8e416"; // 👈 put the actual userId (the one in your token)
+  "Bearer eyJraWQiOiJCR3FMdC1pa0RCTXBMSmdHN1QtSFA1cGN4cVFFejBjNlcxZGNfLXlFSHY0IiwidHlwIjoiSldUIiwiYWxnIjoiUlMyNTYifQ.eyJhdWQiOiJmb29kcmVzY3VlLWJmZiIsInN1YiI6IjY4ZjZmNjhmMDE3MjhjMWMwNmRhNDc5NyIsInJvbGVzIjpbIlJFQ0VJVkVSIl0sImlzcyI6ImZvb2RyZXNjdWUtYXV0aCIsInR5cCI6ImFjY2VzcyIsImV4cCI6MTc2MjY0MjQ2OCwiaWF0IjoxNzYyNjQwNjY4LCJqdGkiOiJjMThjODMxNS0xMDM5LTQyNGQtYWJiNC00YTIwZDNkODNlMjEiLCJlbWFpbCI6Iml0cy5oYXJtZWV0LnNpbmdoQG91dGxvb2suY29tIiwic3RhdHVzIjoiQUNUSVZFIn0.LD1KLQkzpXk3qX_KQHN8aOB9kBfTczlwym_juz_v3hPmbv7MrgetJ67GVC9m42mFwT7iyWaEnbKul45CI7aiEXguWV8o_V0wzBYXmc7DbrdJEYqYZlwO-UTxcANboGa8jcp12gDJd-eK8irE3Tc_kNFbGCOBVsEACeySwjokJJfX2yTu23X3Gpbmo01-D9OQGfcq9X_uWb6aH5Tv6fW-WEhOSiEPdL6UXfpPJrdLidMPUwBQhFAAyZuEQcQFlyb-dw33EHpslcx3ME7NL7HHGodFdXVqOmtD98Dymq38aSxJlLpujxU8ymDxycgNmO1a86Eg_3EW3_6eq63jumJ9WA";
+
+// the one that worked in Postman
+const USER_ID = "690d2a7946bb798cf6b8e416";
 
 export default function TestLotImportWithAddresses() {
   const fileInputRef = useRef(null);
@@ -14,33 +16,41 @@ export default function TestLotImportWithAddresses() {
   const [addresses, setAddresses] = useState([]);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
+  const [addrError, setAddrError] = useState("");
+  const [uploadingIndex, setUploadingIndex] = useState(null);
 
-  // 1) fetch addresses right away (or you can do it after preview)
+  // 1) fetch user addresses
   useEffect(() => {
     const fetchAddresses = async () => {
       try {
         const res = await fetch(
           `${ADDRESS_SERVICE_BASE}/api/v1/addresses/user/${USER_ID}`,
           {
+            method: "GET",
+            mode: "cors",
             headers: {
               Authorization: AUTH_TOKEN,
+              Accept: "application/json",
             },
           }
         );
         if (!res.ok) {
-          throw new Error("Failed to load addresses");
+          const txt = await res.text();
+          console.error("address fetch failed:", txt);
+          setAddrError(`Failed to load addresses (${res.status})`);
+          return;
         }
         const data = await res.json();
-        // data is Flux<Address> → array
-        setAddresses(data);
+        setAddresses(Array.isArray(data) ? data : []);
       } catch (err) {
-        console.error(err);
-        // don't block the page, just show optional error
+        console.error("address fetch error:", err);
+        setAddrError(err.message);
       }
     };
     fetchAddresses();
   }, []);
 
+  // open file chooser
   const handleChooseFile = () => {
     fileInputRef.current?.click();
   };
@@ -49,6 +59,7 @@ export default function TestLotImportWithAddresses() {
   const handleFileSelected = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
     setMsg("Uploading and building preview...");
     setError("");
     setPreview(null);
@@ -74,16 +85,22 @@ export default function TestLotImportWithAddresses() {
       }
 
       const data = await res.json();
-      // backend sends addressId: null → we keep it
-      setPreview(data);
-      setMsg("Preview ready. Pick address for each lot, then confirm.");
+
+      // ensure every lot has imageUrl property so inputs are controlled
+      const lotsWithImage = (data.lots || []).map((l) => ({
+        ...l,
+        imageUrl: l.imageUrl || "",
+      }));
+
+      setPreview({ ...data, lots: lotsWithImage });
+      setMsg("Preview ready. Pick address & image for each lot, then confirm.");
     } catch (err) {
       setError(err.message);
       setMsg("");
     }
   };
 
-  // 3) when user selects address for a lot
+  // 3) address dropdown change
   const handleAddressChange = (index, addressId) => {
     setPreview((prev) => {
       const lots = [...prev.lots];
@@ -92,7 +109,55 @@ export default function TestLotImportWithAddresses() {
     });
   };
 
-  // 4) confirm → commit
+  // 4) manual image URL change
+  const handleImageUrlChange = (index, imageUrl) => {
+    setPreview((prev) => {
+      const lots = [...prev.lots];
+      lots[index] = { ...lots[index], imageUrl };
+      return { ...prev, lots };
+    });
+  };
+
+  // 5) upload to Cloudinary (same as your reference)
+  const handleImageUpload = async (index, e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploadingIndex(index);
+
+    const formData = new FormData();
+    formData.append("file", file); // same field name
+    formData.append("upload_preset", "foodrescue_lot_uploads"); // same preset
+
+    try {
+      const res = await fetch(
+        "https://api.cloudinary.com/v1_1/da8bvrcjg/image/upload",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+      const data = await res.json();
+
+      // only store the image URL
+      if (data.secure_url) {
+        setPreview((prev) => {
+          const lots = [...prev.lots];
+          lots[index] = { ...lots[index], imageUrl: data.secure_url };
+          return { ...prev, lots };
+        });
+      } else {
+        alert("Image upload failed");
+      }
+    } catch (err) {
+      alert("Image upload failed");
+    } finally {
+      setUploadingIndex(null);
+      e.target.value = "";
+    }
+  };
+
+  // 6) commit
   const handleConfirm = async () => {
     if (!preview) return;
     setMsg("Importing...");
@@ -107,7 +172,7 @@ export default function TestLotImportWithAddresses() {
             "Content-Type": "application/json",
             Authorization: AUTH_TOKEN,
           },
-          body: JSON.stringify(preview),
+          body: JSON.stringify(preview), // this now includes imageUrl per lot
         }
       );
 
@@ -126,21 +191,17 @@ export default function TestLotImportWithAddresses() {
     }
   };
 
-  // helper: how to show address in dropdown
-  const getAddressLabel = (addr) => {
-    // guess fields – adjust to your Address model
-    return (
-      addr.label ||
-      addr.name ||
-      addr.addressLine1 ||
-      `${addr.city || ""} ${addr.postalCode || ""}` ||
-      addr.id
-    );
-  };
+  const getAddressLabel = (addr) =>
+    `${addr.street}, ${addr.city}, ${addr.postalCode}`;
 
   return (
     <div style={{ padding: "1.5rem" }}>
-      <h2>Import Lots from Excel (with address dropdown)</h2>
+      <h2>Import Lots from Excel (with address + image)</h2>
+
+      <p>
+        Addresses loaded: <b>{addresses.length}</b>
+      </p>
+      {addrError && <p style={{ color: "red" }}>{addrError}</p>}
 
       <button onClick={handleChooseFile}>1) Choose Excel & Preview</button>
       <input
@@ -154,7 +215,7 @@ export default function TestLotImportWithAddresses() {
       {msg && <p style={{ color: "green" }}>{msg}</p>}
       {error && <p style={{ color: "red" }}>{error}</p>}
 
-      {/* TABLE: LOTS */}
+      {/* LOTS TABLE */}
       {preview?.lots && preview.lots.length > 0 && (
         <>
           <h3 style={{ marginTop: "1.5rem" }}>Lots Preview</h3>
@@ -173,6 +234,7 @@ export default function TestLotImportWithAddresses() {
                   <th>Category</th>
                   <th>Tags</th>
                   <th>Address</th>
+                  <th>Image URL / Upload</th>
                 </tr>
               </thead>
               <tbody>
@@ -194,10 +256,32 @@ export default function TestLotImportWithAddresses() {
                         <option value="">-- select address --</option>
                         {addresses.map((addr) => (
                           <option key={addr.id} value={addr.id}>
-                            {getAddressLabel(addr)} ({addr.id})
+                            {getAddressLabel(addr)}
                           </option>
                         ))}
                       </select>
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        placeholder="https://..."
+                        value={lot.imageUrl || ""}
+                        onChange={(e) =>
+                          handleImageUrlChange(idx, e.target.value)
+                        }
+                        style={{ width: "160px", marginBottom: "4px" }}
+                      />
+                      <br />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleImageUpload(idx, e)}
+                      />
+                      {uploadingIndex === idx && (
+                        <div style={{ fontSize: "0.75rem" }}>
+                          uploading...
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -207,7 +291,7 @@ export default function TestLotImportWithAddresses() {
         </>
       )}
 
-      {/* TABLE: FOOD ITEMS */}
+      {/* FOOD ITEMS TABLE */}
       {preview?.foodItems && preview.foodItems.length > 0 && (
         <>
           <h3>Food Items Preview</h3>
@@ -246,12 +330,10 @@ export default function TestLotImportWithAddresses() {
         </>
       )}
 
-      {/* CONFIRM BUTTON */}
       {preview?.lots && preview.lots.length > 0 && (
         <button onClick={handleConfirm}>2) Confirm & Import</button>
       )}
 
-      {/* raw dump for debugging */}
       {preview && (
         <pre
           style={{

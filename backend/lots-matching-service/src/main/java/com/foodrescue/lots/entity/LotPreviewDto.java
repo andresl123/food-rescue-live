@@ -13,4 +13,5 @@ public class LotPreviewDto {
     private String category;
     private String addressId;
     private List<String> tags;
+    private String imageUrl;
 }
