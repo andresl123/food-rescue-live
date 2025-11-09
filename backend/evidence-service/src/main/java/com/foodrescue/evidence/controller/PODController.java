@@ -46,4 +46,9 @@ public class PODController {
     public Mono<ResponseEntity<ApiResponse<String>>> deleteByJobId(@PathVariable String jobId) {
         return podService.deleteByJobId(jobId).map(ResponseEntity::ok);
     }
+    // using by Admin
+    @GetMapping("/job/{jobId}")
+    public Mono<ResponseEntity<ApiResponse<PODResponse>>> getPodByJobId(@PathVariable String jobId) {
+        return podService.getOtpByJobId(jobId).map(ResponseEntity::ok);
+    }
 }
