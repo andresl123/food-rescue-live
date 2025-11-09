@@ -59,7 +59,7 @@ export default function ProfilePage() {
     setModal({ show: true, type: 'email', value: user.email });
 
   const openMobileModal = () =>
-    setModal({ show: true, type: 'mobile', value: user.phone });
+    setModal({ show: true, type: 'mobile', value: user.phoneNumber });
 
   const closeVerifyModal = () => setModal((m) => ({ ...m, show: false }));
 
@@ -67,7 +67,7 @@ export default function ProfilePage() {
     setUser((prev) =>
       modal.type === 'email'
         ? { ...prev, email: newValue }
-        : { ...prev, phone: newValue }
+        : { ...prev, phoneNumber: newValue }
     );
     closeVerifyModal();
   };
