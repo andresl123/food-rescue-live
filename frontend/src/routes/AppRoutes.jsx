@@ -18,7 +18,7 @@ function AppRoutes() {
         <Route path="/dashboard" element={<UserDashboard />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/orders" element={<RescueOrdersPage data={ordersData} />} />
-        <Route path="/test-import" element={<TestLotImport />} />
+        <Route path="/bulk-import" element={<TestLotImport />} />
         <Route path="/food-items" element={<FoodItemList />} />
       </Routes>
     </BrowserRouter>

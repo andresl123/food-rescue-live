@@ -14,7 +14,6 @@ import reactor.core.publisher.Mono;
 @RestController
 @RequestMapping("/api/v1/import")
 @RequiredArgsConstructor
-@CrossOrigin("*")
 public class LotImportController {
 
     private final ExcelLotImportService excelLotImportService;
