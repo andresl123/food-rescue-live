@@ -1,6 +1,7 @@
 // src/pages/dashboards/userDashboard/UserDashboard.jsx
 import React, { useEffect, useState } from "react";
 import UserLayout from "../../../layout/UserLayout";
+import { Navigate } from "react-router-dom";
 
 // role components
 import DonorDashboard from "../../../components/dashboards/donor/DonorDashboard";
@@ -59,6 +60,8 @@ export default function UserDashboard() {
             Courier Dashboard coming soon…
           </div>
         );
+      case "ADMIN":
+          return <Navigate to="/admin-dashboard" replace />;
       default:
         return (
           <div className="text-center text-danger mt-5">
