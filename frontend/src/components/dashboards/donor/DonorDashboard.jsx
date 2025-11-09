@@ -171,11 +171,11 @@ export default function DonorDashboard() {
   // -------------------- MAIN RETURN --------------------
   return (
     <div
-      className="container-fluid px-4 py-4"
+      className="container-fluid px-4"
       style={{
-        background: "linear-gradient(to bottom, #f9fdf9, #f0f0f0)", // light gray bottom tint
+//         background: "linear-gradient(to bottom, #f9fdf9, #f0f0f0)", // light gray bottom tint
         minHeight: "calc(100vh - 80px)", // prevents white overlap under navbar
-        borderTop: "1px solid #e5e7eb",
+//         borderTop: "1px solid #e5e7eb",
       }}
     >
 

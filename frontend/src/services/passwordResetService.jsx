@@ -1,17 +1,15 @@
 // Use a relative URL for the proxy. This should match the key in your vite.config.js proxy setup.
 const BASE_URL = "http://localhost:8080/api";
+const BFF_BASE_URL = "http://localhost:8090/api";
 
-/**
- * Sends a request to the backend to generate and email a verification code.
- * @param {string} email The user's email address.
- * @returns {Promise<{success: boolean, message: string}>} An object indicating success or failure.
- */
-export async function generateResetCode(email) {
+export async function generateResetCode(email, purpose = "FORGOT_PASSWORD") {
   try {
-    const response = await fetch(`${BASE_URL}/code/generate`, {
+    //const response = await fetch(`${BASE_URL}/code/generate`, {
+    const response = await fetch(`${BFF_BASE_URL}/code/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ identifier: email }),
+      body: JSON.stringify({ identifier: email, purpose: purpose }),
+      //credentials: "include"
     });
 
     const data = await response.json();
@@ -28,16 +26,10 @@ export async function generateResetCode(email) {
   }
 }
 
-/**
- * Sends the verification code and new password to the backend to reset the password.
- * @param {string} email The user's email.
- * @param {string} code The 6-digit verification code.
- * @param {string} newPassword The user's new password.
- * @returns {Promise<{success: boolean, message: string}>} An object indicating success or failure.
- */
 export async function resetPassword(email, code, newPassword) {
   try {
-    const url = `${BASE_URL}/password/reset/${email}/${code}`;
+    //const url = `${BASE_URL}/password/reset/${email}/${code}`;
+    const url = `${BFF_BASE_URL}/password/reset/${email}/${code}`;
 
     const response = await fetch(url, {
       method: "POST",
@@ -55,6 +47,72 @@ export async function resetPassword(email, code, newPassword) {
     return { success: true, message: data.message };
   } catch (error) {
     console.error("Reset Password Error:", error);
+    return { success: false, message: error.message };
+  }
+}
+
+    export async function validateEmailCode(email, code) {
+      try {
+        const response = await fetch(`${BFF_BASE_URL}/code/validate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ identifier: email, code }),
+          credentials: "include"
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || "Invalid or expired verification code.");
+        }
+
+        return { success: true, message: data.message };
+      } catch (error) {
+        console.error("Validate Email Code Error:", error);
+        return { success: false, message: error.message };
+      }
+    }
+
+export async function updateUserEmail(userId, newEmail) {
+  try {
+    const response = await fetch(`${BFF_BASE_URL}/users/${userId}/update-email`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: newEmail }),
+      credentials: "include"
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to update email.");
+    }
+
+    return { success: true, message: data.message };
+  } catch (error) {
+    console.error("Update Email Error:", error);
+    return { success: false, message: error.message };
+  }
+}
+
+export async function updateUserPhone(userId, newPhone) {
+  try {
+    const response = await fetch(`${BFF_BASE_URL}/users/${userId}/update-phone`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: newPhone }),
+      credentials: "include",
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to update phone number.");
+    }
+
+    return { success: true, message: data.message };
+  } catch (error) {
+    console.error("Update Phone Error:", error);
     return { success: false, message: error.message };
   }
 }

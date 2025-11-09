@@ -218,4 +218,33 @@ public class ApiGatewayController {
         return forward(authBase, exchange, downstreamPath, body, contentType);
     }
 
+    @RequestMapping(
+            path = "/code/**",
+            method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.PATCH, RequestMethod.DELETE}
+    )
+    public Mono<ResponseEntity<byte[]>> code(@RequestBody(required = false) String body,
+                                             @RequestHeader(name = "Content-Type", required = false) MediaType contentType,
+                                             ServerWebExchange exchange) {
+        // /api/code/... → /api/v1/code/...
+        String incoming = exchange.getRequest().getURI().getPath();
+        String afterApi = incoming.replaceFirst("^/api", "");
+        String downstreamPath = afterApi.replaceFirst("^/code", "/api/code");
+        return forward(authBase, exchange, downstreamPath, body, contentType);
+    }
+
+    @RequestMapping(
+            path = "/password/**",
+            method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.PATCH, RequestMethod.DELETE}
+    )
+    public Mono<ResponseEntity<byte[]>> password(@RequestBody(required = false) String body,
+                                                 @RequestHeader(name = "Content-Type", required = false) MediaType contentType,
+                                                 ServerWebExchange exchange) {
+        // /api/password/... → /api/v1/password/...
+        String incoming = exchange.getRequest().getURI().getPath();
+        String afterApi = incoming.replaceFirst("^/api", "");
+        String downstreamPath = afterApi.replaceFirst("^/password", "/api/password");
+        return forward(authBase, exchange, downstreamPath, body, contentType);
+    }
+
+
 }
