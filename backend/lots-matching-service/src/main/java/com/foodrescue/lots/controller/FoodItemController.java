@@ -99,4 +99,9 @@ public class FoodItemController {
         return foodItemService.deleteFoodItem(lotId, itemId, authenticationMono)
                 .then(Mono.just(ResponseEntity.noContent().build()));
     }
+    @GetMapping("/items/expiring-soon")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Flux<FoodItem> getExpiringSoon() {
+        return foodItemService.getExpiringSoon();
+    }
 }

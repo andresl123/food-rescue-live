@@ -65,3 +65,21 @@ export const deleteFoodItem = async (lotId, itemId) => {
   }
   return;
 };
+/**
+ * Fetches items that are expiring soon (Admin only).
+ */
+export const getExpiringSoonItems = async () => {
+  const response = await fetch(`${BFF_BASE_URL}/api/lots/items/expiring-soon`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: "include", // Use cookies
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch expiring items: ${response.status}`);
+  }
+
+  return response.json(); // Returns the raw array
+};

@@ -600,3 +600,8 @@
 .row-inactive .badge {
   opacity: 0.7;
 }
+.expiring-soon-text {
+  color: #fbc02d; /* Dark yellow */
+  font-weight: 600;
+  white-space: nowrap;
+}

@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import StatCard from '../../../components/dashboards/admin/StatCard';
 import '../../../components/dashboards/admin/Dashboard.css';
 
-// --- 1. Import all the services we need ---
 import { getAllLots } from '../../../services/lotService';
-import { getAllFoodItems } from '../../../services/foodItemService';
+import { getAllFoodItems, getExpiringSoonItems } from '../../../services/foodItemService';
 import { getAllUsers } from '../../../services/userService';
+import { Status } from '../../../assets/statusValues';
 
 const AdminDashboard = () => {
   // --- 2. Add state for our dynamic data ---
@@ -14,10 +14,12 @@ const AdminDashboard = () => {
     activeLots: 0,
     foodItems: 0,
   });
+  const [expiringItems, setExpiringItems] = useState([]);
+  const [lotMap, setLotMap] = useState({}); // For lot names
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // --- 3. Fetch all data when the component mounts ---
+  // Fetch all data when the component mounts ---
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
@@ -25,25 +27,27 @@ const AdminDashboard = () => {
         setError(null);
 
         // Fetch all data in parallel for efficiency
-        const [usersData, lotsData, itemsData] = await Promise.all([
+    const [usersData, lotsData, itemsData, expiringData] = await Promise.all([
           getAllUsers(),
           getAllLots(),
           getAllFoodItems(),
+          getExpiringSoonItems(), // <-- New API call
         ]);
+        // CREATE LOT MAP ---
+        // this to show lot names in the list
+        const newLotMap = lotsData.reduce((map, lot) => {
+          map[lot.lotId] = lot.description; // 'description' is the lot name
+          return map;
+        }, {});
+        setLotMap(newLotMap);
 
-// --- 4. Calculate the stats ---
+        // CALCULATE STATS
         const totalUsers = usersData.length;
-        // FIX: Check for both "OPEN" and "ACTIVE"
-        const activeLots = lotsData.filter(lot =>
-          lot.status === 'OPEN' || lot.status === 'ACTIVE'
-        ).length;
+        const activeLots = lotsData.filter(lot => lot.status === Status.ACTIVE).length;
         const foodItems = itemsData.length;
 
-        setStats({
-          totalUsers: totalUsers,
-          activeLots: activeLots,
-          foodItems: foodItems,
-        });
+        setStats({ totalUsers, activeLots, foodItems });
+        setExpiringItems(expiringData); // <-- Set the new state
 
       } catch (err) {
         console.error("Failed to fetch dashboard data:", err);
@@ -54,8 +58,25 @@ const AdminDashboard = () => {
     };
 
     fetchDashboardData();
-  }, []); // Empty array means this runs once on mount
+  }, []);
 
+  // HELPER FUNCTIONS
+  const getLotName = (lotId) => {
+    return lotMap[lotId] || 'Unknown Lot';
+  };
+
+  const getDaysLeft = (expiryDate) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expiry = new Date(expiryDate);
+    const diffTime = expiry - today;
+    const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (days === 0) return "Expires today";
+    if (days === 1) return "1 day left";
+    return `${days} days left`;
+  };
+
+  const loadingValue = '...';
 
   // (These are still dummy data, as we don't have the backend for them yet)
   const quickStats = [
@@ -63,12 +84,6 @@ const AdminDashboard = () => {
     { label: 'Food Items in Stock', value: 64, color: 'bg-primary' },
     { label: 'Active Users', value: 92, color: 'bg-purple' },
   ];
-  const recentActivity = [
-    { title: 'New order', detail: 'Order #1234 placed', time: '2 mins ago' },
-    { title: 'User registered', detail: 'john@example.com joined', time: '15 mins ago' },
-  ];
-
-  const loadingValue = '...';
 
   return (
       <main className="main-content">
@@ -83,9 +98,7 @@ const AdminDashboard = () => {
             Could not load dashboard data: {error}
           </div>
         )}
-
         <div className="stat-cards-grid">
-          {/* --- 5. Hook up the dynamic data to the StatCards --- */}
           <StatCard
             icon="bi-people"
             title="Total Users"
@@ -111,33 +124,46 @@ const AdminDashboard = () => {
             iconBgColor="#fff4e7"
           />
         </div>
-
         <div className="data-grid">
           <div className="card">
             <div className="card-header">
-              <h3>Recent Activity</h3>
+              <h3>Items Nearing Expiry</h3>
             </div>
             <div className="card-body">
               <ul className="activity-list">
-                {recentActivity.map((activity, index) => (
-                  <li key={index}>
-                    {/* ... (static data) ... */}
-                  </li>
-                ))}
+                {isLoading ? (
+                  <li>Loading...</li>
+                ) : error ? (
+                  <li>Error loading items.</li>
+                ) : expiringItems.length === 0 ? (
+                  <li>No items are expiring soon.</li>
+                ) : (
+                  expiringItems.map(item => (
+                    <li key={item.itemId}>
+                      <div className="activity-details">
+                        <strong>{item.itemName}</strong>
+                        <span>Lot: {getLotName(item.lotId)}</span>
+                      </div>
+                      <span className="activity-time expiring-soon-text">
+                        {getDaysLeft(item.expiryDate)}
+                      </span>
+                    </li>
+                  ))
+                )}
               </ul>
             </div>
           </div>
 
+          {/* --- "QUICK STATS" CARD (Now for "Recent Orders") --- */}
           <div className="card">
             <div className="card-header">
-              <h3>Quick Stats</h3>
+              <h3>Recent Orders</h3>
             </div>
             <div className="card-body">
-              {quickStats.map((stat, index) => (
-                <div className="stat-item" key={index}>
-                  {/* ... (static data) ... */}
-                </div>
-              ))}
+              {/* We'll build this out next */}
+              <p>Recent orders will be displayed here.</p>
+
+              {/* (Old quick stats code removed) */}
             </div>
           </div>
         </div>

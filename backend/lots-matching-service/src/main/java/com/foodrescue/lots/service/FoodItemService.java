@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Flux;
+import java.time.LocalDate;
 
 import java.util.Collection;
 import java.time.Instant;
@@ -32,8 +33,7 @@ public class FoodItemService {
         this.lotRepository = lotRepository;
     }
 
-    // --- 1. THE NEW REUSABLE AUTHORIZATION METHOD ---
-    // (This is your original 'checkLotAdminOrOwnershipForItemAccess' method, renamed)
+    // NEW REUSABLE AUTHORIZATION METHOD ---
     private Mono<Lot> authorizeAdminOrLotOwner(String lotId, Mono<Authentication> authMono) {
         return authMono.zipWith(lotRepository.findById(lotId)
                         .switchIfEmpty(Mono.error(new LotNotFoundException("Lot with ID " + lotId + " not found."))))
@@ -52,6 +52,14 @@ public class FoodItemService {
                         return Mono.error(new AccessDeniedException("You do not have permission to access items in this lot."));
                     }
                 });
+    }
+
+    public Flux<FoodItem> getExpiringSoon() {
+        LocalDate today = LocalDate.now();
+        // Get items expiring from today up to 7 days from now
+        LocalDate sevenDaysFromNow = today.plusDays(7);
+
+        return foodItemRepository.findByExpiryDateBetween(today, sevenDaysFromNow);
     }
 
     /**
