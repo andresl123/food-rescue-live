@@ -39,7 +39,7 @@ jobs:
           tags: ${{ secrets.DOCKER_USERNAME }}/auth-users-service:${{ steps.vars.outputs.TAG }}
 
       - name: Update image tag in GitOps repository
-        uses: 752f4c2c5207fe08e89c67b9b1e93ca0a83e058c@v2
+        uses: peter-evans/find-replace-action@752f4c2c5207fe08e89c67b9b1e93ca0a83e058c
         with:
           repository: andresl123/food-rescue-gitops
           token: ${{ secrets.GITOPS_REPO_TOKEN }}
