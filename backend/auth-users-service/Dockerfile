@@ -1,6 +1,6 @@
 # --- STAGE 1: Build ---
 # Use a Java 17 JDK image that supports multi-arch (amd64, arm64)
-FROM eclipse-temurin:17-jdk-jammy AS build
+FROM maven:3.9.9-eclipse-temurin-17 AS build
 
 # Set the working directory
 WORKDIR /app
