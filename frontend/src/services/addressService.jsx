@@ -1,5 +1,5 @@
 // Base URL for all BFF API calls
-const BFF_BASE_URL = "http://localhost:8090/api";
+const BFF_BASE_URL = `${import.meta.env.VITE_BFF_BASE_URL}/api`;
 
 export async function createAddress(addressData) {
   try {

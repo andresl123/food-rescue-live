@@ -1,7 +1,7 @@
 // src/services/userService.js
 
 const BASE_URL = "http://localhost:8080/api/v1/users";
-const BFF_BASE_URL = "http://localhost:8090";
+const BFF_BASE_URL = import.meta.env.VITE_BFF_BASE_URL;
 
 export async function createUser(formData) {
   try {

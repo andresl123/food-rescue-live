@@ -2,3 +2,5 @@
 /frontend/node_modules
 pass.txt
 /frontend/.DS_Store
+# Ignore local environment overrides
+.env*.local
