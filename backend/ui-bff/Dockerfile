@@ -4,7 +4,14 @@ WORKDIR /app
 
 # 1. Copy POM and cache dependencies
 COPY pom.xml .
-RUN mvn dependency:go-offline
+
+# 2. Mount the PAT secret, create settings.xml with the hard-coded username,
+#    run go-offline, and then remove the settings file for security.
+RUN --mount=type=secret,id=GH_PACKAGES_TOKEN \
+    mkdir -p ~/.m2 && \
+    echo "<settings><servers><server><id>github</id><username>its-harmeet-singh</username><password>$(cat /run/secrets/GH_PACKAGES_TOKEN)</password></server></servers></settings>" > ~/.m2/settings.xml && \
+    mvn -e dependency:go-offline && \
+    rm ~/.m2/settings.xml
 
 # 2. Copy source and build
 COPY src ./src

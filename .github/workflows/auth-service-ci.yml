@@ -37,6 +37,8 @@ jobs:
           platforms: linux/arm64
           push: true
           tags: ${{ vars.DOCKERHUB_USERNAME }}/auth-users-service:${{ steps.vars.outputs.TAG }}
+          secrets: |
+            "GH_PACKAGES_TOKEN=${{ secrets.GH_PACKAGES_TOKEN }}"
 
       # ---- Checkout GitOps repo ----
       - name: Checkout GitOps repo
