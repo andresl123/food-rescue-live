@@ -54,14 +54,22 @@ public class FeedbackController {
     /* ------------ NEW: READ for prefill ------------ */
 
     @GetMapping(path = "/order")
-    public Mono<ResponseEntity<OrderFeedbackDocument>> getOrderFeedback(
+    public Mono<ResponseEntity<Object>> getOrderFeedback(
             @RequestParam("orderId") String orderId,
             ServerWebExchange exchange
     ) {
         String receiverId = extractReceiverIdFromJwt(exchange);
-        return feedbackService.getOrderFeedback(orderId, receiverId)
-                .map(ResponseEntity::ok)
-                .switchIfEmpty(Mono.just(ResponseEntity.notFound().build()));
+
+        return feedbackService
+                .getOrderFeedback(orderId, receiverId)   // Mono<OrderFeedbackDocument>
+                .<ResponseEntity<Object>>map(ResponseEntity::ok)
+                .switchIfEmpty(
+                        Mono.just(
+                                ResponseEntity.ok(
+                                        java.util.Map.of("message", "Not found")
+                                )
+                        )
+                );
     }
 
     @GetMapping(path = "/courier")

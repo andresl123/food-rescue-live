@@ -44,18 +44,38 @@ export async function submitCourierFeedback({ courierId, orderId, rating, feedba
 /* NEW — get existing order feedback for this user+order */
 export async function getOrderFeedback(orderId) {
   if (!orderId) return null;
-  const res = await fetch(`${BFF_BASE}/api/feedback/order?orderId=${encodeURIComponent(orderId)}`, {
-    method: "GET",
-    credentials: "include",
-  });
-  if (res.status === 404) return null;
-  const data = await res.json().catch(() => null);
-  return data;
+
+  try {
+    const res = await fetch(
+      `${BFF_BASE}/api/feedback/order?orderId=${encodeURIComponent(orderId)}`,
+      {
+        method: "GET",
+        credentials: "include",
+      }
+    );
+
+    // no feedback yet → not an error
+    if (res.status === 404) {
+      return null;
+    }
+
+    // other non-OK → treat as error
+    if (!res.ok) {
+      throw new Error(`Failed to load order feedback (${res.status})`);
+    }
+
+    const data = await res.json().catch(() => null);
+    return data;
+  } catch (err) {
+    // swallow so UI doesn't explode
+    console.warn("getOrderFeedback failed:", err);
+    return null;
+  }
 }
 
 /* NEW — get existing courier feedback for this user+order+courier */
 export async function getCourierFeedback(orderId, courierId) {
-  if (!orderId || !courierId) return null;
+  if (!orderId || !courierId || courierId == "To be assigned") return null;
   const url = `${BFF_BASE}/api/feedback/courier?orderId=${encodeURIComponent(
     orderId
   )}&courierId=${encodeURIComponent(courierId)}`;

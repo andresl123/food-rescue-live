@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import toast, { Toaster } from "react-hot-toast";
 import {
   submitOrderFeedback,
   submitCourierFeedback,
@@ -166,10 +167,10 @@ export default function OrderDetailsModal({ show, onClose, order }) {
         rating: lotRating,
         feedbackText: lotFeedback,
       });
-      alert("Lot feedback saved.");
+      toast.success("Lot feedback saved.");
     } catch (err) {
       console.error("order feedback error", err);
-      alert(err.message || "Unable to save feedback");
+      toast.error(err.message || "Unable to save feedback");
     } finally {
       setLotSubmitting(false);
     }
@@ -184,7 +185,7 @@ export default function OrderDetailsModal({ show, onClose, order }) {
       courier?.receiverId;
 
     if (!orderId || !courierId) {
-      alert("Courier is not assigned yet.");
+      toast.error("Courier is not assigned yet.");
       return;
     }
 
@@ -196,10 +197,9 @@ export default function OrderDetailsModal({ show, onClose, order }) {
         rating: courierRating,
         feedbackText: courierFeedback,
       });
-      alert("Courier feedback saved.");
+      toast.success("Courier feedback saved.");
     } catch (err) {
-      console.error("courier feedback error", err);
-      alert(err.message || "Unable to save courier feedback");
+      toast.error("Unable to save courier feedback");
     } finally {
       setCourierSubmitting(false);
     }
