@@ -33,44 +33,11 @@ public class WebClientConfig {
         });
     }
 
-    /** On 401: refresh via refresh cookie; rewrite BOTH cookies; retry once. */
-    private ExchangeFilterFunction refreshOn401Filter(RefreshService refreshService) {
-        return (request, next) ->
-                next.exchange(request).flatMap(response -> {
-                    if (response.statusCode() != HttpStatus.UNAUTHORIZED) {
-                        return Mono.just(response);
-                    }
-                    return Mono.deferContextual(ctx -> {
-                        ServerWebExchange exchange = ctx.getOrDefault(ServerWebExchange.class, null);
-                        if (exchange == null) return Mono.just(response);
-                        if (Boolean.TRUE.equals(request.attribute("retried").orElse(false))) {
-                            return Mono.just(response);
-                        }
-
-                        String currentAccess = request.headers().getFirst(HttpHeaders.AUTHORIZATION);
-
-                        return refreshService.refreshTokens(exchange, currentAccess)
-                                .flatMap(newAccess -> {
-                                    ClientRequest retry = ClientRequest.from(request)
-                                            .headers(h -> {
-                                                h.remove(HttpHeaders.AUTHORIZATION);
-                                                h.set(HttpHeaders.AUTHORIZATION, "Bearer " + newAccess);
-                                            })
-                                            .attribute("retried", true)
-                                            .build();
-                                    return next.exchange(retry);
-                                })
-                                .switchIfEmpty(Mono.just(response));
-                    });
-                });
-    }
-
     @Bean
     @Primary
     public WebClient webClient(WebClient.Builder builder, RefreshService refreshService) {
         return builder
                 .filter(authFromCookieOnlyFilter())
-                .filter(refreshOn401Filter(refreshService))
                 .build();
     }
 
