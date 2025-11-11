@@ -1,6 +1,6 @@
 # --- STAGE 1: Build ---
 # Use an official Node.js image as the builder
-FROM node:18-alpine AS build
+FROM node:20-alpine AS build
 
 # Set the working directory
 WORKDIR /app
