@@ -1,11 +1,10 @@
 import React, { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import toast, { Toaster } from "react-hot-toast";
 import UserLayout from "../../layout/UserLayout";
 
-// single place to change later
 const BFF_BASE = "http://localhost:8090";
 
-// pill-style for food-items lotKey
 const pillInputStyle = {
   borderRadius: "999px",
   border: "1px solid #0f172a33",
@@ -27,9 +26,9 @@ export default function TestLotImportWithAddresses() {
   const [activeTab, setActiveTab] = useState("upload");
   const [currentUser, setCurrentUser] = useState(null);
 
-  //
-  // 1) get /api/v1/me from BFF (reads cookie)
-  //
+  // =========================================================
+  // 1) load current user from BFF, then load addresses for user
+  // =========================================================
   useEffect(() => {
     const loadMeAndAddresses = async () => {
       try {
@@ -37,14 +36,12 @@ export default function TestLotImportWithAddresses() {
           credentials: "include",
         });
         if (!meRes.ok) {
-          // not logged in or no cookie
-          return;
+          return; // no cookie / not logged in
         }
         const me = await meRes.json();
         setCurrentUser(me);
 
         if (me.userId) {
-          // load addresses for this user THROUGH BFF
           const addrRes = await fetch(
             `${BFF_BASE}/api/addresses/user/${me.userId}`,
             {
@@ -55,7 +52,9 @@ export default function TestLotImportWithAddresses() {
             }
           );
           if (!addrRes.ok) {
-            setAddrError(`Failed to load addresses (${addrRes.status})`);
+            const msg = `Failed to load addresses (${addrRes.status})`;
+            setAddrError(msg);
+            toast.error(msg);
           } else {
             const data = await addrRes.json();
             setAddresses(Array.isArray(data) ? data : []);
@@ -65,6 +64,7 @@ export default function TestLotImportWithAddresses() {
       } catch (err) {
         console.error("me/addresses error", err);
         setAddrError(err.message);
+        toast.error(err.message);
       }
     };
 
@@ -73,9 +73,9 @@ export default function TestLotImportWithAddresses() {
 
   const handleChooseFile = () => fileInputRef.current?.click();
 
-  //
-  // 2) upload excel → preview (through BFF on 8090)
-  //
+  // =========================================================
+  // 2) upload excel → preview (via BFF)
+  // =========================================================
   const handleFileSelected = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -87,14 +87,11 @@ export default function TestLotImportWithAddresses() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch(
-        `${BFF_BASE}/api/import/lots-excel/preview`,
-        {
-          method: "POST",
-          body: formData,
-          credentials: "include",
-        }
-      );
+      const res = await fetch(`${BFF_BASE}/api/import/lots-excel/preview`, {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -109,14 +106,18 @@ export default function TestLotImportWithAddresses() {
 
       setPreview({ ...data, lots: lotsWithImage });
       setMsg("Preview ready. Configure lots & food items.");
+      toast.success("Preview built. Configure lots & food items.");
       setActiveTab("preview");
     } catch (err) {
       setError(err.message);
       setMsg("");
+      toast.error(err.message);
     }
   };
 
-  // LOT handlers (desc, address, image ONLY)
+  // =========================================================
+  // LOT handlers (desc, address, image only)
+  // =========================================================
   const handleAddressChange = (index, addressId) => {
     setPreview((prev) => {
       const lots = [...prev.lots];
@@ -141,9 +142,9 @@ export default function TestLotImportWithAddresses() {
     });
   };
 
-  //
-  // cloudinary upload: stays direct
-  //
+  // =========================================================
+  // Image upload → Cloudinary
+  // =========================================================
   const handleImageUpload = async (index, e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -168,18 +169,21 @@ export default function TestLotImportWithAddresses() {
           lots[index] = { ...lots[index], imageUrl: data.secure_url };
           return { ...prev, lots };
         });
+        toast.success(`Image added to lot ${index + 1}`);
       } else {
-        alert("Image upload failed");
+        toast.error("Image upload failed");
       }
     } catch (err) {
-      alert("Image upload failed");
+      toast.error("Image upload failed");
     } finally {
       setUploadingIndex(null);
       e.target.value = "";
     }
   };
 
-  // FOOD ITEM handlers (lotKey editable here)
+  // =========================================================
+  // Food item handlers (lotKey editable here)
+  // =========================================================
   const handleFoodItemChange = (index, field, value) => {
     setPreview((prev) => {
       const items = [...prev.foodItems];
@@ -188,45 +192,87 @@ export default function TestLotImportWithAddresses() {
     });
   };
 
-  //
-  // 3) confirm → commit through BFF on 8090
-  //
+  // =========================================================
+  // Validation (must have address + image for all lots)
+  // =========================================================
+  const validatePreview = () => {
+    if (!preview || !preview.lots || preview.lots.length === 0) {
+      toast.error("No lots to import.");
+      return false;
+    }
+
+    const invalid = preview.lots.filter(
+      (l) =>
+        !l.addressId ||
+        l.addressId.trim() === "" ||
+        !l.imageUrl ||
+        l.imageUrl.trim() === ""
+    );
+
+    if (invalid.length > 0) {
+      toast.error(
+        `Please complete all lots: ${invalid.length} lot(s) missing address or image.`
+      );
+      return false;
+    }
+
+    return true;
+  };
+
+  // =========================================================
+  // 3) Confirm → commit via BFF
+  // =========================================================
   const handleConfirm = async () => {
     if (!preview) return;
+
+    const ok = validatePreview();
+    if (!ok) return;
+
     setMsg("Importing...");
     setError("");
 
     try {
-      const res = await fetch(
-        `${BFF_BASE}/api/import/lots-excel/commit`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify(preview),
-        }
-      );
+      const res = await fetch(`${BFF_BASE}/api/import/lots-excel/commit`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(preview),
+      });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.message || "Import failed");
       }
 
+      toast.success("Lots created successfully.");
       setMsg("Lots created successfully.");
       setPreview(null);
       setActiveTab("upload");
-      navigate("/test-import", { replace: true });
+      navigate("/bulk-import", { replace: true });
     } catch (err) {
       setError(err.message);
       setMsg("");
+      toast.error(err.message);
     }
   };
 
+  // =========================================================
+  // Cancel
+  // =========================================================
+  const handleCancel = () => {
+    setPreview(null);
+    setActiveTab("upload");
+    toast.info("Import cancelled.");
+    navigate("/bulk-import", { replace: true });
+  };
+
+  // =========================================================
+  // Helpers
+  // =========================================================
   const getAddressLabel = (addr) =>
     `${addr.street}, ${addr.city}, ${addr.postalCode}`;
 
-  // validation progress
   const totalLots = preview?.lots?.length || 0;
   const completedLots =
     preview?.lots?.filter(
@@ -239,12 +285,12 @@ export default function TestLotImportWithAddresses() {
   const validationPct =
     totalLots > 0 ? Math.round((completedLots / totalLots) * 100) : 0;
 
-  // download from public/assets
   const handleDownloadTemplate = () => {
     const link = document.createElement("a");
     link.href = "/assets/foodrescue-import-template.xlsx";
     link.download = "foodrescue-import-template.xlsx";
     link.click();
+    toast.info("Downloading template...");
   };
 
   return (
@@ -374,7 +420,7 @@ export default function TestLotImportWithAddresses() {
           </div>
         </div>
 
-        {/* === UPLOAD VIEW === */}
+        {/* ================== UPLOAD VIEW ================== */}
         {activeTab === "upload" && (
           <div className="row g-3">
             <div className="col-lg-8">
@@ -493,23 +539,18 @@ export default function TestLotImportWithAddresses() {
                       </div>
                     )
                   )}
-                  <div className="mt-3">
-                    Addresses loaded: <strong>{addresses.length}</strong>
-                    {addrError && (
-                      <div className="text-danger mt-1">{addrError}</div>
-                    )}
-                  </div>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* === PREVIEW VIEW === */}
+        {/* ================== PREVIEW VIEW ================== */}
         {activeTab === "preview" && preview && (
           <>
             {/* STATS */}
             <div className="row g-3 mt-1 mb-3">
+              {/* CARD 1 */}
               <div className="col-md-4">
                 <div
                   className="frl-soft-card d-flex align-items-center gap-3 p-3"
@@ -543,7 +584,7 @@ export default function TestLotImportWithAddresses() {
                   </div>
                 </div>
               </div>
-
+              {/* CARD 2 */}
               <div className="col-md-4">
                 <div
                   className="frl-soft-card d-flex align-items-center gap-3 p-3"
@@ -582,7 +623,7 @@ export default function TestLotImportWithAddresses() {
                   </div>
                 </div>
               </div>
-
+              {/* CARD 3 */}
               <div className="col-md-4">
                 <div
                   className="frl-soft-card d-flex align-items-center gap-3 p-3"
@@ -685,7 +726,6 @@ export default function TestLotImportWithAddresses() {
                       >
                         <td>{idx + 1}</td>
                         <td style={{ minWidth: 120 }}>
-                          {/* lot key is read-only */}
                           <span
                             style={{
                               ...pillInputStyle,
@@ -841,7 +881,6 @@ export default function TestLotImportWithAddresses() {
                       >
                         <td>{idx + 1}</td>
                         <td>
-                          {/* user can edit food-item lot key */}
                           <input
                             style={pillInputStyle}
                             value={fi.lotKey || ""}
@@ -918,7 +957,10 @@ export default function TestLotImportWithAddresses() {
               </div>
 
               <div className="px-3 py-3 d-flex justify-content-end gap-2">
-                <button className="btn btn-outline-secondary btn-sm">
+                <button
+                  className="btn btn-outline-secondary btn-sm"
+                  onClick={handleCancel}
+                >
                   Cancel
                 </button>
                 <button

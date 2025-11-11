@@ -5,6 +5,7 @@ import com.foodrescue.lots.repository.FoodItemRepository;
 import com.foodrescue.lots.repository.LotRepository;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.usermodel.DateUtil;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -15,6 +16,8 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -62,12 +65,12 @@ public class ExcelLotImportService {
                 });
     }
 
-    /* ========= 2) COMMIT (actually save) ========= */
+    /* ========= 2) COMMIT ========= */
     public Mono<ImportResult> commitImport(ImportPreviewResponse preview, String donorUserId) {
 
         return Flux.fromIterable(preview.getLots())
                 .flatMap(row -> {
-                    String lotId = java.util.UUID.randomUUID().toString();
+                    String lotId = UUID.randomUUID().toString();
 
                     Lot lot = Lot.builder()
                             .lotId(lotId)
@@ -87,14 +90,14 @@ public class ExcelLotImportService {
                     return lotRepository.save(lot)
                             .map(saved -> Tuples.of(row.getLotKey(), saved));
                 })
-                .collectMap(reactor.util.function.Tuple2::getT1, reactor.util.function.Tuple2::getT2)
+                .collectMap(Tuple2::getT1, Tuple2::getT2)
                 .flatMap(savedLotsByKey ->
                         Flux.fromIterable(preview.getFoodItems())
                                 .flatMap(pi -> {
                                     Lot savedLot = savedLotsByKey.get(pi.getLotKey());
                                     if (savedLot == null) return Mono.empty();
 
-                                    String itemId = java.util.UUID.randomUUID().toString();
+                                    String itemId = UUID.randomUUID().toString();
 
                                     FoodItem item = FoodItem.builder()
                                             .itemId(itemId)
@@ -102,11 +105,11 @@ public class ExcelLotImportService {
                                             .itemName(pi.getItemName())
                                             .category(pi.getCategory())
                                             .expiryDate(pi.getExpiryDate() != null
-                                                    ? java.time.LocalDate.parse(pi.getExpiryDate())
+                                                    ? LocalDate.parse(pi.getExpiryDate())
                                                     : null)
                                             .quantity(pi.getQuantity() != null ? pi.getQuantity() : 0)
                                             .unitOfMeasure(pi.getUnitOfMeasure())
-                                            .createdAt(java.time.Instant.now())
+                                            .createdAt(Instant.now())
                                             .build();
 
                                     return foodItemRepository.save(item);
@@ -118,7 +121,7 @@ public class ExcelLotImportService {
                                                         ImportResult.builder()
                                                                 .lotsCreated(savedLotsByKey.size())
                                                                 .itemsCreated(savedItems.size())
-                                                                .warnings(java.util.Collections.emptyList())
+                                                                .warnings(Collections.emptyList())
                                                                 .build()
                                                 )
                                 )
@@ -162,99 +165,36 @@ public class ExcelLotImportService {
                 .then();
     }
 
-    /**
-     * Map Excel text -> your 5 categories
-     */
     private com.foodrescue.lots.entity.Category toCategory(String raw) {
         if (raw == null || raw.isBlank()) {
             return com.foodrescue.lots.entity.Category.OTHER;
         }
-
         String v = raw.trim().toLowerCase();
-
         switch (v) {
-            // PRODUCE
-            case "produce":
-            case "fruit":
-            case "fruits":
-            case "vegetable":
-            case "vegetables":
-            case "veggies":
+            case "produce": case "fruit": case "fruits": case "vegetable": case "vegetables": case "veggies":
                 return com.foodrescue.lots.entity.Category.PRODUCE;
-
-            // DAIRY
-            case "dairy":
-            case "milk":
-            case "cheese":
-            case "yogurt":
-            case "butter":
+            case "dairy": case "milk": case "cheese": case "yogurt": case "butter":
                 return com.foodrescue.lots.entity.Category.DAIRY;
-
-            // BAKERY
-            case "bakery":
-            case "bread":
-            case "buns":
-            case "pastry":
-            case "pastries":
-            case "cake":
-            case "cookie":
-            case "cookies":
+            case "bakery": case "bread": case "buns": case "pastry": case "pastries": case "cake": case "cookie": case "cookies":
                 return com.foodrescue.lots.entity.Category.BAKERY;
-
-            // MEAT
-            case "meat":
-            case "chicken":
-            case "beef":
-            case "pork":
-            case "lamb":
+            case "meat": case "chicken": case "beef": case "pork": case "lamb":
                 return com.foodrescue.lots.entity.Category.MEAT;
-
-            // SEAFOOD
-            case "seafood":
-            case "fish":
-            case "shrimp":
-            case "prawn":
-            case "salmon":
+            case "seafood": case "fish": case "shrimp": case "prawn": case "salmon":
                 return com.foodrescue.lots.entity.Category.SEAFOOD;
-
-            // BEVERAGE
-            case "beverage":
-            case "drink":
-            case "drinks":
-            case "juice":
-            case "water":
-            case "soda":
+            case "beverage": case "drink": case "drinks": case "juice": case "water": case "soda":
                 return com.foodrescue.lots.entity.Category.BEVERAGE;
-
-            // PACKAGED / pantry / canned
-            case "packaged":
-            case "package":
-            case "canned":
-            case "can":
-            case "dry":
-            case "pantry":
+            case "packaged": case "package": case "canned": case "can": case "dry": case "pantry":
                 return com.foodrescue.lots.entity.Category.PACKAGED;
-
-            // FROZEN
-            case "frozen":
-            case "freezer":
+            case "frozen": case "freezer":
                 return com.foodrescue.lots.entity.Category.FROZEN;
-
-            // PREPARED / ready to eat
-            case "prepared":
-            case "ready to eat":
-            case "ready-to-eat":
-            case "meal":
-            case "meals":
-            case "cooked":
+            case "prepared": case "ready to eat": case "ready-to-eat": case "meal": case "meals": case "cooked":
                 return com.foodrescue.lots.entity.Category.PREPARED;
-
             default:
                 return com.foodrescue.lots.entity.Category.OTHER;
         }
     }
 
-    /* ========= Excel parsing (same columns as before) ========= */
+    /* ========= Excel parsing ========= */
     private Tuple2<List<LotImportRow>, List<FoodItemImportRow>> parseWorkbook(byte[] excelBytes) throws IOException {
         try (Workbook wb = WorkbookFactory.create(new ByteArrayInputStream(excelBytes))) {
             Sheet lotsSheet = wb.getSheet("Lots");
@@ -284,7 +224,7 @@ public class ExcelLotImportService {
 
             if (itemsSheet != null) {
                 Iterator<Row> it2 = itemsSheet.iterator();
-                if (it2.hasNext()) it2.next();
+                if (it2.hasNext()) it2.next(); // header
                 while (it2.hasNext()) {
                     Row r = it2.next();
                     if (isRowEmpty(r)) continue;
@@ -292,7 +232,8 @@ public class ExcelLotImportService {
                             .lotKey(getString(r, 0))
                             .itemName(getString(r, 1))
                             .category(getString(r, 2))
-                            .expiryDate(parseLocalDate(getString(r, 3)))
+                            // 👇 this is the important change
+                            .expiryDate(parseLocalDate(r.getCell(3)))
                             .quantity(parseInt(getString(r, 4)))
                             .unitOfMeasure(getString(r, 5))
                             .build());
@@ -312,16 +253,68 @@ public class ExcelLotImportService {
         return true;
     }
 
+    /**
+     * Safe string getter: DOES NOT force numeric cells to string for date columns
+     */
     private String getString(Row row, int idx) {
         Cell cell = row.getCell(idx);
         if (cell == null) return "";
+        // if it's already string, just return
+        if (cell.getCellType() == CellType.STRING) {
+            return cell.getStringCellValue().trim();
+        }
+        if (cell.getCellType() == CellType.NUMERIC && !DateUtil.isCellDateFormatted(cell)) {
+            // normal numeric (like quantity)
+            return String.valueOf((long) cell.getNumericCellValue());
+        }
+        // fall back
         cell.setCellType(CellType.STRING);
         return cell.getStringCellValue().trim();
     }
 
-    private LocalDate parseLocalDate(String s) {
+    /**
+     * Parse Excel cell into LocalDate.
+     * Supports:
+     * - real Excel date (numeric)
+     * - yyyy-MM-dd
+     * - dd-MM-yyyy
+     * - dd/MM/yyyy
+     */
+    private LocalDate parseLocalDate(Cell cell) {
+        if (cell == null) return null;
+
+        // 1) Excel numeric date (properly date-formatted)
+        if (cell.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(cell)) {
+            // pass the numeric value, not the cell
+            return DateUtil.getLocalDateTime(cell.getNumericCellValue()).toLocalDate();
+        }
+
+        // 2) Excel numeric but NOT marked as date (you saw 45996) -> still a serial date
+        if (cell.getCellType() == CellType.NUMERIC) {
+            double value = cell.getNumericCellValue();
+            return DateUtil.getLocalDateTime(value).toLocalDate();
+        }
+
+        // 3) text date
+        String s = cell.getStringCellValue();
         if (s == null || s.isBlank()) return null;
-        return LocalDate.parse(s); // expects yyyy-MM-dd
+        s = s.trim();
+
+        // try several formats
+        List<DateTimeFormatter> fmts = List.of(
+                DateTimeFormatter.ISO_LOCAL_DATE,          // 2025-12-05
+                DateTimeFormatter.ofPattern("dd-MM-yyyy"), // 05-12-2025
+                DateTimeFormatter.ofPattern("dd/MM/yyyy")  // 05/12/2025
+        );
+
+        for (DateTimeFormatter f : fmts) {
+            try {
+                return LocalDate.parse(s, f);
+            } catch (DateTimeParseException ignored) {}
+        }
+
+        // if none worked, you can return null or throw — throwing makes the error explicit
+        throw new DateTimeParseException("Unparsable date: " + s, s, 0);
     }
 
     private Integer parseInt(String s) {
