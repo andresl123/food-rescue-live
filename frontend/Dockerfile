@@ -15,7 +15,7 @@ RUN npm install
 COPY . .
 
 # 4. Build the production static files
-RUN npm run dev
+RUN npm run build
 
 # --- STAGE 2: Run ---
 # Use a lightweight Nginx image for ARM64
