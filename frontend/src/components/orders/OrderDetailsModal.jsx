@@ -1,5 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import {
+  submitOrderFeedback,
+  submitCourierFeedback,
+  getOrderFeedback,
+  getCourierFeedback,
+} from "../../services/feedback";
 
 const LOT_API_BASE = "http://localhost:8090";
 
@@ -9,16 +15,19 @@ export default function OrderDetailsModal({ show, onClose, order }) {
   const [lotError, setLotError] = useState("");
   const [imgBroken, setImgBroken] = useState(false);
 
-  // ratings (bottom)
+  // order feedback
   const [lotRating, setLotRating] = useState(0);
   const [lotHoverRating, setLotHoverRating] = useState(0);
   const [lotFeedback, setLotFeedback] = useState("");
+  const [lotSubmitting, setLotSubmitting] = useState(false);
 
+  // courier feedback
   const [courierRating, setCourierRating] = useState(0);
   const [courierHoverRating, setCourierHoverRating] = useState(0);
   const [courierFeedback, setCourierFeedback] = useState("");
+  const [courierSubmitting, setCourierSubmitting] = useState(false);
 
-  // lock scroll
+  // 1) lock scroll
   useEffect(() => {
     if (!show) return;
     const prev = document.body.style.overflow;
@@ -28,7 +37,7 @@ export default function OrderDetailsModal({ show, onClose, order }) {
     };
   }, [show]);
 
-  // fetch lot
+  // 2) fetch lot
   useEffect(() => {
     if (!show || !order?.lotId) {
       setLot(null);
@@ -41,14 +50,11 @@ export default function OrderDetailsModal({ show, onClose, order }) {
       setImgBroken(false);
 
       try {
-        const res = await fetch(
-          `${LOT_API_BASE}/api/lots/${order.lotId}`,
-          {
-            method: "GET",
-            credentials: "include",
-            headers: { Accept: "application/json" },
-          }
-        );
+        const res = await fetch(`${LOT_API_BASE}/api/lots/${order.lotId}`, {
+          method: "GET",
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        });
         if (!res.ok) {
           setLotError("Unable to load lot details");
           setLot(null);
@@ -69,17 +75,77 @@ export default function OrderDetailsModal({ show, onClose, order }) {
     fetchLot();
   }, [show, order?.lotId]);
 
-  if (!show || !order) return null;
+  // derive ids for prefill
+  const orderId = order?.id;
+  const actualLotId = order?.lotId || order?.lotID || order?.lot_id;
 
-  const {
-    id,
-    date,
-    status,
-    donor,
-    recipient,
-    items = [],
-    courier,
-  } = order;
+  // 3) prefill feedbacks when modal opens
+  useEffect(() => {
+    if (!show || !orderId) return;
+
+    // reset order feedback when a new order is opened
+    setLotRating(0);
+    setLotFeedback("");
+
+    // order feedback prefill
+    (async () => {
+      try {
+        const existing = await getOrderFeedback(orderId);
+        if (existing) {
+          if (typeof existing.rating === "number") {
+            setLotRating(existing.rating);
+          }
+          if (typeof existing.feedbackText === "string") {
+            setLotFeedback(existing.feedbackText);
+          }
+        }
+      } catch (err) {
+        console.warn("order feedback prefill failed", err);
+      }
+    })();
+
+    // courier feedback prefill
+    (async () => {
+      const c = order?.courier;
+      const courierId =
+        c?.id || c?.courierId || c?.userId || c?.receiverId;
+
+      // ⬅️ if courier is not assigned, do NOT hit API and clear fields
+      if (!courierId) {
+        setCourierRating(0);
+        setCourierFeedback("");
+        return;
+      }
+
+      try {
+        const existing = await getCourierFeedback(orderId, courierId);
+        if (existing) {
+          if (typeof existing.rating === "number") {
+            setCourierRating(existing.rating);
+          }
+          if (typeof existing.feedbackText === "string") {
+            setCourierFeedback(existing.feedbackText);
+          }
+        } else {
+          // no feedback for this courier/order → clear
+          setCourierRating(0);
+          setCourierFeedback("");
+        }
+      } catch (err) {
+        console.warn("courier feedback prefill failed", err);
+        // on error also clear so we don't show stale data
+        setCourierRating(0);
+        setCourierFeedback("");
+      }
+    })();
+  }, [show, orderId, order?.courier]);
+
+  // AFTER all hooks: if not visible or no order -> render nothing
+  if (!show || !order) {
+    return null;
+  }
+
+  const { date, status, donor, recipient, items = [], courier } = order;
 
   const shownItems = items.slice(0, 6);
   const moreCount = Math.max(items.length - shownItems.length, 0);
@@ -88,19 +154,55 @@ export default function OrderDetailsModal({ show, onClose, order }) {
   const imgSrc =
     (lot && (lot.imageUrl || lot.imageURL || lot.image_url)) || "";
 
-  const handleSubmitLot = (e) => {
+  const handleSubmitLot = async (e) => {
     e.preventDefault();
-    console.log("Lot rating:", lotRating, "Lot feedback:", lotFeedback);
+    if (!orderId || !actualLotId) return;
+
+    try {
+      setLotSubmitting(true);
+      await submitOrderFeedback({
+        orderId,
+        lotId: actualLotId,
+        rating: lotRating,
+        feedbackText: lotFeedback,
+      });
+      alert("Lot feedback saved.");
+    } catch (err) {
+      console.error("order feedback error", err);
+      alert(err.message || "Unable to save feedback");
+    } finally {
+      setLotSubmitting(false);
+    }
   };
 
-  const handleSubmitCourier = (e) => {
+  const handleSubmitCourier = async (e) => {
     e.preventDefault();
-    console.log(
-      "Courier rating:",
-      courierRating,
-      "Courier feedback:",
-      courierFeedback
-    );
+    const courierId =
+      courier?.id ||
+      courier?.courierId ||
+      courier?.userId ||
+      courier?.receiverId;
+
+    if (!orderId || !courierId) {
+      alert("Courier is not assigned yet.");
+      return;
+    }
+
+    try {
+      setCourierSubmitting(true);
+      await submitCourierFeedback({
+        courierId,
+        orderId,
+        rating: courierRating,
+        feedbackText: courierFeedback,
+      });
+      alert("Courier feedback saved.");
+    } catch (err) {
+      console.error("courier feedback error", err);
+      alert(err.message || "Unable to save courier feedback");
+    } finally {
+      setCourierSubmitting(false);
+    }
   };
 
   // tiny svg star component
@@ -182,8 +284,6 @@ export default function OrderDetailsModal({ show, onClose, order }) {
           align-items:center;
           gap:.35rem;
         }
-
-        /* LOT SECTION */
         .frl-lot-section {
           background:#fff;
           border:1px solid #e2e8f0;
@@ -200,8 +300,6 @@ export default function OrderDetailsModal({ show, onClose, order }) {
           flex-direction:column;
           gap:.5rem;
         }
-
-        /* match your LotDetailsModal style */
         .frl-lot-img-wrapper {
           width:100%;
         }
@@ -211,7 +309,6 @@ export default function OrderDetailsModal({ show, onClose, order }) {
         .frl-lot-img-wrapper img {
           object-fit:cover;
         }
-
         .frl-lot-placeholder {
           width:100%;
           height:140px;
@@ -223,20 +320,6 @@ export default function OrderDetailsModal({ show, onClose, order }) {
           justify-content:center;
           font-size:.7rem;
           color:#94a3b8;
-        }
-
-        .frl-lot-tags {
-          display:flex;
-          flex-wrap:wrap;
-          gap:.4rem;
-        }
-        .frl-tag-pill {
-          background:#ecfdf3;
-          border:1px solid rgba(22,101,52,0.15);
-          border-radius:999px;
-          padding:.25rem .55rem;
-          font-size:.6rem;
-          color:#166534;
         }
         .frl-lot-right {
           flex:1 1 auto;
@@ -260,8 +343,6 @@ export default function OrderDetailsModal({ show, onClose, order }) {
           padding:.5rem .75rem;
           min-width:120px;
         }
-
-        /* info cards */
         .frl-bottom-flex {
           display:flex;
           gap:1rem;
@@ -274,8 +355,6 @@ export default function OrderDetailsModal({ show, onClose, order }) {
           border-radius:14px;
           padding:.8rem 1rem 1rem;
         }
-
-        /* rating blocks */
         .frl-rating-blocks {
           display:flex;
           gap:1rem;
@@ -326,7 +405,6 @@ export default function OrderDetailsModal({ show, onClose, order }) {
           justify-content:flex-end;
           margin-top:.65rem;
         }
-
         @media (max-width: 992px) {
           .frl-order-modal__panel {
             max-width: min(100vw - 1.5rem, 980px);
@@ -355,7 +433,7 @@ export default function OrderDetailsModal({ show, onClose, order }) {
           <div>
             <h5 className="mb-0">Order Details</h5>
             <small className="text-muted">
-              {id} • {date}
+              {orderId} • {date}
             </small>
           </div>
           <div className="d-flex align-items-center gap-2">
@@ -379,7 +457,6 @@ export default function OrderDetailsModal({ show, onClose, order }) {
           {/* LOT SECTION */}
           <div className="frl-lot-section">
             <div className="frl-lot-left">
-              {/* this part now behaves like your LotDetailsModal */}
               {imgSrc && !imgBroken ? (
                 <div className="frl-lot-img-wrapper">
                   <div className="ratio ratio-4x3 rounded overflow-hidden border">
@@ -394,7 +471,6 @@ export default function OrderDetailsModal({ show, onClose, order }) {
               ) : (
                 <div className="frl-lot-placeholder">No image available</div>
               )}
-
             </div>
 
             <div className="frl-lot-right">
@@ -409,7 +485,6 @@ export default function OrderDetailsModal({ show, onClose, order }) {
                   : lot?.description || "No description for this lot."}
               </p>
 
-              {/* Food items in lot section */}
               <div>
                 <p className="frl-section-title mb-2">
                   <i className="bi bi-box-seam" /> Food Items ({items.length})
@@ -465,7 +540,7 @@ export default function OrderDetailsModal({ show, onClose, order }) {
             </div>
           </div>
 
-          {/* RATING SECTION AT END */}
+          {/* RATING SECTION */}
           <div className="frl-rating-blocks">
             {/* LOT RATING */}
             <div className="frl-rating-card">
@@ -500,8 +575,12 @@ export default function OrderDetailsModal({ show, onClose, order }) {
                   placeholder="Please share your experience with this lot (quality, packaging, accuracy, etc.)"
                 />
                 <div className="frl-rating-actions">
-                  <button type="submit" className="btn btn-sm btn-success">
-                    Submit
+                  <button
+                    type="submit"
+                    className="btn btn-sm btn-success"
+                    disabled={lotSubmitting}
+                  >
+                    {lotSubmitting ? "Saving..." : "Submit"}
                   </button>
                 </div>
               </form>
@@ -543,8 +622,9 @@ export default function OrderDetailsModal({ show, onClose, order }) {
                   <button
                     type="submit"
                     className="btn btn-sm btn-outline-secondary"
+                    disabled={courierSubmitting}
                   >
-                    Submit
+                    {courierSubmitting ? "Saving..." : "Submit"}
                   </button>
                 </div>
               </form>
