@@ -1,0 +1,36 @@
+# --- STAGE 1: Build ---
+# Use an official Node.js image as the builder
+FROM node:18-alpine AS build
+
+# Set the working directory
+WORKDIR /app
+
+# 1. Copy package.json and package-lock.json first
+COPY package.json package-lock.json ./
+
+# 2. Install dependencies
+RUN npm install
+
+# 3. Copy the rest of your source code
+COPY . .
+
+# 4. Build the production static files
+RUN npm run dev
+
+# --- STAGE 2: Run ---
+# Use a lightweight Nginx image for ARM64
+# nginx:alpine is multi-arch, so it will work on your Pi
+FROM nginx:1.27.0-alpine-slim
+
+# 1. Remove the default Nginx welcome page
+RUN rm /usr/share/nginx/html/index.html
+
+# 2. Copy the built static files from the 'build' stage
+# The 'npm run build' command creates a 'dist' folder
+COPY --from=build /app/dist /usr/share/nginx/html
+
+# Expose port 80 (standard HTTP)
+EXPOSE 80
+
+# 3. Nginx starts automatically
+CMD ["nginx", "-g", "daemon off;"]
