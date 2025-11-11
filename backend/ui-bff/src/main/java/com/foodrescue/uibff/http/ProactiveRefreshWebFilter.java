@@ -2,14 +2,12 @@ package com.foodrescue.uibff.http;
 
 import com.foodrescue.uibff.auth.Cookies;
 import com.foodrescue.uibff.auth.RefreshService;
-import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseCookie;
+import org.springframework.http.*;
+import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
@@ -21,22 +19,25 @@ import java.text.ParseException;
 import java.time.Duration;
 import java.util.Date;
 
-/**
- * Runs BEFORE Spring Security. If the access token is missing, expired, or expiring soon,
- * use the refresh cookie to rotate tokens so Spring Security sees a fresh access token.
- */
-
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 20)
 @RequiredArgsConstructor
 public class ProactiveRefreshWebFilter implements WebFilter {
 
     private static final long REFRESH_BEFORE_MILLIS = Duration.ofMinutes(8).toMillis();
-
     private final RefreshService refreshService;
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+
+        // 0) let preflight and auth endpoints pass untouched
+        String path = exchange.getRequest().getURI().getPath();
+        HttpMethod method = exchange.getRequest().getMethod();
+        if (method == HttpMethod.OPTIONS ||
+                path.startsWith("/api/auth/")) {
+            return chain.filter(exchange);
+        }
+
         var cookies = exchange.getRequest().getCookies();
         var accessCookie = cookies.getFirst(Cookies.ACCESS_COOKIE);
         var refreshCookie = cookies.getFirst(Cookies.REFRESH_COOKIE);
@@ -52,11 +53,9 @@ public class ProactiveRefreshWebFilter implements WebFilter {
             return unauthorized(exchange);
         }
 
-        // from here we have an access token
+        // 3) we have access → check exp
         String accessToken = accessCookie.getValue();
         Date exp = getExpiry(accessToken);
-
-        // if token can't be parsed → treat as unauthorized
         if (exp == null) {
             return unauthorized(exchange);
         }
@@ -64,26 +63,23 @@ public class ProactiveRefreshWebFilter implements WebFilter {
         long now = System.currentTimeMillis();
         long millisLeft = exp.getTime() - now;
 
-        // 3) if access is still good for > 8 minutes → just continue
+        // still valid for > 8 minutes → ok
         if (millisLeft > REFRESH_BEFORE_MILLIS) {
             return chain.filter(exchange);
         }
 
-        // 4) access is expiring soon → we MUST have refresh, otherwise 401
+        // expiring soon → we need refresh
         if (refreshCookie == null) {
             return unauthorized(exchange);
         }
 
-        // 5) call your existing refreshService
         return refreshService.refreshTokens(exchange, accessToken)
                 .flatMap(newAccess -> chain.filter(exchange))
                 .switchIfEmpty(Mono.defer(() -> {
-                    // refresh endpoint said no / non-2xx
                     clearRefresh(exchange);
                     return unauthorized(exchange);
                 }))
-                .onErrorResume(ex -> {
-                    // network / parsing / auth error
+                .onErrorResume(e -> {
                     clearRefresh(exchange);
                     return unauthorized(exchange);
                 });
@@ -110,11 +106,14 @@ public class ProactiveRefreshWebFilter implements WebFilter {
     }
 
     private Mono<Void> unauthorized(ServerWebExchange exchange) {
-        var res = exchange.getResponse();
+        ServerHttpResponse res = exchange.getResponse();
         res.setStatusCode(HttpStatus.UNAUTHORIZED);
         res.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+        // add CORS here because we might be returning before Spring’s CORS filter
+        res.getHeaders().setAccessControlAllowOrigin("http://localhost:5173");
+        res.getHeaders().setAccessControlAllowCredentials(true);
+
         byte[] body = "{\"error\":\"unauthorized\"}".getBytes(StandardCharsets.UTF_8);
         return res.writeWith(Mono.just(res.bufferFactory().wrap(body)));
     }
 }
-
