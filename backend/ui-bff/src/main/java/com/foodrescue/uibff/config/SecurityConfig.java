@@ -39,7 +39,7 @@ public class SecurityConfig {
                 .authorizeExchange(ex -> ex
                         .pathMatchers(HttpMethod.OPTIONS).permitAll()
                         .pathMatchers("/api/auth/login", "/api/auth/refresh", "/api/auth/logout").permitAll()
-                        .pathMatchers("/api/addresses").permitAll()
+                        .pathMatchers("/api/addresses/**").permitAll()
                         .pathMatchers("/api/users").permitAll()
                         .pathMatchers("/api/code/generate", "/api/code/validate").permitAll()
                         .pathMatchers("/api/password/**").permitAll()
