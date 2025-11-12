@@ -91,7 +91,7 @@ public class LotController {
     @GetMapping("/dashboard")
     public Mono<Map<String, Object>> getLots(
             @RequestParam(name = "page", defaultValue = "0") int page,
-            @RequestParam(name = "size", defaultValue = "12") int size
+            @RequestParam(name = "size", defaultValue = "8") int size
     ) {
         return lotService.getLotsPaged(page, size);
     }
