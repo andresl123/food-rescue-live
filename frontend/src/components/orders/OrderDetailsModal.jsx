@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
-const LOT_API_BASE = "http://localhost:8090";
+const LOT_API_BASE = import.meta.env.VITE_BFF_BASE_URL;
 
 export default function OrderDetailsModal({ show, onClose, order }) {
   const [lot, setLot] = useState(null);

@@ -1,6 +1,6 @@
 // src/api/receiverLots.js
 
-const BFF_BASE_URL = "http://localhost:8090";
+const BFF_BASE_URL = import.meta.env.VITE_BFF_BASE_URL;
 
 export async function bffFetch(path) {
   const url = `${BFF_BASE_URL}${path}`;

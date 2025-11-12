@@ -148,7 +148,7 @@ public class ApiGatewayController {
     public Mono<ResponseEntity<byte[]>> evidence(@RequestBody(required = false) String body,
                                                  @RequestHeader(name = "Content-Type", required = false) MediaType contentType,
                                                  ServerWebExchange exchange) {
-        // /api/evidence/...   ->  /api/v1/...
+        // /api /evidence/...   ->  /api/v1/...
         String incoming = exchange.getRequest().getURI().getPath();
         String afterApi = incoming.replaceFirst("^/api", "");
         String downstreamPath = afterApi.replaceFirst("^/evidence", "/api/v1");

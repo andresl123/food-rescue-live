@@ -1,5 +1,5 @@
 const BASE_URL = "http://localhost:8081/api/v1";
-const BFF_BASE_URL = "http://localhost:8090";
+const BFF_BASE_URL = import.meta.env.VITE_BFF_BASE_URL;
 
 export async function getLots() {
   try {
@@ -124,57 +124,39 @@ export async function updateLot(lotId, lotData) {
       headers: {
         "Content-Type": "application/json",
       },
-      credentials: "include",
       body: JSON.stringify(lotData),
+      credentials: "include",
     });
 
     const text = await response.text();
     console.log("Raw response:", text);
 
-    let parsed;
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      parsed = { raw: text };
-    }
-
     if (!response.ok) {
-      console.error("Lot update failed:", parsed);
-      throw new Error(parsed.message || `Failed to update lot: ${response.status}`);
+      // Handle backend errors
+      let errorMsg = `Failed to update lot: ${response.status}`;
+      try {
+        const parsedError = JSON.parse(text);
+        if (parsedError.message) errorMsg = parsedError.message;
+      } catch (e) {
+        // Not a JSON error, just use the raw text or status
+      }
+      console.error("Lot update failed:", errorMsg);
+      throw new Error(errorMsg);
     }
 
-    console.log("Lot updated successfully:", parsed);
-    return { success: true, data: parsed.data || parsed };
+    // --- THIS IS THE FIX ---
+    // The response is the lot object. Parse it and return it directly.
+    const updatedLot = JSON.parse(text);
+    console.log("Lot updated successfully:", updatedLot);
+
+    return updatedLot; // <-- Return the raw object, NOT a wrapper
+
   } catch (error) {
     console.error("Update Lot Error:", error);
-    return { success: false, message: error.message };
+    // Re-throw the error so the component's catch block can handle it
+    throw error;
   }
 }
-
-// export async function updateLot(lotId, lotData) {
-//   try {
-//     const token = localStorage.getItem("accessToken");
-//     if (!token) return { success: false, message: "No token found" };
-//
-//     const response = await fetch(`http://localhost:8081/api/v1/lots/${lotId}`, {
-//       method: "PUT",
-//       headers: {
-//         "Content-Type": "application/json",
-//         Authorization: `Bearer ${token}`,
-//       },
-//       body: JSON.stringify(lotData),
-//     });
-//
-//     const data = await response.json();
-//     if (!response.ok)
-//       throw new Error(data.message || "Failed to update lot");
-//
-//     return { success: true, data };
-//   } catch (error) {
-//     console.error("Update Lot Error:", error);
-//     return { success: false, message: error.message };
-//   }
-// }
 
 export async function updateFoodItem(lotId, itemId, itemData) {
   try {
@@ -203,14 +185,13 @@ export async function updateFoodItem(lotId, itemId, itemData) {
 // Disable food item instead of deleting
 export async function disableFoodItem(item) {
   try {
-    const token = localStorage.getItem("accessToken");
-    const res = await fetch(`${BASE_URL}/lots/${item.lotId}/items/${item.itemId}`, {
+    const res = await fetch(`${BFF_BASE_URL}/lots/${item.lotId}/items/${item.itemId}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ status: "INACTIVE" }),
+      credentials: "include",
     });
     if (!res.ok) throw new Error("Failed to disable item");
     return { success: true };
@@ -219,3 +200,67 @@ export async function disableFoodItem(item) {
     return { success: false, message: err.message };
   }
 }
+
+/**
+ * Fetches all lots from the raw backend API.
+ */
+export const getAllLots = async () => {
+  const response = await fetch(`${BFF_BASE_URL}/api/lots/all`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: "include",
+  });
+
+  if (response.status === 401) {
+    throw new Error("Unauthorized: Your token may be invalid or expired.");
+  }
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch lots: ${response.status} ${response.statusText}`);
+  }
+
+  // --- THIS IS THE FIX ---
+  // The BFF returns a simple array, so we return it directly.
+  return response.json();
+};
+
+/**
+ * Updates an existing lot.
+ * @param {string} lotId - The ID of the lot to update.
+ * @param {object} updateData - An object with { description, status }.
+ */
+/**
+ * Deletes a lot permanently from the database.
+ * @param {string} lotId - The ID of the lot to delete.
+ */
+export const deleteLot = async (lotId) => {
+
+  const response = await fetch(`${BFF_BASE_URL}/api/lots/${lotId}`, {
+    method: 'DELETE',
+    headers: {
+    },
+    credentials: "include",
+  });
+
+  if (response.status === 401) {
+    throw new Error("Unauthorized: Your token may be invalid or expired.");
+  }
+
+  if (response.status === 403) {
+    throw new Error("Forbidden: You must be an ADMIN to permanently delete a lot.");
+  }
+
+  // A successful DELETE often returns a 204 No Content
+  if (response.status === 204) {
+    return; // Success
+  }
+
+  if (!response.ok) {
+    throw new Error(`Failed to delete lot: ${response.status} ${response.statusText}`);
+  }
+
+  // Handle if server returns 200 OK with a body, though 204 is more common
+  return;
+};

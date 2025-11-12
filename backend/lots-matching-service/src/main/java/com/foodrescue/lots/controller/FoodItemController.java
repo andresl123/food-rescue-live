@@ -11,9 +11,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Flux;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
-@RequestMapping("/api/v1/lots/{lotId}/items")
+@RequestMapping("/api/v1/lots") // Base path for all methods in this controller
 public class FoodItemController {
 
     private final FoodItemService foodItemService;
@@ -22,8 +23,24 @@ public class FoodItemController {
         this.foodItemService = foodItemService;
     }
 
-    // GET ENDPOINT for food items by lotid
-    @GetMapping
+    /**
+     * GET /api/v1/lots/items/all
+     * Endpoint for ADMINS to retrieve every food item.
+     */
+    @GetMapping("/items/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Flux<FoodItem> getAllFoodItems() {
+        return foodItemService.getAllFoodItems();
+    }
+
+    /**
+     * GET /api/v1/lots/{lotId}/items
+     * Gets all items for a specific lot.
+     * Accessible by: ADMIN (any lot) or DONOR (only their own lot).
+     */
+    // FIX: Added explicit path /{lotId}/items
+    @GetMapping("/{lotId}/items")
+    @PreAuthorize("hasAnyRole('ADMIN','DONOR')")
     public Flux<FoodItem> getItemsForLot(
             @PathVariable String lotId,
             Mono<Authentication> authenticationMono) {
@@ -31,38 +48,60 @@ public class FoodItemController {
         return foodItemService.getItemsForLot(lotId, authenticationMono);
     }
 
-    @PostMapping
-    public Mono<ResponseEntity<FoodItem>> addItem(
-            @PathVariable String lotId, // ID is received as a String
+    /**
+     * POST /api/v1/lots/{lotId}/items
+     * Adds a new item to a specific lot.
+     * Accessible by: DONOR (only their own lot).
+     */
+    // FIX: Added explicit path /{lotId}/items
+    @PostMapping("/{lotId}/items")
+    @PreAuthorize("hasRole('DONOR')")
+    public Mono<ResponseEntity<FoodItem>> addItemToLot(
+            @PathVariable String lotId,
             @Valid @RequestBody FoodItemCreateRequest request,
-            Mono<Authentication> authenticationMono) { // Get user info
+            Mono<Authentication> authenticationMono) {
 
-        // Pass everything to the service, which now handles validation
         return foodItemService.addItemToLot(request, lotId, authenticationMono)
-                .map(createdItem -> ResponseEntity.status(HttpStatus.CREATED).body(createdItem));
-        // Add .onErrorResume() here if you want specific handling for 404/403
+                .map(item -> ResponseEntity.status(HttpStatus.CREATED).body(item));
     }
-    // UPDATE ITEM ENDPOINT
-    @PutMapping("/{itemId}")
+
+    /**
+     * PUT /api/v1/lots/{lotId}/items/{itemId}
+     * Updates a specific item in a specific lot.
+     * Accessible by: ADMIN (any item) or DONOR (only their own item).
+     */
+    // FIX: Changed path from "/{itemId}" to "/{lotId}/items/{itemId}"
+    @PutMapping("/{lotId}/items/{itemId}")
+    @PreAuthorize("hasAnyRole('ADMIN','DONOR')")
     public Mono<ResponseEntity<FoodItem>> updateItem(
             @PathVariable String lotId,
             @PathVariable String itemId,
             @Valid @RequestBody FoodItemUpdateRequest request,
             Mono<Authentication> authenticationMono) {
+
         return foodItemService.updateFoodItem(lotId, itemId, request, authenticationMono)
-                .map(ResponseEntity::ok) // Return 200 OK with the updated item
-                // Add .onErrorResume() here for specific 400/403/404 handling
-                ;
+                .map(ResponseEntity::ok);
     }
 
-    // NEW: DELETE ITEM ENDPOINT
-    @DeleteMapping("/{itemId}")
-    public Mono<ResponseEntity<Void>> deleteItem(
+    /**
+     * DELETE /api/v1/lots/{lotId}/items/{itemId}
+     * Deletes a specific item from a specific lot.
+     * Accessible by: ADMIN (any item) or DONOR (only their own item).
+     */
+    // This path was already correct
+    @DeleteMapping("/{lotId}/items/{itemId}")
+    @PreAuthorize("hasAnyRole('ADMIN','DONOR')")
+    public Mono<ResponseEntity<Void>> deleteFoodItem(
             @PathVariable String lotId,
             @PathVariable String itemId,
             Mono<Authentication> authenticationMono) {
 
         return foodItemService.deleteFoodItem(lotId, itemId, authenticationMono)
                 .then(Mono.just(ResponseEntity.noContent().build()));
+    }
+    @GetMapping("/items/expiring-soon")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Flux<FoodItem> getExpiringSoon() {
+        return foodItemService.getExpiringSoon();
     }
 }
