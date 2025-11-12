@@ -55,12 +55,12 @@ jobs:
       - name: Update image tag in GitOps manifest
         run: |
           set -euo pipefail
-          file="gitops/lots-service/lots-deployment.yaml" # <- Path to this service's deployment
+          file="gitops/lots-service/lots-deployment.yaml"
           echo "Before:"
           awk '/^[[:space:]]*image:[[:space:]]+/ {print NR ": " $0}' "$file" || true
           
           sed -E -i \
-            "s|^(\\s*image:\\s*).*$|\\1${{ vars.DOCKERHUB_USERNAME }}/lots-matching-service:${{ steps.vars.outputs.TAG }}|" \ # <- Update this service's image
+            "s|^(\\s*image:\\s*).*$|\\1${{ vars.DOCKERHUB_USERNAME }}/lots-matching-service:${{ steps.vars.outputs.TAG }}|" \
             "$file"
           
           echo "After:"
