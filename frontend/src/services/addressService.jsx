@@ -125,3 +125,21 @@ export async function getAddressById(addressId) {
 //     throw error;
 //   }
 // }
+export async function updateAddress(addressId, updatedData) {
+  try {
+    const response = await fetch(`${BFF_BASE_URL}/addresses/${addressId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(updatedData),
+      credentials: "include", // important if backend needs auth cookie
+    });
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error updating address:", error);
+    throw error;
+  }
+}

@@ -29,7 +29,7 @@ public class JobDocument {
         ASSIGNED,
         PICKUP_IN_PROGRESS,
         DELIVERY_IN_PROGRESS,
-        COMPLETED,
+        DELIVERED,
         CANCELLED
     }
 }

@@ -1,6 +1,10 @@
 // src/components/VerifyAndUpdateModal.jsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { generateResetCode, validateEmailCode, updateUserEmail, updateUserPhone } from "../../services/passwordResetService";
+import { getUserProfile, logoutUser } from "../../services/loginServices";
+import { useNavigate } from "react-router-dom";
+
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 
@@ -45,6 +49,10 @@ export default function VerifyAndUpdateModal({
   userId,
   title = 'Update Contact',
 }) {
+
+  const navigate = useNavigate();
+
+
   const backdropRef = useRef(null);
   const [newTarget, setNewTarget] = useState('');
   const [otp, setOtp] = useState('');
@@ -52,18 +60,30 @@ export default function VerifyAndUpdateModal({
   const [otpVerified, setOtpVerified] = useState(false);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(null);
 
   const channelLabel = useMemo(() => (type === 'mobile' ? 'Mobile' : 'Email'), [type]);
 
   useEffect(() => {
     if (show) {
-      // reset state when opening
-      setNewTarget('');
-      setOtp('');
+      // Reset modal fields
+      setNewTarget("");
+      setOtp("");
       setOtpSent(false);
       setOtpVerified(false);
       setMsg(null);
       setLoading(false);
+
+      // Fetch user profile to get userId
+      getUserProfile().then((res) => {
+        if (res.success) {
+          setCurrentUserId(res.data.userId || res.data.id);
+          console.log("Fetched userId:", res.data.userId);
+        } else {
+          console.error("Failed to load user profile:", res.message);
+          setMsg({ type: "danger", text: "Unable to fetch user information." });
+        }
+      });
     }
   }, [show]);
 
@@ -83,66 +103,203 @@ export default function VerifyAndUpdateModal({
   const validNewTarget =
     type === 'email' ? isEmail(newTarget) : isPhone(newTarget);
 
-  const handleSendOtp = async () => {
-    if (!validNewTarget) {
-      setMsg({ type: 'danger', text: `Please enter a valid ${channelLabel.toLowerCase()}.` });
-      return;
-    }
-    setLoading(true);
-    setMsg(null);
-    const res = await apiSendOtp({ userId, channel: type, target: newTarget.trim() });
-    setLoading(false);
-    if (res.ok) {
-      setOtpSent(true);
-      setMsg({ type: 'success', text: 'OTP sent. Check your inbox/messages.' });
-    } else {
-      setMsg({ type: 'danger', text: res.message || 'Failed to send OTP.' });
-    }
-  };
+//   const handleSendOtp = async () => {
+//     if (!validNewTarget) {
+//       setMsg({ type: 'danger', text: `Please enter a valid ${channelLabel.toLowerCase()}.` });
+//       return;
+//     }
+//     setLoading(true);
+//     setMsg(null);
+//     const res = await apiSendOtp({ userId, channel: type, target: newTarget.trim() });
+//     setLoading(false);
+//     if (res.ok) {
+//       setOtpSent(true);
+//       setMsg({ type: 'success', text: 'OTP sent. Check your inbox/messages.' });
+//     } else {
+//       setMsg({ type: 'danger', text: res.message || 'Failed to send OTP.' });
+//     }
+//   };
 
-  const handleVerifyOtp = async () => {
-    if (!otp || otp.length < 4) {
-      setMsg({ type: 'danger', text: 'Enter the OTP you received.' });
-      return;
-    }
-    setLoading(true);
-    setMsg(null);
-    const res = await apiVerifyOtp({
-      userId,
-      channel: type,
-      target: newTarget.trim(),
-      otp: otp.trim(),
-    });
-    setLoading(false);
-    if (res.ok) {
-      setOtpVerified(true);
-      setMsg({ type: 'success', text: 'OTP verified. You can now save changes.' });
-    } else {
-      setMsg({ type: 'danger', text: res.message || 'Invalid OTP.' });
-    }
-  };
+    const handleSendOtp = async () => {
+      if (!validNewTarget) {
+        setMsg({ type: "danger", text: `Please enter a valid ${channelLabel.toLowerCase()}.` });
+        return;
+      }
 
-  const handleSave = async () => {
-    if (!validNewTarget) {
-      setMsg({ type: 'danger', text: `Please enter a valid ${channelLabel.toLowerCase()}.` });
-      return;
-    }
-    setLoading(true);
-    setMsg(null);
-    const res = await apiSaveChange({
-      userId,
-      channel: type,
-      newValue: newTarget.trim(),
-    });
-    setLoading(false);
-    if (res.ok) {
-      setMsg({ type: 'success', text: `${channelLabel} updated.` });
-      // Optionally close after a short delay
-      setTimeout(() => onClose?.(), 700);
-    } else {
-      setMsg({ type: 'danger', text: res.message || 'Failed to save.' });
-    }
-  };
+      setLoading(true);
+      setMsg(null);
+
+      let targetIdentifier = "";
+
+      try {
+        if (type === "email") {
+          // ✅ For updating email: send OTP to *new* email
+          targetIdentifier = newTarget.trim();
+        } else if (type === "mobile") {
+          // ✅ For updating phone: send OTP to *existing user email*
+          const profile = await getUserProfile();
+          if (!profile.success) {
+            setMsg({ type: "danger", text: "Unable to load your registered email." });
+            setLoading(false);
+            return;
+          }
+          targetIdentifier = profile.data.email;
+        }
+
+        // ✅ Send OTP using the backend Courier service
+        const res = await generateResetCode(targetIdentifier, 'UPDATE_PHONE_EMAIL');
+
+        setLoading(false);
+
+        if (res.success) {
+          setOtpSent(true);
+          if (type === "email") {
+            setMsg({ type: "success", text: "OTP sent to your new email address. Please check your inbox." });
+          } else {
+            setMsg({ type: "success", text: "OTP sent to your registered email for phone verification." });
+          }
+        } else {
+          setMsg({ type: "danger", text: res.message });
+        }
+      } catch (error) {
+        console.error("OTP Send Error:", error);
+        setMsg({ type: "danger", text: "Something went wrong. Please try again." });
+        setLoading(false);
+      }
+    };
+
+
+
+//   const handleVerifyOtp = async () => {
+//     if (!otp || otp.length < 4) {
+//       setMsg({ type: 'danger', text: 'Enter the OTP you received.' });
+//       return;
+//     }
+//     setLoading(true);
+//     setMsg(null);
+//     const res = await apiVerifyOtp({
+//       userId,
+//       channel: type,
+//       target: newTarget.trim(),
+//       otp: otp.trim(),
+//     });
+//     setLoading(false);
+//     if (res.ok) {
+//       setOtpVerified(true);
+//       setMsg({ type: 'success', text: 'OTP verified. You can now save changes.' });
+//     } else {
+//       setMsg({ type: 'danger', text: res.message || 'Invalid OTP.' });
+//     }
+//   };
+
+    const handleVerifyOtp = async () => {
+      if (!otp || otp.length < 4) {
+        setMsg({ type: "danger", text: "Enter the OTP you received." });
+        return;
+      }
+
+      setLoading(true);
+      setMsg(null);
+
+      try {
+        let identifier = "";
+
+        if (type === "email") {
+          // For email update, verify OTP sent to new email
+          identifier = newTarget.trim();
+        } else if (type === "mobile") {
+          // For phone update, verify OTP sent to registered email
+          const profile = await getUserProfile();
+          if (!profile.success) {
+            setMsg({ type: "danger", text: "Unable to load your registered email." });
+            setLoading(false);
+            return;
+          }
+          identifier = profile.data.email;
+        }
+
+        const res = await validateEmailCode(identifier, otp);
+        setLoading(false);
+
+        if (res.success) {
+          setOtpVerified(true);
+          setMsg({ type: "success", text: "OTP verified. You can now save changes." });
+        } else {
+          setMsg({ type: "danger", text: res.message || "Invalid OTP." });
+        }
+      } catch (err) {
+        console.error("OTP Verify Error:", err);
+        setLoading(false);
+        setMsg({ type: "danger", text: "Something went wrong while verifying." });
+      }
+    };
+
+
+
+//   const handleSave = async () => {
+//     if (!validNewTarget) {
+//       setMsg({ type: 'danger', text: `Please enter a valid ${channelLabel.toLowerCase()}.` });
+//       return;
+//     }
+//     setLoading(true);
+//     setMsg(null);
+//     const res = await apiSaveChange({
+//       userId,
+//       channel: type,
+//       newValue: newTarget.trim(),
+//     });
+//     setLoading(false);
+//     if (res.ok) {
+//       setMsg({ type: 'success', text: `${channelLabel} updated.` });
+//       // Optionally close after a short delay
+//       setTimeout(() => onClose?.(), 700);
+//     } else {
+//       setMsg({ type: 'danger', text: res.message || 'Failed to save.' });
+//     }
+//   };
+
+    const handleSave = async () => {
+      if (!validNewTarget) {
+        setMsg({ type: "danger", text: `Please enter a valid ${channelLabel.toLowerCase()}.` });
+        return;
+      }
+
+      setLoading(true);
+      setMsg(null);
+
+      try {
+        let res;
+        if (type === "email") {
+          res = await updateUserEmail(currentUserId, newTarget.trim());
+        } else if (type === "mobile") {
+          res = await updateUserPhone(currentUserId, newTarget.trim());
+        }
+
+        setLoading(false);
+
+        if (res.success) {
+          setMsg({ type: "success", text: res.message });
+
+          // ✅ Logout and redirect (if updating email)
+          if (type === "email") {
+            await logoutUser();
+            setTimeout(() => (window.location.href = "/authentication"), 800);
+          } else {
+            setTimeout(() => {
+                  window.location.reload(); // refresh page without logging out
+                }, 800);
+          }
+        } else {
+          setMsg({ type: "danger", text: res.message });
+        }
+      } catch (err) {
+        console.error("Save Error:", err);
+        setLoading(false);
+        setMsg({ type: "danger", text: "Something went wrong while saving." });
+      }
+    };
+
+
 
   return (
     <AnimatePresence>
@@ -252,7 +409,7 @@ export default function VerifyAndUpdateModal({
                         )}
                       </div>
                       <div className="form-text mt-1">
-                        Use <code>123456</code> as a demo OTP in this mock.
+                        Check your inbox for the 6-digit code.
                       </div>
                     </motion.div>
                   )}

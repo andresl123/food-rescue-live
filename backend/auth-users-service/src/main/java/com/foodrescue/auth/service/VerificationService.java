@@ -45,30 +45,68 @@ public class VerificationService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public Mono<Void> generateAndSendCode(String email) {
-        return userRepository.existsByEmail(email)
-                .flatMap(userExists -> {
-                    if (!userExists) {
-                        return Mono.error(new UserNotFoundException("User with email " + email + " not found."));
-                    }
+    public Mono<Void> generateAndSendCode(String email, String purpose) {
+        System.out.println("Generating code for: " + email + " | Purpose: " + purpose);
 
-                    SecureRandom random = new SecureRandom();
-                    int codeValue = 100000 + random.nextInt(900000);
-                    String code = String.valueOf(codeValue);
-
-                    Instant expiryTime = Instant.now().plus(EXPIRATION_MINUTES, ChronoUnit.MINUTES);
-                    codeStore.put(email, new CodeDetails(code, expiryTime));
-
-                    return Mono.fromRunnable(() -> {
-                        try {
-                            sendEmailWithCourier(email, code);
-                        } catch (IOException e) {
-                            System.err.println("Error sending verification code via Courier: " + e.getMessage());
-                            throw new RuntimeException("Failed to send email", e);
+        if ("FORGOT_PASSWORD".equalsIgnoreCase(purpose)) {
+            // Only check DB for forgot password flow
+            return userRepository.existsByEmail(email)
+                    .flatMap(userExists -> {
+                        if (!userExists) {
+                            return Mono.error(new UserNotFoundException("User with email " + email + " not found."));
                         }
-                    }).subscribeOn(Schedulers.boundedElastic()).then();
-                });
+                        return sendOtp(email);
+                    });
+        } else {
+            // For UPDATE_EMAIL_PHONE or any other flow — skip DB check
+            return sendOtp(email);
+        }
     }
+
+    private Mono<Void> sendOtp(String email) {
+        SecureRandom random = new SecureRandom();
+        int codeValue = 100000 + random.nextInt(900000);
+        String code = String.valueOf(codeValue);
+
+        Instant expiryTime = Instant.now().plus(EXPIRATION_MINUTES, ChronoUnit.MINUTES);
+        codeStore.put(email, new CodeDetails(code, expiryTime));
+
+        return Mono.fromRunnable(() -> {
+            try {
+                sendEmailWithCourier(email, code);
+            } catch (IOException e) {
+                e.printStackTrace();
+                throw new RuntimeException("Failed to send email", e);
+            }
+        }).subscribeOn(Schedulers.boundedElastic()).then();
+    }
+
+
+
+//    public Mono<Void> generateAndSendCode(String email) {
+//        return userRepository.existsByEmail(email)
+//                .flatMap(userExists -> {
+//                    if (!userExists) {
+//                        return Mono.error(new UserNotFoundException("User with email " + email + " not found."));
+//                    }
+//
+//                    SecureRandom random = new SecureRandom();
+//                    int codeValue = 100000 + random.nextInt(900000);
+//                    String code = String.valueOf(codeValue);
+//
+//                    Instant expiryTime = Instant.now().plus(EXPIRATION_MINUTES, ChronoUnit.MINUTES);
+//                    codeStore.put(email, new CodeDetails(code, expiryTime));
+//
+//                    return Mono.fromRunnable(() -> {
+//                        try {
+//                            sendEmailWithCourier(email, code);
+//                        } catch (IOException e) {
+//                            System.err.println("Error sending verification code via Courier: " + e.getMessage());
+//                            throw new RuntimeException("Failed to send email", e);
+//                        }
+//                    }).subscribeOn(Schedulers.boundedElastic()).then();
+//                });
+//    }
 
     public boolean validateCode(String identifier, String code) {
         CodeDetails storedDetails = codeStore.get(identifier);
@@ -76,6 +114,11 @@ public class VerificationService {
             return false;
         }
         codeStore.remove(identifier);
+
+        //navpreet update
+        verifiedMap.put(identifier, true);
+        //navpreet update
+
         return true;
     }
 
@@ -111,4 +154,12 @@ public class VerificationService {
                 .build());
         System.out.println("Verification code sent successfully to " + email);
     }
+
+    // ✅ Track which identifiers have been verified successfully
+    private final Map<String, Boolean> verifiedMap = new ConcurrentHashMap<>();
+
+    public boolean isVerified(String identifier) {
+        return verifiedMap.getOrDefault(identifier, false);
+    }
+
 }

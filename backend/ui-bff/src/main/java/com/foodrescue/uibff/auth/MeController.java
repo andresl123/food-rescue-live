@@ -16,7 +16,7 @@ import java.util.Map;
 @RestController
 public class MeController {
 
-    private static final String ACCESS_COOKIE = "access_token"; // adjust if your cookie name is different
+    private static final String ACCESS_COOKIE = "access_token"; // must match your auth cookie
 
     @GetMapping("/api/me")
     public Mono<ResponseEntity<?>> getMe(ServerWebExchange exchange) {
@@ -28,30 +28,34 @@ public class MeController {
 
         String jwt = cookie.getValue();
         try {
-            var signed = SignedJWT.parse(jwt);
+            SignedJWT signed = SignedJWT.parse(jwt);
             var claims = signed.getJWTClaimsSet();
 
-            // Extract fields
+            // sub is your user id
+            String userId = claims.getSubject();
+
+            // email is in the token, but fall back to sub
             String email = claims.getStringClaim("email");
             if (email == null || email.isBlank()) {
-                email = claims.getSubject(); // fallback
+                email = userId;
             }
 
+            // roles can be an array or a single string depending on issuer
             Object rolesObj = claims.getClaim("roles");
             if (rolesObj == null) {
                 rolesObj = claims.getClaim("authorities");
             }
             List<?> roles = toList(rolesObj);
-            String role = roles.isEmpty() ? null : roles.get(0).toString();
+            // keep role as STRING
+            String role = roles.isEmpty() ? null : String.valueOf(roles.get(0));
 
-            // New: include userId from sub
-            String userId = claims.getSubject();
-
-            return Mono.just(ResponseEntity.ok(Map.of(
-                    "userId", userId,
-                    "email", email,
-                    "role", role
-            )));
+            return Mono.just(ResponseEntity.ok(
+                    Map.of(
+                            "userId", userId,
+                            "email", email,
+                            "role", role
+                    )
+            ));
         } catch (ParseException e) {
             return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", "invalid token")));

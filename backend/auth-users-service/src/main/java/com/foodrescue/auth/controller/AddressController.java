@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Flux;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -56,10 +57,34 @@ public class AddressController {
         return userRepository.findById(userId)
                 .flatMapMany(user -> {
                     List<String> ids = user.getMoreAddresses();
+                    ids.add(user.getDefaultAddressId());
                     if (ids == null || ids.isEmpty()) {
                         return Flux.empty();
                     }
                     return addressRepository.findAllById(ids);
                 });
     }
+
+    // ✅ Update address by ID
+    @PutMapping("/{id}")
+    public Mono<Map<String, Object>> updateAddress(@PathVariable String id, @RequestBody Address updatedAddress) {
+        return addressRepository.findById(id)
+                .flatMap(existing -> {
+                    existing.setStreet(updatedAddress.getStreet());
+                    existing.setCity(updatedAddress.getCity());
+                    existing.setState(updatedAddress.getState());
+                    existing.setPostalCode(updatedAddress.getPostalCode());
+                    existing.setCountry(updatedAddress.getCountry());
+                    return addressRepository.save(existing);
+                })
+                .map(saved -> Map.of(
+                        "success", true,
+                        "data", saved
+                ))
+                .switchIfEmpty(Mono.just(Map.of(
+                        "success", false,
+                        "message", "Address not found"
+                )));
+    }
+
 }

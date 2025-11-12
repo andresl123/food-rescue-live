@@ -218,4 +218,78 @@ public class ApiGatewayController {
         return forward(authBase, exchange, downstreamPath, body, contentType);
     }
 
+    @RequestMapping(
+            path = "/code/**",
+            method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.PATCH, RequestMethod.DELETE}
+    )
+    public Mono<ResponseEntity<byte[]>> code(@RequestBody(required = false) String body,
+                                             @RequestHeader(name = "Content-Type", required = false) MediaType contentType,
+                                             ServerWebExchange exchange) {
+        // /api/code/... → /api/v1/code/...
+        String incoming = exchange.getRequest().getURI().getPath();
+        String afterApi = incoming.replaceFirst("^/api", "");
+        String downstreamPath = afterApi.replaceFirst("^/code", "/api/code");
+        return forward(authBase, exchange, downstreamPath, body, contentType);
+    }
+
+    @RequestMapping(
+            path = "/password/**",
+            method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.PATCH, RequestMethod.DELETE}
+    )
+    public Mono<ResponseEntity<byte[]>> password(@RequestBody(required = false) String body,
+                                                 @RequestHeader(name = "Content-Type", required = false) MediaType contentType,
+                                                 ServerWebExchange exchange) {
+        // /api/password/... → /api/v1/password/...
+        String incoming = exchange.getRequest().getURI().getPath();
+        String afterApi = incoming.replaceFirst("^/api", "");
+        String downstreamPath = afterApi.replaceFirst("^/password", "/api/password");
+        return forward(authBase, exchange, downstreamPath, body, contentType);
+    }
+
+
+    @RequestMapping(
+            path = "/import/**",
+            method = {
+                    RequestMethod.GET,
+                    RequestMethod.POST,
+                    RequestMethod.PUT,
+                    RequestMethod.PATCH,
+                    RequestMethod.DELETE
+            }
+    )
+    public Mono<ResponseEntity<byte[]>> imports(ServerWebExchange exchange) {
+        var request = exchange.getRequest();
+
+        // original path, e.g. /api/import/lots-excel/preview
+        String incoming = request.getURI().getPath();
+
+        // remove /api
+        String afterApi = incoming.replaceFirst("^/api", "");
+
+        // /import/... -> /api/v1/import/...
+        String downstreamPath = afterApi.replaceFirst("^/import", "/api/v1/import");
+
+        // keep query params
+        String query = request.getURI().getQuery();
+        if (query != null && !query.isBlank()) {
+            downstreamPath = downstreamPath + "?" + query;
+        }
+
+        // now forward the *raw* body
+        return webClient
+                .method(request.getMethod())
+                .uri(lotsBase + downstreamPath)
+                .headers(h -> {
+                    h.addAll(request.getHeaders());
+                    // sometimes Host should not be forwarded
+                    h.remove(HttpHeaders.HOST);
+                })
+                // this is the key: stream the request body, don't turn it into String
+                .body((outputMessage, context) -> outputMessage.writeWith(request.getBody()))
+                .exchangeToMono(clientResponse ->
+                        clientResponse.toEntity(byte[].class)
+                );
+    }
+
+
 }
