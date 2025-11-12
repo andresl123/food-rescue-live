@@ -1,6 +1,5 @@
 package com.foodrescue.jobs.entity;
 
-<<<<<<< Updated upstream
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -17,7 +16,6 @@ public class OrderDocument {
 
     @Id
     private String id;  // this is also your business order_id
-=======
 import com.foodrescue.jobs.entity.base.Auditable;
 import java.time.Instant;
 import lombok.AllArgsConstructor;
@@ -55,8 +53,3 @@ public class OrderDocument extends Auditable {
         CANCELLED
     }
 }
-=======
-    private String status;
-}
-
->>>>>>> Stashed changes
