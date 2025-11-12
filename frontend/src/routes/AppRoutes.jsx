@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
+import RequireAuth from "../services/RequireAuth";
+
 // --- Your Page Imports ---
 import SignupPage from "../pages/signup/SignupPage";
 import UserDashboard from "../pages/dashboards/userDashboard/UserDashboard";
@@ -21,26 +23,40 @@ function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* --- Public & User-Specific Routes --- */}
-        {/* These routes do NOT have the admin layout */}
         <Route path="/" element={<Navigate to="/authentication" replace />} />
         <Route path="/authentication" element={<SignupPage />} />
-        <Route path="/courier-verification" element={<CourierVerificationPage />} />
-        <Route path="/dashboard" element={<UserDashboard />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/orders" element={<RescueOrdersPage />} />
-        <Route path="/bulk-import" element={<TestLotImport />} />
-        <Route path="/food-items" element={<FoodItemList />} />
 
-        {/* --- Admin Routes --- */}
-        {/* All routes inside here will share the new AdminLayout
-            (which includes the top Navbar and the Sidebar) */}
-        <Route element={<AdminLayout />}>
-          <Route path="/admin-dashboard" element={<AdminDashboard />} />
-          <Route path="/admin-users" element={<UsersManagementPage />} />
-          <Route path="/admin-lots" element={<LotsManagementPage />} />
-          <Route path="/admin-food-items" element={<FoodItemsManagementPage />} />
-          <Route path="/admin-orders" element={<OrdersAndPODPage />} />
+        {/* any logged-in user */}
+        <Route element={<RequireAuth />}>
+          <Route path="/dashboard" element={<UserDashboard />} />
+          <Route path="/profile" element={<ProfilePage />} />
+        </Route>
+
+        {/* DONOR-only */}
+        <Route element={<RequireAuth allowed={["DONOR"]} />}>
+          <Route path="/food-items" element={<FoodItemList />} />
+          <Route path="/bulk-import" element={<TestLotImport />} />
+        </Route>
+
+        {/* RECEIVER-only */}
+        <Route element={<RequireAuth allowed={["RECEIVER"]} />}>
+          <Route path="/orders" element={<RescueOrdersPage />} />
+        </Route>
+
+        {/* COURIER- only */}
+        <Route element={<RequireAuth allowed={["COURIER"]} />}>
+          {/* <Route path="/courier-jobs" element={<CourierJobsPage />} /> */}
+        </Route>
+
+        {/* ADMIN-only */}
+        <Route element={<RequireAuth allowed={["ADMIN"]} />}>
+          <Route element={<AdminLayout />}>
+            <Route path="/admin-dashboard" element={<AdminDashboard />} />
+            <Route path="/admin-users" element={<UsersManagementPage />} />
+            <Route path="/admin-lots" element={<LotsManagementPage />} />
+            <Route path="/admin-food-items" element={<FoodItemsManagementPage />} />
+            <Route path="/admin-orders" element={<OrdersAndPODPage />} />
+          </Route>
         </Route>
 
       </Routes>

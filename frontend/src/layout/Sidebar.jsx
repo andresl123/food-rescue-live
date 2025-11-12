@@ -53,7 +53,6 @@ useEffect(() => {
     ],
     RECEIVER: [
       { path: "/profile", label: "Profile", icon: "bi-person" },
-      { path: "/requests", label: "My Requests", icon: "bi-basket" },
       { path: "/delivery", label: "Delivery Update", icon: "bi-truck" },
       { path: "/orders", label: "Previous Orders", icon: "bi-clock-history" },
     ],
