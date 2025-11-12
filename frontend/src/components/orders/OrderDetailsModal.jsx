@@ -111,7 +111,7 @@ export default function OrderDetailsModal({ show, onClose, order }) {
       const courierId =
         c?.id || c?.courierId || c?.userId || c?.receiverId;
 
-      // ⬅️ if courier is not assigned, do NOT hit API and clear fields
+      // if courier is not assigned, do NOT hit API and clear fields
       if (!courierId) {
         setCourierRating(0);
         setCourierFeedback("");
@@ -540,96 +540,98 @@ export default function OrderDetailsModal({ show, onClose, order }) {
             </div>
           </div>
 
-          {/* RATING SECTION */}
-          <div className="frl-rating-blocks">
-            {/* LOT RATING */}
-            <div className="frl-rating-card">
-              <h6>How would you rate this lot?</h6>
-              <div className="frl-stars-row">
-                {[1, 2, 3, 4, 5].map((n) => {
-                  const active = lotHoverRating
-                    ? lotHoverRating >= n
-                    : lotRating >= n;
-                  return (
-                    <button
-                      key={n}
-                      type="button"
-                      className="frl-star-btn"
-                      onClick={() => setLotRating(n)}
-                      onMouseEnter={() => setLotHoverRating(n)}
-                      onMouseLeave={() => setLotHoverRating(0)}
-                    >
-                      <Star active={active} />
-                    </button>
-                  );
-                })}
-              </div>
-              <form onSubmit={handleSubmitLot}>
-                <label className="small mb-1 d-block fw-semibold">
-                  Your Feedback
-                </label>
-                <textarea
-                  className="frl-rating-textarea"
-                  value={lotFeedback}
-                  onChange={(e) => setLotFeedback(e.target.value)}
-                  placeholder="Please share your experience with this lot (quality, packaging, accuracy, etc.)"
-                />
-                <div className="frl-rating-actions">
-                  <button
-                    type="submit"
-                    className="btn btn-sm btn-success"
-                    disabled={lotSubmitting}
-                  >
-                    {lotSubmitting ? "Saving..." : "Submit"}
-                  </button>
+          {/* RATING SECTION – only when not READY */}
+          {status !== "READY" && (
+            <div className="frl-rating-blocks">
+              {/* LOT RATING */}
+              <div className="frl-rating-card">
+                <h6>How would you rate this lot?</h6>
+                <div className="frl-stars-row">
+                  {[1, 2, 3, 4, 5].map((n) => {
+                    const active = lotHoverRating
+                      ? lotHoverRating >= n
+                      : lotRating >= n;
+                    return (
+                      <button
+                        key={n}
+                        type="button"
+                        className="frl-star-btn"
+                        onClick={() => setLotRating(n)}
+                        onMouseEnter={() => setLotHoverRating(n)}
+                        onMouseLeave={() => setLotHoverRating(0)}
+                      >
+                        <Star active={active} />
+                      </button>
+                    );
+                  })}
                 </div>
-              </form>
-            </div>
+                <form onSubmit={handleSubmitLot}>
+                  <label className="small mb-1 d-block fw-semibold">
+                    Your Feedback
+                  </label>
+                  <textarea
+                    className="frl-rating-textarea"
+                    value={lotFeedback}
+                    onChange={(e) => setLotFeedback(e.target.value)}
+                    placeholder="Please share your experience with this lot (quality, packaging, accuracy, etc.)"
+                  />
+                  <div className="frl-rating-actions">
+                    <button
+                      type="submit"
+                      className="btn btn-sm btn-success"
+                      disabled={lotSubmitting}
+                    >
+                      {lotSubmitting ? "Saving..." : "Submit"}
+                    </button>
+                  </div>
+                </form>
+              </div>
 
-            {/* COURIER RATING */}
-            <div className="frl-rating-card">
-              <h6>How would you rate the courier?</h6>
-              <div className="frl-stars-row">
-                {[1, 2, 3, 4, 5].map((n) => {
-                  const active = courierHoverRating
-                    ? courierHoverRating >= n
-                    : courierRating >= n;
-                  return (
-                    <button
-                      key={n}
-                      type="button"
-                      className="frl-star-btn"
-                      onClick={() => setCourierRating(n)}
-                      onMouseEnter={() => setCourierHoverRating(n)}
-                      onMouseLeave={() => setCourierHoverRating(0)}
-                    >
-                      <Star active={active} />
-                    </button>
-                  );
-                })}
-              </div>
-              <form onSubmit={handleSubmitCourier}>
-                <label className="small mb-1 d-block fw-semibold">
-                  Your Feedback
-                </label>
-                <textarea
-                  className="frl-rating-textarea"
-                  value={courierFeedback}
-                  onChange={(e) => setCourierFeedback(e.target.value)}
-                  placeholder="Please share your experience with the courier (timeliness, behavior, communication, etc.)"
-                />
-                <div className="frl-rating-actions">
-                  <button
-                    type="submit"
-                    className="btn btn-sm btn-outline-secondary"
-                    disabled={courierSubmitting}
-                  >
-                    {courierSubmitting ? "Saving..." : "Submit"}
-                  </button>
+              {/* COURIER RATING */}
+              <div className="frl-rating-card">
+                <h6>How would you rate the courier?</h6>
+                <div className="frl-stars-row">
+                  {[1, 2, 3, 4, 5].map((n) => {
+                    const active = courierHoverRating
+                      ? courierHoverRating >= n
+                      : courierRating >= n;
+                    return (
+                      <button
+                        key={n}
+                        type="button"
+                        className="frl-star-btn"
+                        onClick={() => setCourierRating(n)}
+                        onMouseEnter={() => setCourierHoverRating(n)}
+                        onMouseLeave={() => setCourierHoverRating(0)}
+                      >
+                        <Star active={active} />
+                      </button>
+                    );
+                  })}
                 </div>
-              </form>
+                <form onSubmit={handleSubmitCourier}>
+                  <label className="small mb-1 d-block fw-semibold">
+                    Your Feedback
+                  </label>
+                  <textarea
+                    className="frl-rating-textarea"
+                    value={courierFeedback}
+                    onChange={(e) => setCourierFeedback(e.target.value)}
+                    placeholder="Please share your experience with the courier (timeliness, behavior, communication, etc.)"
+                  />
+                  <div className="frl-rating-actions">
+                    <button
+                      type="submit"
+                      className="btn btn-sm btn-outline-secondary"
+                      disabled={courierSubmitting}
+                    >
+                      {courierSubmitting ? "Saving..." : "Submit"}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* FOOTER */}
@@ -642,5 +644,11 @@ export default function OrderDetailsModal({ show, onClose, order }) {
     </div>
   );
 
-  return createPortal(dialog, document.body);
+  return createPortal(
+    <>
+      <Toaster position="top-center" />
+      {dialog}
+    </>,
+    document.body
+  );
 }

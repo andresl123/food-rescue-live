@@ -2,10 +2,17 @@
 
 const BFF_BASE_URL = "http://localhost:8090";
 
-export async function bffFetch(path) {
-  const url = `${BFF_BASE_URL}${path}`;
+export async function bffFetch(path, query = {}) {
+  const url = new URL(`${BFF_BASE_URL}${path}`);
 
-  const response = await fetch(url, {
+  // attach query params if provided
+  Object.entries(query).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      url.searchParams.set(key, value);
+    }
+  });
+
+  const response = await fetch(url.toString(), {
     method: "GET",
     credentials: "include",
   });
