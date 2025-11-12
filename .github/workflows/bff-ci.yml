@@ -2,7 +2,7 @@ name: Build and Deploy BFF (ARM64)
 
 on:
   push:
-    branches: ["MTC-201"] # Or "main"
+    branches: ["CI/CD"] # Or "main"
     paths:
       - 'backend/ui-bff/**' # Only run if code in ui-bff/ changes
       - '.github/workflows/bff-ci.yml'

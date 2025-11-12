@@ -1,11 +1,11 @@
-name: Build and Deploy Frontend (ARM64)
+name: Build and Deploy lots-matching-service (ARM64)
 
 on:
   push:
-    branches: ["CI/CD"] # Or "main"
+    branches: ["CI/CD"] # Or your main branch
     paths:
-      - 'frontend/**' # Only run if code in frontend/ changes
-      - '.github/workflows/frontend-ci.yml'
+      - 'backend/lots-matching-service/**' # <- Triggers on changes to this service
+      - '.github/workflows/lots-service-ci.yml'
 
 jobs:
   build-and-push-image:
@@ -33,10 +33,13 @@ jobs:
       - name: Build and push ARM64 image
         uses: docker/build-push-action@v6
         with:
-          context: ./frontend # <- Path to your frontend Dockerfile
-          platforms: linux/arm64 # <- Build for Raspberry Pi
+          context: backend/lots-matching-service # <- Path to this service
+          platforms: linux/arm64
           push: true
-          tags: ${{ vars.DOCKERHUB_USERNAME }}/frontend-app:${{ steps.vars.outputs.TAG }}
+          tags: ${{ vars.DOCKERHUB_USERNAME }}/lots-matching-service:${{ steps.vars.outputs.TAG }} # <- Image name for this service
+          # This passes your private package token to the Docker build
+          secrets: |
+            "GH_PACKAGES_TOKEN=${{ secrets.GH_PACKAGES_TOKEN }}"
 
       # ---- Checkout GitOps repo ----
       - name: Checkout GitOps repo
@@ -46,18 +49,28 @@ jobs:
           token: ${{ secrets.GITOPS_REPO_TOKEN }}
           path: gitops
           ref: main
+          fetch-depth: 0
 
       # ---- Update manifest ----
       - name: Update image tag in GitOps manifest
         run: |
           set -euo pipefail
-          file="gitops/frontend/frontend-deployment.yaml" # <- Path to frontend deployment
+          file="gitops/lots-service/lots-deployment.yaml" # <- Path to this service's deployment
+          echo "Before:"
+          awk '/^[[:space:]]*image:[[:space:]]+/ {print NR ": " $0}' "$file" || true
           
           sed -E -i \
-            "s|^(\\s*image:\\s*).*$|\\1${{ vars.DOCKERHUB_USERNAME }}/frontend-app:${{ steps.vars.outputs.TAG }}|" \
+            "s|^(\\s*image:\\s*).*$|\\1${{ vars.DOCKERHUB_USERNAME }}/lots-matching-service:${{ steps.vars.outputs.TAG }}|" \ # <- Update this service's image
             "$file"
+          
+          echo "After:"
+          awk '/^[[:space:]]*image:[[:space:]]+/ {print NR ": " $0}' "$file" || true
 
-      # ---- Commit & push ----
+      # ---- Show diff & commit if changed ----
+      - name: Show GitOps diff
+        working-directory: gitops
+        run: git --no-pager diff || true
+
       - name: Commit & push GitOps changes
         working-directory: gitops
         run: |
@@ -66,7 +79,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if ! git diff --quiet; then
             git add -A
-            git commit -m "Update frontend-app image to ${{ steps.vars.outputs.TAG }}"
+            git commit -m "Update lots-matching-service image to ${{ steps.vars.outputs.TAG }}" # <- Commit message
             git push
           else
             echo "No changes to commit."
