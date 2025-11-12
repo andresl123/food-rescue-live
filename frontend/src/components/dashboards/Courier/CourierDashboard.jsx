@@ -492,7 +492,7 @@ export default function CourierDashboard({ onShowPOD }) {
         recipientName: job.recipientName || `Recipient for ${job.orderId}`,
         recipientAddress: job.recipientAddress || "Address will be fetched from order service"
       };
-
+      
       const enrichedAcceptedJob = await enrichJobWithAddresses(acceptedJob);
       setMyJobs([enrichedAcceptedJob]);
       setAvailableJobs((prev) => prev.filter((j) => j.id !== jobId));
