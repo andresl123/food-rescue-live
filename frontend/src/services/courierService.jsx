@@ -66,7 +66,7 @@ export async function unassignCourierFromJob(jobId) {
 }
 
 export async function generatePodOtps(jobId) {
-  const response = await fetch(`${EVIDENCE_API_BASE}/v1/pods/generate-otp?jobId=${encodeURIComponent(jobId)}`, {
+  const response = await fetch(`${EVIDENCE_API_BASE}/pods/generate-otp?jobId=${encodeURIComponent(jobId)}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -79,7 +79,7 @@ export async function generatePodOtps(jobId) {
 }
 
 export async function deletePodsForJob(jobId) {
-  const response = await fetch(`${EVIDENCE_API_BASE}/v1/pods/job/${encodeURIComponent(jobId)}`, {
+  const response = await fetch(`${EVIDENCE_API_BASE}/pods/job/${encodeURIComponent(jobId)}`, {
     method: "DELETE",
     headers: { "Content-Type": "application/json" },
     credentials: "include",

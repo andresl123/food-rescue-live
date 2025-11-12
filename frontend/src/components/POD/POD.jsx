@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Card, Button, Form, InputGroup, Badge } from "react-bootstrap";
 import toast from "react-hot-toast";
+import { verifyPodCode, updateJobStatus } from "../../services/podService.jsx";
 
 const verificationCopy = {
   pickup: {
@@ -24,12 +25,6 @@ const verificationCopy = {
 function getVerificationConfig(type) {
   return verificationCopy[type] ?? verificationCopy.delivery;
 }
-
-const EVIDENCE_API_BASE =
-  import.meta.env.VITE_EVIDENCE_SERVICE_URL ?? "http://localhost:8082";
-
-const JOBS_API_BASE =
-  import.meta.env.VITE_JOBS_SERVICE_URL ?? "http://localhost:8083/api/v1/jobs";
 
 export default function POD({
   jobData,
@@ -82,26 +77,7 @@ export default function POD({
         return;
       }
 
-      const verificationRole = verificationType === "pickup" ? "donor" : "receiver";
-      const verifyUrl = new URL(
-        `/api/v1/pods/verify/${jobId}/${verificationRole}`,
-        EVIDENCE_API_BASE
-      );
-      verifyUrl.searchParams.set("code", otp);
-
-      const response = await fetch(verifyUrl.toString(), {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || `Verification failed with status ${response.status}`);
-      }
-
-      const isValid = await response.json();
+      const isValid = await verifyPodCode(jobId, verificationType, otp);
       if (isValid === true) {
         await handlePostVerification();
       } else {
@@ -121,29 +97,7 @@ export default function POD({
 
   const handlePostVerification = async () => {
     try {
-      let jobStatusEndpoint = null;
-      if (verificationType === "pickup") {
-        jobStatusEndpoint = `${JOBS_API_BASE}/${jobId}/pickup`;
-      } else if (verificationType === "delivery") {
-        jobStatusEndpoint = `${JOBS_API_BASE}/${jobId}/delivered`;
-      }
-
-      if (jobStatusEndpoint) {
-        const response = await fetch(jobStatusEndpoint, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(
-            errorText ||
-              `Failed to update job status (${verificationType}) (HTTP ${response.status})`
-          );
-        }
-      }
+      await updateJobStatus(jobId, verificationType);
 
       toast.success(
         verificationType === "pickup"
