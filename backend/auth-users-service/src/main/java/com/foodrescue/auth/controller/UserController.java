@@ -10,6 +10,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 import java.util.Map;
+import org.springframework.http.ResponseEntity;
+import com.foodrescue.auth.service.VerificationService;
+import com.foodrescue.auth.repository.UserRepository;
 import com.foodrescue.auth.web.response.AddressesResponse;
 
 
@@ -25,8 +28,18 @@ import com.foodrescue.auth.web.response.AddressesResponse;
 public class UserController {
 
     private final UserService service;
+    private final VerificationService verificationService;
+    private final UserRepository userRepository;
 
-    public UserController(UserService service) { this.service = service; }
+//    public UserController(UserService service) { this.service = service; }
+public UserController(UserService service,
+                      VerificationService verificationService,
+                      UserRepository userRepository) {
+    this.service = service;
+    this.verificationService = verificationService;
+    this.userRepository = userRepository;
+}
+
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -71,6 +84,60 @@ public class UserController {
                     return Mono.just(err);
                 });
     }
+
+    @PutMapping("/{userId}/update-email")
+    public Mono<ResponseEntity<Map<String, String>>> updateEmail(
+            @PathVariable String userId,
+            @RequestBody Map<String, String> body) {
+
+        String newEmail = body.get("email");
+
+        if (!verificationService.isVerified(newEmail)) {
+            return Mono.just(ResponseEntity.badRequest()
+                    .body(Map.of("message", "Please verify this email first.")));
+        }
+
+        return userRepository.findById(userId)
+                .flatMap(user -> {
+                    user.setEmail(newEmail);
+                    return userRepository.save(user)
+                            .thenReturn(ResponseEntity.ok(Map.of("message", "Email updated successfully.")));
+                })
+                .switchIfEmpty(Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("message", "User not found."))));
+    }
+
+    @PutMapping("/{userId}/update-phone")
+    public Mono<ResponseEntity<Map<String, Object>>> updatePhone(
+            @PathVariable String userId,
+            @RequestBody Map<String, String> body) {
+
+        String newPhone = body.get("phone");
+
+        return userRepository.findById(userId)
+                .flatMap(user -> {
+                    // ✅ Check if OTP sent to user's registered email was verified
+                    if (!verificationService.isVerified(user.getEmail())) {
+                        return Mono.just(ResponseEntity.badRequest()
+                                .body(Map.<String, Object>of("message", "Please verify OTP sent to your registered email first.")));
+                    }
+
+                    // ✅ Save the new phone number after successful email OTP verification
+                    user.setPhoneNumber(newPhone);
+                    return userRepository.save(user)
+                            .thenReturn(ResponseEntity.ok(Map.<String, Object>of("message", "Phone number updated successfully.")));
+                })
+                .switchIfEmpty(Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.<String, Object>of("message", "User not found."))));
+    }
+
+
+
+
+
+
+
+
 }
 
 

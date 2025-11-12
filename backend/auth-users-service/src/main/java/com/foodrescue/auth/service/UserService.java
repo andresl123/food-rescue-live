@@ -68,7 +68,9 @@ public class UserService {
     private UserResponse toResponse(User u) {
         return new UserResponse(
                 u.getId(), u.getName(), u.getEmail(), u.getCategoryId(),
-                u.getPhoneNumber(), u.getDefaultAddressId(), u.getRoles(),
+                u.getPhoneNumber(), u.getDefaultAddressId(),
+                u.getMoreAddresses(),
+                u.getRoles(),
                 u.getStatus(), u.getCreatedAt(), u.getUpdatedAt()
         );
     }

@@ -62,4 +62,27 @@ public class AddressController {
                     return addressRepository.findAllById(ids);
                 });
     }
+
+    // ✅ Update address by ID
+    @PutMapping("/{id}")
+    public Mono<Map<String, Object>> updateAddress(@PathVariable String id, @RequestBody Address updatedAddress) {
+        return addressRepository.findById(id)
+                .flatMap(existing -> {
+                    existing.setStreet(updatedAddress.getStreet());
+                    existing.setCity(updatedAddress.getCity());
+                    existing.setState(updatedAddress.getState());
+                    existing.setPostalCode(updatedAddress.getPostalCode());
+                    existing.setCountry(updatedAddress.getCountry());
+                    return addressRepository.save(existing);
+                })
+                .map(saved -> Map.of(
+                        "success", true,
+                        "data", saved
+                ))
+                .switchIfEmpty(Mono.just(Map.of(
+                        "success", false,
+                        "message", "Address not found"
+                )));
+    }
+
 }

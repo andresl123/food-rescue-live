@@ -3,6 +3,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
+import { updateAddress } from "../../services/addressService";
+
 
 export default function AddressEditModal({
   show,
@@ -60,21 +62,39 @@ export default function AddressEditModal({
     [form]
   );
 
-  const handleSave = async () => {
-    if (!validate()) return;
-    setSaving(true);
-    try {
-      // TODO: replace with your API call:
-      // await api.updateAddress(userId, form.id, form);
-      await new Promise((r) => setTimeout(r, 900)); // demo delay
+const handleSave = async () => {
+  if (!validate()) return;
+  setSaving(true);
+  try {
+    const res = await updateAddress(form.id, form);
+    if (res.success) {
       setSaved(true);
-      onSaved?.(form);
-      // brief success flash before closing
+      onSaved?.(res.data);
       setTimeout(onClose, 450);
-    } catch (e) {
-      setSaving(false);
+    } else {
+      throw new Error(res.message || "Failed to update address");
     }
-  };
+  } catch (e) {
+    console.error("Error saving address:", e);
+    setSaving(false);
+  }
+};
+
+//   const handleSave = async () => {
+//     if (!validate()) return;
+//     setSaving(true);
+//     try {
+//       // TODO: replace with your API call:
+//       // await api.updateAddress(userId, form.id, form);
+//       await new Promise((r) => setTimeout(r, 900)); // demo delay
+//       setSaved(true);
+//       onSaved?.(form);
+//       // brief success flash before closing
+//       setTimeout(onClose, 450);
+//     } catch (e) {
+//       setSaving(false);
+//     }
+//   };
 
   return (
     <>
