@@ -12,7 +12,7 @@ export default function Navbar({ navbarHeight = 64, collapsed, onToggleSidebar }
         const result = await getUserProfile();
         if (result.success && result.data) {
           setUser({
-            name: result.data.email?.split("@")[0] || "User",
+            name: result.data.name.split(" ")[0] || "User",
             role: result.data.role || result.data.roles?.[0] || "",
           });
         } else {
