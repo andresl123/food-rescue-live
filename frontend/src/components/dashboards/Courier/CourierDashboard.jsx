@@ -3,9 +3,17 @@ import { Row, Col, Card, Button, Badge, Modal, Spinner } from 'react-bootstrap';
 import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { jwtDecode } from 'jwt-decode';
-
-const JOBS_API_BASE = import.meta.env.VITE_JOBS_SERVICE_URL ?? "http://localhost:8083/api/v1/jobs";
-const JOBS_USER_NAME_ENDPOINT = `${JOBS_API_BASE}/users`;
+import {
+  getAvailableJobs,
+  getCourierJobs,
+  assignCourierToJob,
+  unassignCourierFromJob,
+  generatePodOtps,
+  deletePodsForJob,
+  getOrderDetails,
+  getAddress,
+  getUserName,
+} from '../../../services/courierService.jsx';
 
 export default function CourierDashboard({ onShowPOD }) {
   const navigate = useNavigate();
@@ -49,74 +57,60 @@ export default function CourierDashboard({ onShowPOD }) {
     return [street, city, state, postalCode, country].filter(Boolean).join(", ");
   };
 
-  const fetchOrderDetails = async (orderId) => {
+  const loadOrderDetails = async (orderId) => {
     if (!orderId) return null;
     if (orderCacheRef.current[orderId]) {
       return orderCacheRef.current[orderId];
     }
     try {
-      const response = await fetch(`${JOBS_API_BASE}/orders/details/${orderId}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch order ${orderId}`);
+      const order = await getOrderDetails(orderId);
+      if (order) {
+        orderCacheRef.current[orderId] = order;
       }
-      const payload = await response.json();
-      if (payload?.success && payload?.data) {
-        orderCacheRef.current[orderId] = payload.data;
-        return payload.data;
-      }
+      return order;
     } catch (error) {
       console.error('Error fetching order details:', error);
+      return null;
     }
-    return null;
   };
 
-  const fetchAddressById = async (addressId) => {
+  const loadAddressById = async (addressId) => {
     if (!addressId) return null;
     if (addressCacheRef.current[addressId]) {
       return addressCacheRef.current[addressId];
     }
     try {
-      const response = await fetch(`${JOBS_API_BASE}/address/${addressId}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch address ${addressId}`);
+      const address = await getAddress(addressId);
+      if (address) {
+        addressCacheRef.current[addressId] = address;
       }
-      const payload = await response.json();
-      if (payload?.success && payload?.data) {
-        addressCacheRef.current[addressId] = payload.data;
-        return payload.data;
-      }
+      return address;
     } catch (error) {
       console.error('Error fetching address:', error);
+      return null;
     }
-    return null;
   };
 
-  const fetchUserNameById = async (userId) => {
+  const loadUserNameById = async (userId) => {
     if (!userId) return null;
     if (userCacheRef.current[userId]) {
       return userCacheRef.current[userId];
     }
-
     try {
-      const response = await fetch(`${JOBS_USER_NAME_ENDPOINT}/${userId}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch user ${userId}`);
-      }
-      const payload = await response.json();
-      if (payload?.success && payload?.data) {
-        const name = payload.data.name;
+      const name = await getUserName(userId);
+      if (name) {
         userCacheRef.current[userId] = name;
-        return name;
       }
+      return name;
     } catch (error) {
       console.error('Error fetching user name:', error);
+      return null;
     }
-    return null;
   };
 
   const fetchAndSetCourierFullName = async (courierId) => {
     try {
-      const courierName = await fetchUserNameById(courierId);
+      const courierName = await loadUserNameById(courierId);
       if (courierName) {
         setUser((prev) => ({ ...prev, name: courierName }));
       }
@@ -131,18 +125,18 @@ export default function CourierDashboard({ onShowPOD }) {
     }
 
     try {
-      const orderDetails = await fetchOrderDetails(job.orderId);
+      const orderDetails = await loadOrderDetails(job.orderId);
       if (!orderDetails) {
         return job;
       }
 
       const { pickupAddressId, deliveryAddressId, receiverId } = orderDetails;
       const [pickupAddress, deliveryAddress] = await Promise.all([
-        fetchAddressById(pickupAddressId),
-        fetchAddressById(deliveryAddressId),
+        loadAddressById(pickupAddressId),
+        loadAddressById(deliveryAddressId),
       ]);
 
-      const receiverName = receiverId ? await fetchUserNameById(receiverId) : null;
+      const receiverName = receiverId ? await loadUserNameById(receiverId) : null;
 
       return {
         ...job,
@@ -208,11 +202,7 @@ export default function CourierDashboard({ onShowPOD }) {
   const fetchAvailableJobs = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${JOBS_API_BASE}/available`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch available jobs');
-      }
-      const jobs = await response.json();
+      const jobs = await getAvailableJobs();
       console.log('Available jobs fetched:', jobs);
       
       const mappedJobs = jobs.map(job => ({
@@ -256,11 +246,7 @@ export default function CourierDashboard({ onShowPOD }) {
         });
         return;
       }
-      const response = await fetch(`${JOBS_API_BASE}/courier/${courierId}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch my jobs');
-      }
-      const jobs = await response.json();
+      const jobs = await getCourierJobs(courierId);
       console.log('My jobs fetched:', jobs);
       
       const mappedJobs = jobs.map(job => ({
@@ -323,7 +309,6 @@ export default function CourierDashboard({ onShowPOD }) {
   }, [activeTab]);
 
   const handleAcceptJob = async (jobId) => {
-    // Check if courier already has a job
     if (myJobs.length > 0) {
       toast.error("You can only have one active job at a time", {
         duration: 4000,
@@ -347,68 +332,25 @@ export default function CourierDashboard({ onShowPOD }) {
         return;
       }
       
-      // Call the assign-courier API
-      const response = await fetch(
-        `${JOBS_API_BASE}/${jobId}/assign-courier/${courierId}`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        }
-      );
+      await assignCourierToJob(jobId, courierId);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('Job assigned successfully:', result);
-
-      // Generate OTPs for this job
       try {
-        const otpResponse = await fetch(
-          `http://localhost:8082/api/v1/pods/generate-otp?jobId=${jobId}`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            }
-          }
-        );
-
-        if (!otpResponse.ok) {
-          console.warn('Failed to generate OTPs, but job was assigned successfully');
-          // Don't throw error here, job assignment was successful
-        } else {
-          const otpResult = await otpResponse.json();
-          console.log('OTPs generated successfully:', otpResult);
-        }
+        await generatePodOtps(jobId);
       } catch (otpError) {
-        console.error('Error generating OTPs:', otpError);
-        // Don't throw error here, job assignment was successful
-        // OTPs can be generated later if needed
+        console.warn('Failed to generate OTPs, but job was assigned successfully', otpError);
       }
 
-      // Update local state - preserve all job data including donor/recipient info
-      const acceptedJob = { 
-        ...job, 
+      const acceptedJob = {
+        ...job,
         courierId: courierId,
         assigned_at: new Date().toISOString(),
-        status: 'ASSIGNED', // Status will be set to ASSIGNED by the backend
-        // Preserve donor and recipient data from available job
-        donorName: job.donorName || `Donor for ${job.orderId}`,
-        donorAddress: job.donorAddress || "Address will be fetched from order service",
-        recipientName: job.recipientName || `Recipient for ${job.orderId}`,
-        recipientAddress: job.recipientAddress || "Address will be fetched from order service"
+        status: 'ASSIGNED',
       };
       
       const enrichedAcceptedJob = await enrichJobWithAddresses(acceptedJob);
       setMyJobs([enrichedAcceptedJob]);
       setAvailableJobs((prev) => prev.filter((j) => j.id !== jobId));
       
-      // Refresh available jobs to reflect the change
       await fetchAvailableJobs();
       
       setTimeout(() => {
@@ -471,54 +413,17 @@ export default function CourierDashboard({ onShowPOD }) {
     }
 
     try {
-      // Call the unassign-courier API to remove courier_id from the job
-      const response = await fetch(
-        `${JOBS_API_BASE}/${cancelDialog.jobId}/unassign-courier`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        }
-      );
+      await unassignCourierFromJob(cancelDialog.jobId);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('Courier unassigned successfully:', result);
-
-      // Delete POD records for this job
       try {
-        const deletePodResponse = await fetch(
-          `http://localhost:8082/api/v1/pods/job/${cancelDialog.jobId}`,
-          {
-            method: 'DELETE',
-            headers: {
-              'Content-Type': 'application/json',
-            }
-          }
-        );
-
-        if (deletePodResponse.ok) {
-          const deleteResult = await deletePodResponse.json();
-          console.log('POD records deleted successfully:', deleteResult);
-        } else {
-          // Log warning but don't fail the entire cancel operation
-          console.warn('Failed to delete POD records, but job cancellation succeeded');
-        }
+        await deletePodsForJob(cancelDialog.jobId);
       } catch (podError) {
-        // Log error but don't fail the entire cancel operation
-        console.error('Error deleting POD records:', podError);
+        console.warn('Failed to delete POD records, but job cancellation succeeded', podError);
       }
 
-      // Update local state
       setMyJobs([]);
       setCancelDialog({ open: false, jobId: "", jobName: "" });
       
-      // Refresh available jobs to show the cancelled job
       await fetchAvailableJobs();
       
       setTimeout(() => {
