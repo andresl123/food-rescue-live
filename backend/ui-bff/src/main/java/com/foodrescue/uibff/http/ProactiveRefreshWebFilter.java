@@ -34,7 +34,9 @@ public class ProactiveRefreshWebFilter implements WebFilter {
         String path = exchange.getRequest().getURI().getPath();
         HttpMethod method = exchange.getRequest().getMethod();
         if (method == HttpMethod.OPTIONS ||
-                path.startsWith("/api/auth/")) {
+                path.startsWith("/api/auth/")
+                || path.startsWith("/api/addresses")
+                || path.startsWith("/api/users")) {
             return chain.filter(exchange);
         }
 
