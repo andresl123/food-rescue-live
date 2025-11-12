@@ -40,7 +40,7 @@ public class FoodItemController {
      */
     // FIX: Added explicit path /{lotId}/items
     @GetMapping("/{lotId}/items")
-    @PreAuthorize("hasAnyRole('ADMIN','DONOR')")
+    @PreAuthorize("hasAnyRole('ADMIN','DONOR', 'RECEIVER')")
     public Flux<FoodItem> getItemsForLot(
             @PathVariable String lotId,
             Mono<Authentication> authenticationMono) {

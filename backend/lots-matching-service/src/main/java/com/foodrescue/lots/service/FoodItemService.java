@@ -45,8 +45,11 @@ public class FoodItemService {
                     boolean isAdmin = auth.getAuthorities().stream()
                             .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
+                    boolean isReceiver = auth.getAuthorities().stream()
+                            .anyMatch(a -> a.getAuthority().equals("ROLE_RECEIVER"));
+
                     // This is the core logic: Allow if ADMIN or if DONOR owns the lot
-                    if (isAdmin || lot.getUserId().equals(currentUserId)) {
+                    if (isAdmin || isReceiver || lot.getUserId().equals(currentUserId)) {
                         return Mono.just(lot); // Authorized, return the lot for chaining
                     } else {
                         return Mono.error(new AccessDeniedException("You do not have permission to access items in this lot."));
