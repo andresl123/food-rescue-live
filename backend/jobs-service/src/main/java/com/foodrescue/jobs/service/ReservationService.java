@@ -1,7 +1,8 @@
 package com.foodrescue.jobs.service;
 
 import com.foodrescue.jobs.dto.ReserveLotRequest;
-import com.foodrescue.jobs.entity.JobDocument;
+import com.foodrescue.jobs.model.Job;
+import com.foodrescue.jobs.model.JobStatus;
 import com.foodrescue.jobs.entity.OrderDocument;
 import com.foodrescue.jobs.repository.JobRepository;
 import com.foodrescue.jobs.repository.OrderRepository;
@@ -39,12 +40,12 @@ public class ReservationService {
         return orderRepository.save(order)
                 .flatMap(savedOrder -> {
                     // 2) build job
-                    JobDocument job = JobDocument.builder()
-                            .id(jobId)
+                    Job job = Job.builder()
+                            .jobId(jobId)
                             .orderId(savedOrder.getId()) // link to order
                             .courierId(null)
-                            .status(JobDocument.JobStatus.UNASSIGNED)
-                            .assignedAt(null)
+                            .status(JobStatus.ASSIGNED)
+                            .assignedAt(Instant.now())
                             .completedAt(null)
                             .notes("Auto-created for lot reservation")
                             .build();
@@ -65,6 +66,6 @@ public class ReservationService {
     // updated result: only order + job
     public record ReservationResult(
             OrderDocument order,
-            JobDocument job
+            Job job
     ) {}
 }
