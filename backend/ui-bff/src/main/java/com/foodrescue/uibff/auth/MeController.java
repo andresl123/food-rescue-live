@@ -40,6 +40,13 @@ public class MeController {
                 email = userId;
             }
 
+            // name from token (optional)
+            String name = claims.getStringClaim("name");
+            if (name == null || name.isBlank()) {
+                // optional fallbacks if your issuer uses different fields
+                name = claims.getStringClaim("given_name");
+            }
+
             // roles can be an array or a single string depending on issuer
             Object rolesObj = claims.getClaim("roles");
             if (rolesObj == null) {
@@ -53,6 +60,7 @@ public class MeController {
                     Map.of(
                             "userId", userId,
                             "email", email,
+                            "name", name,
                             "role", role
                     )
             ));
@@ -61,6 +69,7 @@ public class MeController {
                     .body(Map.of("error", "invalid token")));
         }
     }
+
 
     private List<?> toList(Object obj) {
         if (obj == null) return Collections.emptyList();
