@@ -7,82 +7,6 @@ import { jwtDecode } from 'jwt-decode';
 const JOBS_API_BASE = import.meta.env.VITE_JOBS_SERVICE_URL ?? "http://localhost:8083/api/v1/jobs";
 const JOBS_USER_NAME_ENDPOINT = `${JOBS_API_BASE}/users`;
 
-// Mock data for available jobs
-const availableJobsData = [
-  {
-    id: "JOB-001",
-    orderId: "ORDER-101",
-    donorName: "Sunrise Bakery",
-    donorAddress: "123 Main St, Downtown",
-    recipientName: "Community Food Bank",
-    recipientAddress: "456 Oak Ave, Riverside",
-    foodItems: ["Fresh Bread", "Pastries", "Croissants"],
-    distance: "2.3 km",
-    estimatedTime: "15 min",
-    servings: 25,
-    status: "pending",
-    urgency: "high",
-    assigned_at: null,
-    completed_at: null,
-    notes: "Handle with care - fragile items included"
-  },
-  {
-    id: "JOB-002",
-    orderId: "ORDER-102",
-    donorName: "Green Valley Restaurant",
-    donorAddress: "789 Park Blvd, Westside",
-    recipientName: "Hope Shelter",
-    recipientAddress: "321 Pine St, Eastside",
-    foodItems: ["Cooked Meals", "Salads", "Fruits"],
-    distance: "3.8 km",
-    estimatedTime: "20 min",
-    servings: 40,
-    status: "pending",
-    urgency: "medium",
-    assigned_at: null,
-    completed_at: null,
-    notes: "Keep refrigerated items cold"
-  },
-  {
-    id: "JOB-003",
-    orderId: "ORDER-103",
-    donorName: "Fresh Market",
-    donorAddress: "555 Commerce Dr, North District",
-    recipientName: "Elderly Care Center",
-    recipientAddress: "888 Maple Rd, South District",
-    foodItems: ["Vegetables", "Dairy Products", "Eggs"],
-    distance: "5.2 km",
-    estimatedTime: "25 min",
-    servings: 30,
-    status: "pending",
-    urgency: "low",
-    assigned_at: null,
-    completed_at: null,
-    notes: "Standard delivery"
-  },
-];
-
-// Mock data for my jobs (only one job at a time)
-const myJobsData = [
-  {
-    id: "JOB-004",
-    orderId: "ORDER-104",
-    donorName: "Organic Café",
-    donorAddress: "234 Garden St, Midtown",
-    recipientName: "Youth Center",
-    recipientAddress: "567 Elm St, Downtown",
-    foodItems: ["Sandwiches", "Smoothies", "Snacks"],
-    distance: "1.8 km",
-    estimatedTime: "12 min",
-    servings: 20,
-    status: "pending",
-    urgency: "high",
-    assigned_at: "2024-01-14T10:30:00",
-    completed_at: null,
-    notes: "Urgent delivery - call recipient upon arrival"
-  }
-];
-
 export default function CourierDashboard({ onShowPOD }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -291,7 +215,6 @@ export default function CourierDashboard({ onShowPOD }) {
       const jobs = await response.json();
       console.log('Available jobs fetched:', jobs);
       
-      // Map API response to UI format
       const mappedJobs = jobs.map(job => ({
         id: job.jobId,
         orderId: job.orderId,
@@ -301,26 +224,23 @@ export default function CourierDashboard({ onShowPOD }) {
         assigned_at: job.assignedAt,
         completed_at: job.completedAt,
         notes: job.notes || '',
-        // Keep mock data fields for display (you may want to fetch these from order service)
-        donorName: `Donor for ${job.orderId}`,
-        donorAddress: "Address will be fetched from order service",
-        recipientName: `Recipient for ${job.orderId}`,
-        recipientAddress: "Address will be fetched from order service",
-        foodItems: ["Food items from order"],
-        distance: "2.5 km",
-        estimatedTime: "15 min",
-        servings: 20,
-        urgency: "medium"
+        donorName: job.donorName || `Donor for ${job.orderId}`,
+        donorAddress: job.donorAddress || "Address unavailable",
+        recipientName: job.recipientName || `Recipient for ${job.orderId}`,
+        recipientAddress: job.recipientAddress || "Address unavailable",
+        foodItems: job.foodItems && job.foodItems.length ? job.foodItems : ["Food items from order"],
+        distance: job.distance || "N/A",
+        estimatedTime: job.estimatedTime || "N/A",
+        servings: job.servings ?? 0,
+        urgency: job.urgency || "medium"
       }));
       
       const enrichedJobs = await enrichJobsBatch(mappedJobs);
       setAvailableJobs(enrichedJobs);
     } catch (error) {
       console.error('Error fetching available jobs:', error);
-      toast.error('Failed to load available jobs. Using mock data.');
-      // Fallback to mock data on error
-      const enrichedFallback = await enrichJobsBatch(availableJobsData);
-      setAvailableJobs(enrichedFallback);
+      toast.error('Failed to load available jobs.');
+      setAvailableJobs([]);
     } finally {
       setLoading(false);
     }
@@ -343,7 +263,6 @@ export default function CourierDashboard({ onShowPOD }) {
       const jobs = await response.json();
       console.log('My jobs fetched:', jobs);
       
-      // Map API response to UI format
       const mappedJobs = jobs.map(job => ({
         id: job.jobId,
         orderId: job.orderId,
@@ -353,19 +272,17 @@ export default function CourierDashboard({ onShowPOD }) {
         assigned_at: job.assignedAt,
         completed_at: job.completedAt,
         notes: job.notes || '',
-        // Keep mock data fields for display
-        donorName: `Donor for ${job.orderId}`,
-        donorAddress: "Address will be fetched from order service",
-        recipientName: `Recipient for ${job.orderId}`,
-        recipientAddress: "Address will be fetched from order service",
-        foodItems: ["Food items from order"],
-        distance: "2.5 km",
-        estimatedTime: "15 min",
-        servings: 20,
-        urgency: "medium"
+        donorName: job.donorName || `Donor for ${job.orderId}`,
+        donorAddress: job.donorAddress || "Address unavailable",
+        recipientName: job.recipientName || `Recipient for ${job.orderId}`,
+        recipientAddress: job.recipientAddress || "Address unavailable",
+        foodItems: job.foodItems && job.foodItems.length ? job.foodItems : ["Food items from order"],
+        distance: job.distance || "N/A",
+        estimatedTime: job.estimatedTime || "N/A",
+        servings: job.servings ?? 0,
+        urgency: job.urgency || "medium"
       }));
       
-      // Only show jobs that are not completed (status should not be DELIVERED, FAILED, CANCELLED, or RETURNED)
       const activeJobs = mappedJobs.filter(job => 
         job.status !== 'DELIVERED' && 
         job.status !== 'FAILED' && 
@@ -376,7 +293,7 @@ export default function CourierDashboard({ onShowPOD }) {
       setMyJobs(enrichedMyJobs);
     } catch (error) {
       console.error('Error fetching my jobs:', error);
-      // Don't show error toast for my jobs, just keep empty array
+      toast.error('Failed to load your jobs.');
       setMyJobs([]);
     }
   };
@@ -423,12 +340,6 @@ export default function CourierDashboard({ onShowPOD }) {
     try {
       setLoadingAccept(true);
       const courierId = getCourierId();
-      if (!courierId) {
-        toast.error("Unable to determine courier ID. Please sign in again.", {
-          duration: 4000,
-        });
-        return;
-      }
       if (!courierId) {
         toast.error("Unable to determine courier ID. Please sign in again.", {
           duration: 4000,
