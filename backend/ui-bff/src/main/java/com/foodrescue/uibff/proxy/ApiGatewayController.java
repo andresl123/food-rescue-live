@@ -247,4 +247,49 @@ public class ApiGatewayController {
     }
 
 
+    @RequestMapping(
+            path = "/import/**",
+            method = {
+                    RequestMethod.GET,
+                    RequestMethod.POST,
+                    RequestMethod.PUT,
+                    RequestMethod.PATCH,
+                    RequestMethod.DELETE
+            }
+    )
+    public Mono<ResponseEntity<byte[]>> imports(ServerWebExchange exchange) {
+        var request = exchange.getRequest();
+
+        // original path, e.g. /api/import/lots-excel/preview
+        String incoming = request.getURI().getPath();
+
+        // remove /api
+        String afterApi = incoming.replaceFirst("^/api", "");
+
+        // /import/... -> /api/v1/import/...
+        String downstreamPath = afterApi.replaceFirst("^/import", "/api/v1/import");
+
+        // keep query params
+        String query = request.getURI().getQuery();
+        if (query != null && !query.isBlank()) {
+            downstreamPath = downstreamPath + "?" + query;
+        }
+
+        // now forward the *raw* body
+        return webClient
+                .method(request.getMethod())
+                .uri(lotsBase + downstreamPath)
+                .headers(h -> {
+                    h.addAll(request.getHeaders());
+                    // sometimes Host should not be forwarded
+                    h.remove(HttpHeaders.HOST);
+                })
+                // this is the key: stream the request body, don't turn it into String
+                .body((outputMessage, context) -> outputMessage.writeWith(request.getBody()))
+                .exchangeToMono(clientResponse ->
+                        clientResponse.toEntity(byte[].class)
+                );
+    }
+
+
 }

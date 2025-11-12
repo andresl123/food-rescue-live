@@ -1,14 +1,13 @@
-package com.foodrescue.lots;
+package com.foodrescue.feedback_service;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class
-LotsMatchingServiceApplication {
+public class FeedbackServiceApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(LotsMatchingServiceApplication.class, args);
+		SpringApplication.run(FeedbackServiceApplication.class, args);
 	}
 
 }

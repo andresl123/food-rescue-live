@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Flux;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -56,6 +57,7 @@ public class AddressController {
         return userRepository.findById(userId)
                 .flatMapMany(user -> {
                     List<String> ids = user.getMoreAddresses();
+                    ids.add(user.getDefaultAddressId());
                     if (ids == null || ids.isEmpty()) {
                         return Flux.empty();
                     }
