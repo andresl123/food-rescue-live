@@ -5,7 +5,7 @@ import RescueOrderCard from "../../components/orders/RescueOrderCard";
 import OrderDetailsModal from "../../components/orders/OrderDetailsModal"; // ⬅️ new
 import "bootstrap/dist/css/bootstrap.min.css";
 
-const BFF_BASE_URL = import.meta.env.VITE_BFF_BASE_URL;
+const BFF_BASE_URL = "http://localhost:8090";
 
 export default function RescueOrdersPage() {
   const [tab, setTab] = useState("completed");
