@@ -2,7 +2,7 @@ name: Build and Deploy Frontend (ARM64)
 
 on:
   push:
-    branches: ["main"] # Or "main"
+    branches: ["CI/CD"] # Or "main"
     paths:
       - 'frontend/**' # Only run if code in frontend/ changes
       - '.github/workflows/frontend-ci.yml'
