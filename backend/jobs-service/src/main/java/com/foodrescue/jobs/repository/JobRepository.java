@@ -1,9 +1,23 @@
 package com.foodrescue.jobs.repository;
 
-import com.foodrescue.jobs.entity.JobDocument;
+import com.foodrescue.jobs.model.Job;
+import org.springframework.data.mongodb.repository.Query;
 import org.springframework.data.mongodb.repository.ReactiveMongoRepository;
-import reactor.core.publisher.Mono;
+import reactor.core.publisher.Flux;
 
-public interface JobRepository extends ReactiveMongoRepository<JobDocument, String> {
-    Mono<JobDocument> findByOrderId(String orderId);
+public interface JobRepository extends ReactiveMongoRepository<Job, String> {
+
+    Flux<Job> findByOrderId(String orderId);
+
+    Flux<Job> findByStatus(String status);
+
+    Flux<Job> findByCourierId(String courierId);
+
+    Flux<Job> findByCourierIdAndStatus(String courierId, String status);
+
+    /**
+     * Available jobs are those without a courier assigned (missing or null field).
+     */
+    @Query("{ $or: [ { 'courierId': null }, { 'courierId': { $exists: false } } ] }")
+    Flux<Job> findAvailableJobs();
 }
