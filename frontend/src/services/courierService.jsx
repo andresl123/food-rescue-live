@@ -1,8 +1,8 @@
 const BFF_BASE_URL = import.meta.env.VITE_BFF_BASE_URL ?? "http://localhost:8090/api";
-const JOBS_API_BASE = `${BFF_BASE_URL}/jobs`;
-const USERS_API_BASE = `${BFF_BASE_URL}/users`;
-const ADDRESSES_API_BASE = `${BFF_BASE_URL}/addresses`;
-const EVIDENCE_API_BASE = `${BFF_BASE_URL}/evidence`;
+const JOBS_API_BASE = `${BFF_BASE_URL}/api/jobs`;
+const USERS_API_BASE = `${BFF_BASE_URL}/api/users`;
+const ADDRESSES_API_BASE = `${BFF_BASE_URL}/api/addresses`;
+const EVIDENCE_API_BASE = `${BFF_BASE_URL}/api/evidence`;
 
 async function parseJson(response) {
   const text = await response.text();

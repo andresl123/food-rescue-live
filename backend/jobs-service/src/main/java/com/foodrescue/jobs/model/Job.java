@@ -12,13 +12,6 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
 
-/**
- * Canonical Job document stored in the {@code jobs} collection.
- * <p>
- * We keep a {@link TypeAlias} so that legacy documents that were persisted
- * with the old {@code com.foodrescue.jobs.entity.JobDocument} type continue
- * to deserialize without requiring a data migration.
- */
 @Data
 @Builder
 @NoArgsConstructor
