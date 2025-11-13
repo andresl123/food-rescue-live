@@ -1,4 +1,4 @@
-const BFF_BASE_URL = "http://localhost:8090";
+const BFF_BASE_URL = import.meta.env.VITE_BFF_BASE_URL;
 
 // 1) upload file → preview
 export async function previewLotExcel(file) {

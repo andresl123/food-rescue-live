@@ -1,11 +1,11 @@
-name: Build and Deploy auth-users-service (ARM64)
+name: Build and Deploy lots-matching-service (ARM64)
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main"] # Or your main branch
     paths:
-      - 'backend/auth-users-service/**'
-      - '.github/workflows/auth-service-ci.yml'
+      - 'backend/lots-matching-service/**' # <- Triggers on changes to this service
+      - '.github/workflows/lots-service-ci.yml'
 
 jobs:
   build-and-push-image:
@@ -23,8 +23,8 @@ jobs:
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ vars.DOCKERHUB_USERNAME }}   # store as Actions variable
-          password: ${{ secrets.DOCKERHUB_TOKEN }}   # Docker Hub PAT, not password
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Get version (short SHA tag)
         id: vars
@@ -33,10 +33,11 @@ jobs:
       - name: Build and push ARM64 image
         uses: docker/build-push-action@v6
         with:
-          context: backend/auth-users-service         # <- align with your repo layout
+          context: backend/lots-matching-service # <- Path to this service
           platforms: linux/arm64
           push: true
-          tags: ${{ vars.DOCKERHUB_USERNAME }}/auth-users-service:${{ steps.vars.outputs.TAG }}
+          tags: ${{ vars.DOCKERHUB_USERNAME }}/lots-matching-service:${{ steps.vars.outputs.TAG }} # <- Image name for this service
+          # This passes your private package token to the Docker build
           secrets: |
             "GH_PACKAGES_TOKEN=${{ secrets.GH_PACKAGES_TOKEN }}"
 
@@ -50,16 +51,16 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      # ---- Update manifest (Option A: unconditional replace) ----
+      # ---- Update manifest ----
       - name: Update image tag in GitOps manifest
         run: |
           set -euo pipefail
-          file="gitops/auth-service/auth-deployment.yaml"
+          file="gitops/lots-service/lots-deployment.yaml"
           echo "Before:"
           awk '/^[[:space:]]*image:[[:space:]]+/ {print NR ": " $0}' "$file" || true
           
           sed -E -i \
-            "s|^(\\s*image:\\s*).*$|\\1${{ vars.DOCKERHUB_USERNAME }}/auth-users-service:${{ steps.vars.outputs.TAG }}|" \
+            "s|^(\\s*image:\\s*).*$|\\1${{ vars.DOCKERHUB_USERNAME }}/lots-matching-service:${{ steps.vars.outputs.TAG }}|" \
             "$file"
           
           echo "After:"
@@ -78,7 +79,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if ! git diff --quiet; then
             git add -A
-            git commit -m "Update auth-users-service image to ${{ steps.vars.outputs.TAG }}"
+            git commit -m "Update lots-matching-service image to ${{ steps.vars.outputs.TAG }}" # <- Commit message
             git push
           else
             echo "No changes to commit."

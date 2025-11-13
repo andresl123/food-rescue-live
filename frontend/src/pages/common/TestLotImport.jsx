@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import UserLayout from "../../layout/UserLayout";
 
-const BFF_BASE = "http://localhost:8090";
+const BFF_BASE = import.meta.env.VITE_BFF_BASE_URL;
 
 const pillInputStyle = {
   borderRadius: "999px",

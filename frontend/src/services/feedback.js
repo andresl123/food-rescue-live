@@ -1,5 +1,5 @@
 // src/services/feedback.js
-const BFF_BASE = "http://localhost:8090";
+const BFF_BASE = import.meta.env.VITE_BFF_BASE_URL;
 
 // POST/UPSERT — already had this
 export async function submitOrderFeedback({ orderId, lotId, rating, feedbackText }) {

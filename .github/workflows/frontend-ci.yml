@@ -2,7 +2,7 @@ name: Build and Deploy Frontend (ARM64)
 
 on:
   push:
-    branches: ["MTC-201"] # Or "main"
+    branches: ["CI/CD"] # Or "main"
     paths:
       - 'frontend/**' # Only run if code in frontend/ changes
       - '.github/workflows/frontend-ci.yml'
@@ -25,6 +25,11 @@ jobs:
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create .env.production file
+        run: |
+          echo "VITE_BFF_BASE_URL=${{ vars.VITE_BFF_BASE_URL }}" > frontend/.env.production
+          echo "Created .env.production with URL: ${{ vars.VITE_BFF_BASE_URL }}"
 
       - name: Get version (short SHA tag)
         id: vars

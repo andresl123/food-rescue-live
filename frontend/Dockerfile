@@ -29,6 +29,9 @@ RUN rm /usr/share/nginx/html/index.html
 # The 'npm run build' command creates a 'dist' folder
 COPY --from=build /app/dist /usr/share/nginx/html
 
+# Copy our custom nginx.conf to override the default
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
 # Expose port 80 (standard HTTP)
 EXPOSE 80
 
