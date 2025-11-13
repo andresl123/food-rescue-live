@@ -21,6 +21,11 @@ public class OrderQueryService {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ISO_INSTANT;
 
+    public Mono<Long> countPendingOrders() {
+        // "Pending" here means anything that is NOT DELIVERED.
+        return orderRepository.countByStatusNotIgnoreCase("DELIVERED");
+    }
+
     public Mono<OrdersPage> getOrdersForReceiver(String receiverId) {
         // if you make a repo method: orderRepository.findByReceiverId(receiverId)
         // you can replace this filtering with that
@@ -37,11 +42,11 @@ public class OrderQueryService {
                 .collectList()
                 .map(rows -> {
                     List<OrderRow> current = rows.stream()
-                            .filter(r -> r.status() == null || !"COMPLETED".equalsIgnoreCase(r.status()))
+                            .filter(r -> r.status() == null || !"DELIVERED".equalsIgnoreCase(r.status()))
                             .toList();
 
                     List<OrderRow> completed = rows.stream()
-                            .filter(r -> "COMPLETED".equalsIgnoreCase(r.status()))
+                            .filter(r -> "DELIVERED".equalsIgnoreCase(r.status()))
                             .toList();
 
                     return new OrdersPage(current, completed);

@@ -6,7 +6,9 @@ import com.foodrescue.jobs.model.Job;
 import com.foodrescue.jobs.repository.JobRepository;
 import com.foodrescue.jobs.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
 import java.security.SecureRandom;
@@ -21,30 +23,45 @@ public class ReservationService {
     private final JobRepository jobRepository;
 
     public Mono<ReservationResult> reserveLot(ReserveLotRequest request, String receiverId) {
-        String orderId = UUID.randomUUID().toString();
-        String jobId = UUID.randomUUID().toString();
 
-        OrderDocument order = OrderDocument.builder()
-                .id(orderId)
-                .lotId(request.getLotId())
-                .receiverId(receiverId)
-                .deliveryAddressId(request.getDeliveryAddressId())
-                .pickupAddressId(request.getPickupAddressId())
-                .orderDate(Instant.now())
-                .status("CREATED")
-                .build();
+        return orderRepository
+                // any order for this user with status != DELIVERED?
+                .existsByReceiverIdAndStatusNotIgnoreCase(receiverId, "DELIVERED")
+                .flatMap(hasActiveUndelivered -> {
+                    if (Boolean.TRUE.equals(hasActiveUndelivered)) {
+                        // Business rule: one active (non-delivered) order per receiver
+                        return Mono.error(new ResponseStatusException(
+                                HttpStatus.CONFLICT,
+                                "You already have an active order pending delivery. Please complete it before reserving another lot."
+                        ));
+                    }
 
-        return orderRepository.save(order)
-                .flatMap(savedOrder -> {
-                    Job job = Job.builder()
-                            .jobId(jobId)
-                            .orderId(savedOrder.getId())
-                            .status("UNASSIGNED")
-                            .notes("Auto-created for lot reservation")
+                    // No active undelivered orders → proceed with reservation
+                    String orderId = UUID.randomUUID().toString();
+                    String jobId = UUID.randomUUID().toString();
+
+                    OrderDocument order = OrderDocument.builder()
+                            .id(orderId)
+                            .lotId(request.getLotId())
+                            .receiverId(receiverId)
+                            .deliveryAddressId(request.getDeliveryAddressId())
+                            .pickupAddressId(request.getPickupAddressId())
+                            .orderDate(Instant.now())
+                            .status("CREATED")
                             .build();
 
-                    return jobRepository.save(job)
-                            .map(savedJob -> new ReservationResult(savedOrder, savedJob));
+                    return orderRepository.save(order)
+                            .flatMap(savedOrder -> {
+                                Job job = Job.builder()
+                                        .jobId(jobId)
+                                        .orderId(savedOrder.getId())
+                                        .status("UNASSIGNED")
+                                        .notes("Auto-created for lot reservation")
+                                        .build();
+
+                                return jobRepository.save(job)
+                                        .map(savedJob -> new ReservationResult(savedOrder, savedJob));
+                            });
                 });
     }
 

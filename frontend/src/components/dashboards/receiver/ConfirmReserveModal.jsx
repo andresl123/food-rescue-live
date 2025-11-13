@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import "./css/LotDetailsModal.css"; // reuse same shell styles
+import "./css/LotDetailsModal.css";
+import toast from "react-hot-toast";
 
 const BFF_BASE_URL = import.meta.env.VITE_BFF_BASE_URL;
 
 export default function ConfirmReserveModal({ lot, show, onCancel, onConfirm }) {
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -14,7 +14,6 @@ export default function ConfirmReserveModal({ lot, show, onCancel, onConfirm }) 
     return () => {
       document.body.style.overflow = prev;
       setSubmitting(false);
-      setError("");
     };
   }, [show]);
 
@@ -23,14 +22,13 @@ export default function ConfirmReserveModal({ lot, show, onCancel, onConfirm }) 
   const handleReserve = async () => {
     const lotId = lot?.id ?? lot?.lotId;
     if (!lotId) {
-      setError("Lot id is missing.");
+      toast.error("Lot id is missing.");
       return;
     }
 
-    try {
-      setSubmitting(true);
-      setError("");
+    setSubmitting(true);
 
+    try {
       const resp = await fetch(
         `${BFF_BASE_URL}/api/r_dashboard/reserve/${lotId}`,
         {
@@ -40,15 +38,34 @@ export default function ConfirmReserveModal({ lot, show, onCancel, onConfirm }) 
       );
 
       if (!resp.ok) {
-        const body = await resp.json().catch(() => ({}));
-        const msg = body.message || body.error || resp.statusText;
-        throw new Error(msg);
+        let msg = "Failed to reserve lot.";
+
+        const body = await resp.json().catch(() => null);
+
+        if (resp.status === 409) {
+          msg =
+            "You already have an active order pending delivery.";
+        } else if (body) {
+          msg =
+            body.message ||
+            body.error ||
+            body.detail ||
+            resp.statusText ||
+            msg;
+        } else if (resp.statusText) {
+          msg = resp.statusText;
+        }
+
+        toast.error(msg);
+        return;
       }
 
-      // success — let parent handle navigation / closing
+      toast.success("Lot reserved successfully.");
       onConfirm?.(lot);
-    } catch (e) {
-      setError(e.message || "Failed to reserve lot.");
+    } catch (err) {
+      const msg = err?.message || "Failed to reserve lot.";
+      toast.error(msg);
+      // no rethrow
     } finally {
       setSubmitting(false);
     }
@@ -73,12 +90,10 @@ export default function ConfirmReserveModal({ lot, show, onCancel, onConfirm }) 
           <p className="mb-2">
             Reserve <strong>{lot?.title ?? "this lot"}</strong>?
           </p>
-          <div className="small text-muted mb-2">
+          <div className="small text-muted mb-0">
             You can manage it from your dashboard afterwards.
           </div>
-          {error && (
-            <div className="alert alert-danger py-2 mb-0">{error}</div>
-          )}
+          {/* no red alert here */}
         </div>
 
         <div className="frl-modal__footer">
