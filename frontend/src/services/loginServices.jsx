@@ -1,8 +1,8 @@
-const BFF_BASE_URL = import.meta.env.VITE_BFF_BASE_URL;
+const BFF_BASE_URL = "http://localhost:8090";
 
 export async function loginUser(credentials) {
   try {
-    const response = await fetch(`${BFF_BASE_URL}/api/auth/login`, {
+    const response = await fetch("http://localhost:8090/api/auth/login", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

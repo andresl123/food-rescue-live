@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import "./css/LotDetailsModal.css"; // reuse same shell styles
 
-const BFF_BASE_URL = import.meta.env.VITE_BFF_BASE_URL;
+const BFF_BASE_URL = "http://localhost:8090";
 
 export default function ConfirmReserveModal({ lot, show, onCancel, onConfirm }) {
   const [submitting, setSubmitting] = useState(false);

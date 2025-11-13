@@ -37,7 +37,6 @@ public class ApiGatewayController {
     @Value("${services.orgs.base-url:}")          private String orgsBase;
     @Value("${services.notifications.base-url:}") private String notificationsBase;
     @Value("${services.lots.base-url:}")          private String lotsBase;
-    @Value("${services.feedback.base-url:}")  private String feedbackBase;
 
     public ApiGatewayController(WebClient webClient) {
         this.webClient = webClient;
@@ -149,7 +148,7 @@ public class ApiGatewayController {
     public Mono<ResponseEntity<byte[]>> evidence(@RequestBody(required = false) String body,
                                                  @RequestHeader(name = "Content-Type", required = false) MediaType contentType,
                                                  ServerWebExchange exchange) {
-        // /api /evidence/...   ->  /api/v1/...
+        // /api/evidence/...   ->  /api/v1/...
         String incoming = exchange.getRequest().getURI().getPath();
         String afterApi = incoming.replaceFirst("^/api", "");
         String downstreamPath = afterApi.replaceFirst("^/evidence", "/api/v1");
@@ -292,26 +291,5 @@ public class ApiGatewayController {
                 );
     }
 
-    @RequestMapping(
-            path = "/feedback/**",
-            method = {
-                    RequestMethod.GET,
-                    RequestMethod.POST,
-                    RequestMethod.PUT,
-                    RequestMethod.PATCH,
-                    RequestMethod.DELETE
-            }
-    )
-    public Mono<ResponseEntity<byte[]>> feedback(@RequestBody(required = false) String body,
-                                                 @RequestHeader(name = "Content-Type", required = false) MediaType contentType,
-                                                 ServerWebExchange exchange) {
-        // incoming:  /api/feedback/order
-        String incoming = exchange.getRequest().getURI().getPath();
-        String afterApi = incoming.replaceFirst("^/api", "");
-        // to service: /api/v1/feedback/order
-        String downstreamPath = afterApi.replaceFirst("^/feedback", "/api/v1/feedback");
-
-        return forward(feedbackBase, exchange, downstreamPath, body, contentType);
-    }
 
 }

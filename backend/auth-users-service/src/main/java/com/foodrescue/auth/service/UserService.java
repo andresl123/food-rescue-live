@@ -11,9 +11,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.ArrayList;
 import reactor.core.scheduler.Schedulers;
-import com.foodrescue.auth.web.request.UserUpdateRequest;
-import reactor.core.publisher.Flux;
-import java.util.Set;
 
 @Service
 public class UserService {
@@ -66,53 +63,6 @@ public class UserService {
         return repo.findById(id)
                 .switchIfEmpty(Mono.error(new IllegalArgumentException("User not found")))
                 .map(this::toResponse);
-    }
-
-    // Get All Users
-    public Flux<UserResponse> getAllUsers() {
-        return repo.findAll()
-                .map(this::toResponse);
-    }
-
-    // Update User (for Admin)
-    public Mono<UserResponse> updateUser(String id, UserUpdateRequest req) {
-        return repo.findById(id)
-                .switchIfEmpty(Mono.error(new IllegalArgumentException("User not found")))
-                .flatMap(user -> {
-                    if (!user.getEmail().equalsIgnoreCase(req.email())) {
-                        return repo.existsByEmail(req.email().toLowerCase())
-                                .flatMap(exists -> {
-                                    if (exists) {
-                                        return Mono.error(new IllegalArgumentException("Email already in use."));
-                                    }
-                                    return updateAndSaveUser(user, req);
-                                });
-                    } else {
-                        return updateAndSaveUser(user, req);
-                    }
-                })
-                .map(this::toResponse);
-    }
-
-    /**
-     * Helper method to apply updates and save the user.
-     */
-    private Mono<User> updateAndSaveUser(User user, UserUpdateRequest req) {
-        user.setName(req.name());
-        user.setEmail(req.email().toLowerCase());
-
-        user.setRoles(Set.of(req.role()));
-        user.setCategoryId(req.role());
-
-        user.setStatus(req.status());
-        return repo.save(user);
-    }
-
-    // Delete User
-    public Mono<Void> deleteUser(String id) {
-        return repo.findById(id)
-                .switchIfEmpty(Mono.error(new IllegalArgumentException("User not found")))
-                .flatMap(repo::delete);
     }
 
     private UserResponse toResponse(User u) {

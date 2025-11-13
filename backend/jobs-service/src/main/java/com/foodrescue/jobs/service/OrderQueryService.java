@@ -1,6 +1,7 @@
 package com.foodrescue.jobs.service;
 
-import com.foodrescue.jobs.entity.JobDocument;
+import com.foodrescue.jobs.model.Job;
+import com.foodrescue.jobs.model.JobStatus;
 import com.foodrescue.jobs.entity.OrderDocument;
 import com.foodrescue.jobs.repository.JobRepository;
 import com.foodrescue.jobs.repository.OrderRepository;
@@ -51,10 +52,10 @@ public class OrderQueryService {
                 });
     }
 
-    private OrderRow toOrderRow(OrderDocument order, JobDocument job) {
+    private OrderRow toOrderRow(OrderDocument order, Job job) {
         String courierId = "To be assigned";
         if (job != null && job.getStatus() != null &&
-                job.getStatus() != JobDocument.JobStatus.UNASSIGNED) {
+                !JobStatus.ASSIGNED.equalsIgnoreCase(job.getStatus())) {
             courierId = job.getCourierId();
         }
 

@@ -10,7 +10,7 @@ import reactor.core.publisher.Mono;
 import java.time.Duration;
 import java.time.Instant;
 
-//Removing this file for now
+@Component
 public class SessionTokenCookieFilter implements WebFilter {
 
     private static final String SA_ACCESS  = "sa.access_token";
