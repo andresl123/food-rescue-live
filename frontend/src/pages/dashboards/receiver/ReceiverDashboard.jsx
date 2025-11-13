@@ -98,66 +98,50 @@ export default function ReceiverDashboard() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
 
-  // pagination
-  const [page, setPage] = useState(0);
-  const [pageSize] = useState(8);
-  const [hasMore, setHasMore] = useState(true);
-
   // modals
   const [selectedLot, setSelectedLot] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
   const [confirmLot, setConfirmLot] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  // fetch a page
-  const fetchPage = async (pageToFetch) => {
-    try {
-      setLoading(true);
-      setErr(null);
-
-      // your current bffFetch doesn't support query object,
-      // so we append ?page=...&size=... in the path
-      const data = await bffFetch(
-        `/api/r_dashboard/dashboard?page=${pageToFetch}&size=${pageSize}`
-      );
-
-      const normalized = (Array.isArray(data) ? data : []).map((lot) => {
-        const itemsArr = Array.isArray(lot.items) ? lot.items : [];
-        const total =
-          typeof lot.totalItems === "number" && lot.totalItems > 0
-            ? lot.totalItems
-            : itemsArr.length;
-
-        return {
-          ...lot,
-          items: itemsArr,
-          totalItems: total,
-        };
-      });
-
-      if (pageToFetch === 0) {
-        setLots(normalized);
-      } else {
-        setLots((prev) => [...prev, ...normalized]);
-      }
-
-      // if we got less than pageSize, assume there are no more pages
-      setHasMore(normalized.length === pageSize);
-    } catch (e) {
-      console.error("error fetching lots", e);
-      setErr("Failed to load lots.");
-      if (pageToFetch === 0) {
-        setLots([]);
-      }
-      setHasMore(false);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // initial load
+  // fetch once on mount
   useEffect(() => {
-    fetchPage(0);
+    let ignore = false;
+    (async () => {
+      try {
+        setLoading(true);
+        setErr(null);
+        const data = await bffFetch("/api/r_dashboard/dashboard");
+        if (!ignore) {
+          const normalized = (Array.isArray(data) ? data : []).map((lot) => {
+            const itemsArr = Array.isArray(lot.items) ? lot.items : [];
+            const total =
+              typeof lot.totalItems === "number" && lot.totalItems > 0
+                ? lot.totalItems
+                : itemsArr.length;
+
+            return {
+              ...lot,
+              items: itemsArr,
+              totalItems: total,
+            };
+          });
+
+          setLots(normalized);
+        }
+      } catch (e) {
+        console.error("error fetching lots", e);
+        if (!ignore) {
+          setErr("Failed to load lots.");
+          setLots([]);
+        }
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    })();
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const isDirty =
@@ -240,13 +224,8 @@ export default function ReceiverDashboard() {
   // from ConfirmReserveModal AFTER API success
   const handleConfirmYes = () => {
     setShowConfirm(false);
+    // IMPORTANT: force real reload so dashboard refetches
     window.location.href = "/dashboard";
-  };
-
-  const handleLoadMore = () => {
-    const nextPage = page + 1;
-    setPage(nextPage);
-    fetchPage(nextPage);
   };
 
   return (
@@ -313,7 +292,7 @@ export default function ReceiverDashboard() {
       <div className="mb-2 small text-muted d-flex align-items-center flex-wrap gap-2">
         <span>Showing</span>
         <span className="badge text-bg-light border">
-          {loading && page === 0 ? "…" : filtered.length} lots
+          {loading ? "…" : filtered.length} lots
         </span>
         <span>within</span>
         <span className="badge text-bg-light border">
@@ -362,30 +341,12 @@ export default function ReceiverDashboard() {
           </div>
         )}
 
-        {loading && page === 0 && (
+        {loading && (
           <div className="col-12">
             <div className="text-center text-muted py-5">
               Loading lots…
             </div>
           </div>
-        )}
-      </div>
-
-      {/* Load more */}
-      <div className="text-center my-4">
-        {hasMore ? (
-          <button
-            className="btn btn-outline-secondary"
-            onClick={handleLoadMore}
-            disabled={loading}
-          >
-            {loading && page > 0 ? "Loading…" : "Load more"}
-          </button>
-        ) : (
-          !loading &&
-          lots.length > 0 && (
-            <div className="text-muted small">No more lots to load.</div>
-          )
         )}
       </div>
 

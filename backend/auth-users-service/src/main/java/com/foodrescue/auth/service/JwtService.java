@@ -68,7 +68,6 @@ public class JwtService {
                     .claim("email", user.getEmail())
                     .claim("roles", List.of(user.getCategoryId()))
                     .claim("status", user.getStatus())
-                    .claim("name", user.getName())
                     .build();
 
             return sign(claims);

@@ -188,11 +188,10 @@ public class OrdersAggregationService {
                         .toList();
 
                 UiCourier courier = (courierUser == null)
-                        ? new UiCourier("To be assigned", "To be assigned", "To be assigned")
+                        ? new UiCourier("To be assigned", "To be assigned")
                         : new UiCourier(
                         courierUser.name() != null ? courierUser.name() : "To be assigned",
-                        courierUser.phoneNumber() != null ? courierUser.phoneNumber() : "To be assigned",
-                        courierUser.id() != null ? courierUser.id() : "To be assigned"
+                        courierUser.phoneNumber() != null ? courierUser.phoneNumber() : "To be assigned"
                 );
 
                 System.out.println("[BFF] Built UiOrder for order=" + order.id());

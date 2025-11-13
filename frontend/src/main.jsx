@@ -10,11 +10,6 @@ import "bootstrap/dist/js/bootstrap.bundle.min.js";
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />
-    <Toaster position="top-center" reverseOrder={false} toastOptions={{
-                                                                  // optional styling for all toasts
-                                                                }}
-                                                                containerStyle={{
-                                                                  zIndex: 999999, // make sure it's above modals etc.
-                                                                }}/>
+    <Toaster position="top-center" reverseOrder={false} />
   </StrictMode>,
 )
