@@ -13,5 +13,6 @@ dist/
 .vscode/
 
 # Ignore misc
-.env
+.env.local
+.env.*.local
 README.md
