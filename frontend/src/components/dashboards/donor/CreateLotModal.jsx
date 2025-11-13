@@ -298,6 +298,11 @@ export default function CreateLotModal({ show, onClose, onLotCreated }) {
       return;
     }
 
+    if (items.length === 0) {
+        toast.error("Please add at least one food item before creating the lot.");
+        return;
+      }
+
     setLoading(true);
     const lotData = {
       description,
