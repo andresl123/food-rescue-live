@@ -88,6 +88,7 @@ export default function DonationList({ donations, onAddItem, onEditLot }) {
               maxHeight: "460px", // ~4 cards tall (adjust if your cards are taller/shorter)
               overflowY: "auto",
               paddingRight: "6px",
+              minHeight: "180px",
             }}
         >
         {donations.map((lot) => (
@@ -221,11 +222,25 @@ export default function DonationList({ donations, onAddItem, onEditLot }) {
                 </Dropdown.Toggle>
 
                 <Dropdown.Menu>
-                  <Dropdown.Item
-                    onClick={() => onAddItem(lot.lotId)}
-                  >
-                    Add Item
-                  </Dropdown.Item>
+{/*                   <Dropdown.Item */}
+{/*                     onClick={() => onAddItem(lot.lotId)} */}
+{/*                   > */}
+{/*                     Add Item */}
+{/*                   </Dropdown.Item> */}
+
+                <Dropdown.Item
+                  disabled={
+                    ["pending", "delivered"].includes(lot.status?.toLowerCase())
+                  }
+                  onClick={() => {
+                    if (!["pending", "delivered"].includes(lot.status?.toLowerCase())) {
+                      onAddItem(lot.lotId);
+                    }
+                  }}
+                >
+                  Add Item
+                </Dropdown.Item>
+
                   <Dropdown.Item
                     onClick={() => onEditLot(lot)}
                   >
