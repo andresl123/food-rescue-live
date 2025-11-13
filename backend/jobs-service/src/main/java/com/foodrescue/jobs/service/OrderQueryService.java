@@ -1,7 +1,6 @@
 package com.foodrescue.jobs.service;
 
 import com.foodrescue.jobs.entity.OrderDocument;
-import com.foodrescue.jobs.model.Job;
 import com.foodrescue.jobs.repository.JobRepository;
 import com.foodrescue.jobs.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
