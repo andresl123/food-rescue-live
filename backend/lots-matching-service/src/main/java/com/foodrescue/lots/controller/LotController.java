@@ -116,4 +116,17 @@ public class LotController {
                 });
     }
 
+    // changes
+
+    @PatchMapping("/{lotId}/status/ForCourier")
+    @PreAuthorize("hasAnyRole('ADMIN','COURIER')")
+    public Mono<ResponseEntity<Lot>> updateLotStatusForCourier(
+            @PathVariable String lotId,
+            @RequestParam("status") String status,
+            Mono<Authentication> authenticationMono) {
+
+        return lotService.updateLotStatusForCourier(lotId, status, authenticationMono)
+                .map(ResponseEntity::ok);
+    }
+
 }

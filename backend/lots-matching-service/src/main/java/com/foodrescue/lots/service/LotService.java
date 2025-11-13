@@ -54,6 +54,24 @@ public class LotService {
                 });
     }
 
+    private Mono<Authentication> checkCourierRole(Mono<Authentication> authMono) {
+        return authMono.flatMap(authentication -> {
+            Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
+
+            boolean isCourier = authorities.stream()
+                    .anyMatch(grantedAuthority ->
+                            "COURIER".equals(grantedAuthority.getAuthority()) ||
+                                    "ROLE_COURIER".equals(grantedAuthority.getAuthority())
+                    );
+
+            if (isCourier) {
+                return Mono.just(authentication);
+            } else {
+                return Mono.error(new AccessDeniedException("You must be a COURIER to perform this action."));
+            }
+        });
+    }
+
     public Mono<Lot> createLot(LotCreateRequest request, String donorId) {
         // Default category if none provided
         Category category = Optional.ofNullable(request.getCategory())
@@ -188,5 +206,27 @@ public class LotService {
                         "totalElements", tuple.getT2(),
                         "data", tuple.getT1()
                 ));
+    }
+
+    // changes
+
+    public Mono<Lot> updateLotStatusForCourier(String lotId, String status, Mono<Authentication> authMono) {
+        if (status == null || status.isBlank()) {
+            return Mono.error(new IllegalArgumentException("Status must not be blank."));
+        }
+
+        String normalizedStatus = status.trim().toUpperCase(Locale.ROOT);
+
+        return checkCourierRole(authMono)
+                .flatMap(auth ->
+                        lotRepository.findById(lotId)
+                                .switchIfEmpty(Mono.error(
+                                        new LotNotFoundException("Lot with ID " + lotId + " not found.")
+                                ))
+                                .flatMap(lot -> {
+                                    lot.setStatus(normalizedStatus);
+                                    return lotRepository.save(lot);
+                                })
+                );
     }
 }
