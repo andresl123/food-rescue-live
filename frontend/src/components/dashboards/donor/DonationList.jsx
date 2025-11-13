@@ -7,6 +7,22 @@ export default function DonationList({ donations, onAddItem, onEditLot }) {
   const [addressMap, setAddressMap] = useState({});
   const [openDropdownId, setOpenDropdownId] = useState(null);
 
+    const getEarliestExpiry = (items = []) => {
+      if (!Array.isArray(items) || items.length === 0) return null;
+
+      // extract valid dates
+      const validDates = items
+        .map((i) => new Date(i.expiryDate))
+        .filter((d) => !isNaN(d));
+
+      if (validDates.length === 0) return null;
+
+      // earliest date
+      const earliest = new Date(Math.min(...validDates));
+
+      return earliest.toLocaleDateString();
+    };
+
 
 //   useEffect(() => {
 //     const fetchAddresses = async () => {
@@ -59,6 +75,8 @@ export default function DonationList({ donations, onAddItem, onEditLot }) {
       </div>
     );
   }
+
+
 
   return (
     <>
@@ -152,7 +170,8 @@ export default function DonationList({ donations, onAddItem, onEditLot }) {
                   </div>
                   <div>
                     <i className="bi bi-calendar3 me-2"></i>
-                    {new Date(lot.created_at || lot.createdAt).toLocaleDateString()}
+{/*                     {new Date(lot.created_at || lot.createdAt).toLocaleDateString()} */}
+                        {getEarliestExpiry(lot.items) || "N/A"}
                   </div>
                   {lot.addressId && addressMap[lot.addressId] && (
                     <div>

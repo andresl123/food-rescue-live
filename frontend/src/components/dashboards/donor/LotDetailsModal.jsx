@@ -9,6 +9,23 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
   const [address, setAddress] = useState(null);
   const [pickupOtp, setPickupOtp] = useState(null);
 
+
+  const getEarliestExpiry = (items = []) => {
+    if (!Array.isArray(items) || items.length === 0) return null;
+
+    // extract valid dates
+    const validDates = items
+      .map((i) => new Date(i.expiryDate))
+      .filter((d) => !isNaN(d));
+
+    if (validDates.length === 0) return null;
+
+    // earliest date
+    const earliest = new Date(Math.min(...validDates));
+
+    return earliest.toLocaleDateString();
+  };
+
   // ✅ Sync modal when selected lot changes
   useEffect(() => {
     setCurrentLot(lot);
@@ -161,7 +178,8 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
 
                   <p className="mb-0 text-muted small">
                     <i className="bi bi-calendar-event me-1"></i>
-                    Expires: {currentLot.expiry || "3d left"}
+{/*                     Expires: {currentLot.expiry || "3d left"} */}
+                        Expires: {getEarliestExpiry(currentLot.items) || "N/A"}
                   </p>
                   {/* ✅ tags CSV under expiry */}
                   {tagsCsv && (
