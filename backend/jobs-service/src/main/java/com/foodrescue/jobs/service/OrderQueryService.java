@@ -1,7 +1,7 @@
 package com.foodrescue.jobs.service;
 
-import com.foodrescue.jobs.entity.JobDocument;
 import com.foodrescue.jobs.entity.OrderDocument;
+import com.foodrescue.jobs.model.Job;
 import com.foodrescue.jobs.repository.JobRepository;
 import com.foodrescue.jobs.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
@@ -30,11 +30,8 @@ public class OrderQueryService {
         return ordersForReceiver
                 .flatMap(order ->
                         jobRepository.findByOrderId(order.getId())
-                                // ✅ don't pass null here
                                 .switchIfEmpty(Mono.empty())
-                                // map job (or empty) to row
                                 .map(job -> toOrderRow(order, job))
-                                // if the job was empty, we still need to emit a row (with "To be assigned")
                                 .defaultIfEmpty(toOrderRow(order, null))
                 )
                 .collectList()
@@ -51,17 +48,17 @@ public class OrderQueryService {
                 });
     }
 
-    private OrderRow toOrderRow(OrderDocument order, JobDocument job) {
+    private OrderRow toOrderRow(OrderDocument order, Job job) {
         String courierId = "To be assigned";
         if (job != null && job.getStatus() != null &&
-                job.getStatus() != JobDocument.JobStatus.UNASSIGNED) {
+                !"UNASSIGNED".equalsIgnoreCase(job.getStatus())) {
             courierId = job.getCourierId();
         }
 
         return new OrderRow(
                 order.getId(),
                 order.getOrderDate() != null ? DATE_FMT.format(order.getOrderDate()) : null,
-                order.getStatus() != null ? order.getStatus().name() : null,
+                order.getStatus(),
                 order.getLotId(),
                 order.getPickupAddressId(),
                 order.getReceiverId(),

@@ -1,9 +1,11 @@
 package com.foodrescue.evidence.web.response;
 
+import java.time.Instant;
+
 public record VerificationResponse(
         boolean verified,
+        String verificationType,
         String message,
-        String receiverId,
-        String recipientName,
-        String deliveryAddress
+        Instant verifiedAt,
+        int attempts
 ) {}

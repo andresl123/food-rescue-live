@@ -22,12 +22,9 @@ public class OrderDocument {
     private String deliveryAddressId;
     private String pickupAddressId;
     private Instant orderDate;
-    private OrderStatus status;
-
-    public enum OrderStatus {
-        CREATED,
-        IN_PROGRESS,
-        COMPLETED,
-        CANCELLED
-    }
+    /**
+     * Stored as a simple string to decouple from enums when other services evolve.
+     * Common values: CREATED, IN_PROGRESS, COMPLETED, CANCELLED.
+     */
+    private String status;
 }

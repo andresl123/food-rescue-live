@@ -6,6 +6,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public interface PODRepository extends ReactiveMongoRepository<POD, String> {
+
     Flux<POD> findByJobId(String jobId);
-    Mono<POD> findByJobIdAndOtp(String jobId, String otp);
+
+    Mono<POD> findFirstByJobIdOrderByCreatedAtDesc(String jobId);
 }

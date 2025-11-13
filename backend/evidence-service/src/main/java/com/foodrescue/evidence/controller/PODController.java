@@ -23,36 +23,43 @@ public class PODController {
     
     @PostMapping
     public Mono<ResponseEntity<ApiResponse<PODResponse>>> create(@Valid @RequestBody PODCreateRequest request) {
-        return podService.create(request)
-                .map(ResponseEntity::ok);
+        return podService.create(request).map(ResponseEntity::ok);
     }
-    
-    @GetMapping("/{id}")
-    public Mono<ResponseEntity<ApiResponse<PODResponse>>> getById(@PathVariable String id) {
-        return podService.getById(id)
-                .map(ResponseEntity::ok);
+
+    @PostMapping("/generate-otp")
+    public Mono<ResponseEntity<ApiResponse<PODResponse>>> generateOtps(@RequestParam String jobId) {
+        return podService.generateOtps(jobId).map(ResponseEntity::ok);
     }
-    
+
+    @GetMapping("/latest/{jobId}")
+    public Mono<ResponseEntity<ApiResponse<PODResponse>>> latestForJob(@PathVariable String jobId) {
+        return podService.getLatestForJob(jobId).map(ResponseEntity::ok);
+    }
+
     @GetMapping("/job/{jobId}")
-    public Flux<PODResponse> getByJobId(@PathVariable String jobId) {
+    public Flux<PODResponse> historyForJob(@PathVariable String jobId) {
         return podService.getByJobId(jobId);
     }
-    
+
+    @GetMapping("/verify/{jobId}/{role}")
+    public Mono<ResponseEntity<ApiResponse<VerificationResponse>>> verifyViaQuery(@PathVariable String jobId,
+                                                                                  @PathVariable String role,
+                                                                                  @RequestParam("code") String code) {
+        return podService.verify(jobId, role, code).map(ResponseEntity::ok);
+    }
+
     @PostMapping("/verify")
     public Mono<ResponseEntity<ApiResponse<VerificationResponse>>> verify(@Valid @RequestBody VerificationRequest request) {
-        return podService.verify(request)
-                .map(ResponseEntity::ok);
+        return podService.verify(request).map(ResponseEntity::ok);
     }
-    
-    
+
     @DeleteMapping("/{id}")
     public Mono<ResponseEntity<ApiResponse<Void>>> delete(@PathVariable String id) {
-        return podService.delete(id)
-                .map(ResponseEntity::ok);
+        return podService.delete(id).map(ResponseEntity::ok);
     }
-    
-    @GetMapping("/test-collections")
-    public Mono<ResponseEntity<String>> testCollections() {
-        return Mono.just(ResponseEntity.ok("Collections will be created when you save data. Try creating an order, job, and POD first."));
+
+    @DeleteMapping("/job/{jobId}")
+    public Mono<ResponseEntity<ApiResponse<Void>>> deleteForJob(@PathVariable String jobId) {
+        return podService.deleteByJobId(jobId).map(ResponseEntity::ok);
     }
 }
