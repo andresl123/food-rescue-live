@@ -7,27 +7,47 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
   const [showFoodItemModal, setShowFoodItemModal] = useState(false);
   const [currentLot, setCurrentLot] = useState(lot); // keep local copy of lot
   const [address, setAddress] = useState(null);
+  const [pickupOtp, setPickupOtp] = useState(null);
 
+
+  const getEarliestExpiry = (items = []) => {
+    if (!Array.isArray(items) || items.length === 0) return null;
+
+    // extract valid dates
+    const validDates = items
+      .map((i) => new Date(i.expiryDate))
+      .filter((d) => !isNaN(d));
+
+    if (validDates.length === 0) return null;
+
+    // earliest date
+    const earliest = new Date(Math.min(...validDates));
+
+    return earliest.toLocaleDateString();
+  };
 
   // ✅ Sync modal when selected lot changes
   useEffect(() => {
     setCurrentLot(lot);
   }, [lot]);
 
-useEffect(() => {
-  const fetchAddress = async () => {
-    if (!currentLot?.addressId) return;
-    try {
-      const data = await getAddressById(currentLot.addressId);
-      if (data) setAddress(data);
-    } catch (err) {
-      console.error("Error fetching lot address:", err);
-    }
-  };
+    useEffect(() => {
+      const fetchAddress = async () => {
+        if (!currentLot?.addressId) return;
+        try {
+          const data = await getAddressById(currentLot.addressId);
+          if (data) setAddress(data);
+        } catch (err) {
+          console.error("Error fetching lot address:", err);
+        }
+      };
 
-  fetchAddress();
-}, [currentLot]);
+      fetchAddress();
+    }, [currentLot]);
 
+    useEffect(() => {
+      setPickupOtp(currentLot.pickupOtp || 5847);
+    }, [currentLot]);
 
   // ✅ Refresh food items when a new one is added
   const handleItemAdded = async () => {
@@ -158,7 +178,8 @@ useEffect(() => {
 
                   <p className="mb-0 text-muted small">
                     <i className="bi bi-calendar-event me-1"></i>
-                    Expires: {currentLot.expiry || "3d left"}
+{/*                     Expires: {currentLot.expiry || "3d left"} */}
+                        Expires: {getEarliestExpiry(currentLot.items) || "N/A"}
                   </p>
                   {/* ✅ tags CSV under expiry */}
                   {tagsCsv && (
@@ -170,6 +191,34 @@ useEffect(() => {
                 </div>
               </div>
             </div>
+
+            {/* ---------- PICKUP OTP BLOCK ---------- */}
+            <div className="px-4 mt-4">
+              <div
+                className="d-flex align-items-center justify-content-start p-3 rounded-3"
+                style={{
+                  backgroundColor: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                }}
+              >
+                <span className="text-dark fw-semibold me-3" style={{ fontSize: "1rem" }}>
+                  Pickup OTP:
+                </span>
+
+                <span
+                  className="px-4 py-2 rounded-3 fw-bold"
+                  style={{
+                    backgroundColor: "#ffffff",
+                    border: "1px solid #e5e7eb",
+                    fontSize: "1.25rem",
+                    letterSpacing: "2px",
+                  }}
+                >
+                  {pickupOtp ?? "----"}
+                </span>
+              </div>
+            </div>
+
 
             {/* ---------- FOOD ITEMS ---------- */}
             <hr className="my-4" />
@@ -271,7 +320,8 @@ useEffect(() => {
               <div className="d-flex align-items-center w-100 justify-content-between">
                 <div className="text-muted small d-flex align-items-center">
                   <i className="bi bi-info-circle me-2"></i>
-                  Click <b> + Add Item </b>  to add food to this lot.
+{/*                   Click <b> + Add Item </b>  to add food to this lot. */}
+                Click <b>&nbsp;+ Add Item&nbsp;</b> to add food to this lot.
                 </div>
                 <button
                   className="btn btn-outline-dark btn-sm px-3 py-1"

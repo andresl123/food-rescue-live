@@ -1,40 +1,63 @@
 import React, { useState, useEffect } from "react";
 import { Dropdown } from "react-bootstrap";
-import LotDetailsModal from "./LotDetailsModal"; // ✅ import the modal
+import LotDetailsModal from "./LotDetailsModal";
 
 export default function DonationList({ donations, onAddItem, onEditLot }) {
   const [selectedLot, setSelectedLot] = useState(null);
   const [addressMap, setAddressMap] = useState({});
+  const [openDropdownId, setOpenDropdownId] = useState(null);
 
-  useEffect(() => {
-    const fetchAddresses = async () => {
-      const token = localStorage.getItem("accessToken");
-      if (!token || !donations?.length) return;
+    const getEarliestExpiry = (items = []) => {
+      if (!Array.isArray(items) || items.length === 0) return null;
 
-      const newMap = {};
-      await Promise.all(
-        donations.map(async (lot) => {
-          if (lot.addressId && !addressMap[lot.addressId]) {
-            try {
-              const res = await fetch(`http://localhost:8080/api/v1/addresses/${lot.addressId}`, {
-                headers: { Authorization: `Bearer ${token}` },
-              });
-              const addrData = await res.json();
-              if (addrData?.data) newMap[lot.addressId] = addrData.data;
-            } catch (err) {
-              console.error("Error fetching address for lot:", lot.lotId, err);
-            }
-          }
-        })
-      );
-      setAddressMap((prev) => ({ ...prev, ...newMap }));
+      // extract valid dates
+      const validDates = items
+        .map((i) => new Date(i.expiryDate))
+        .filter((d) => !isNaN(d));
+
+      if (validDates.length === 0) return null;
+
+      // earliest date
+      const earliest = new Date(Math.min(...validDates));
+
+      return earliest.toLocaleDateString();
     };
 
-    fetchAddresses();
-  }, [donations]);
+
+//   useEffect(() => {
+//     const fetchAddresses = async () => {
+//       const token = localStorage.getItem("accessToken");
+//       if (!token || !donations?.length) return;
+//
+//       const newMap = {};
+//       await Promise.all(
+//         donations.map(async (lot) => {
+//           if (lot.addressId && !addressMap[lot.addressId]) {
+//             try {
+//               const res = await fetch(`http://localhost:8080/api/v1/addresses/${lot.addressId}`, {
+//                 headers: { Authorization: `Bearer ${token}` },
+//               });
+//               const addrData = await res.json();
+//               if (addrData?.data) newMap[lot.addressId] = addrData.data;
+//             } catch (err) {
+//               console.error("Error fetching address for lot:", lot.lotId, err);
+//             }
+//           }
+//         })
+//       );
+//       setAddressMap((prev) => ({ ...prev, ...newMap }));
+//     };
+//
+//     fetchAddresses();
+//   }, [donations]);
 
 
   const handleViewDetails = (lot) => setSelectedLot(lot);
+
+  const handleToggleDropdown = (lotId) => {
+    setOpenDropdownId((prev) => (prev === lotId ? null : lotId)); // open one, close others
+  };
+
 
   if (!donations || donations.length === 0) {
     return (
@@ -47,11 +70,13 @@ export default function DonationList({ donations, onAddItem, onEditLot }) {
         }}
       >
         <i className="bi bi-box-seam mb-2" style={{ fontSize: "2rem" }}></i>
-        <p className="mb-0 fw-semibold">No lots created yet</p>
+        <p className="mb-0 fw-semibold">No lots</p>
         <small>Create your first donation lot to get started</small>
       </div>
     );
   }
+
+
 
   return (
     <>
@@ -81,6 +106,7 @@ export default function DonationList({ donations, onAddItem, onEditLot }) {
               maxHeight: "460px", // ~4 cards tall (adjust if your cards are taller/shorter)
               overflowY: "auto",
               paddingRight: "6px",
+              minHeight: "180px",
             }}
         >
         {donations.map((lot) => (
@@ -144,7 +170,8 @@ export default function DonationList({ donations, onAddItem, onEditLot }) {
                   </div>
                   <div>
                     <i className="bi bi-calendar3 me-2"></i>
-                    {new Date(lot.created_at || lot.createdAt).toLocaleDateString()}
+{/*                     {new Date(lot.created_at || lot.createdAt).toLocaleDateString()} */}
+                        {getEarliestExpiry(lot.items) || "N/A"}
                   </div>
                   {lot.addressId && addressMap[lot.addressId] && (
                     <div>
@@ -201,7 +228,10 @@ export default function DonationList({ donations, onAddItem, onEditLot }) {
             >
               <small className="text-muted">Total: {lot.totalItems || 0}</small>
 
-              <Dropdown align="end">
+              <Dropdown align="end"
+                        show={openDropdownId === lot.lotId}
+                        onToggle={() => handleToggleDropdown(lot.lotId)}
+              >
                 <Dropdown.Toggle
                   as="button"
                   className="btn btn-light border-0 rounded-circle p-2 dropdown-toggle-no-caret"
@@ -211,11 +241,25 @@ export default function DonationList({ donations, onAddItem, onEditLot }) {
                 </Dropdown.Toggle>
 
                 <Dropdown.Menu>
-                  <Dropdown.Item
-                    onClick={() => onAddItem(lot.lotId)}
-                  >
-                    Add Item
-                  </Dropdown.Item>
+{/*                   <Dropdown.Item */}
+{/*                     onClick={() => onAddItem(lot.lotId)} */}
+{/*                   > */}
+{/*                     Add Item */}
+{/*                   </Dropdown.Item> */}
+
+                <Dropdown.Item
+                  disabled={
+                    ["pending", "delivered"].includes(lot.status?.toLowerCase())
+                  }
+                  onClick={() => {
+                    if (!["pending", "delivered"].includes(lot.status?.toLowerCase())) {
+                      onAddItem(lot.lotId);
+                    }
+                  }}
+                >
+                  Add Item
+                </Dropdown.Item>
+
                   <Dropdown.Item
                     onClick={() => onEditLot(lot)}
                   >
