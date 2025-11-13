@@ -14,6 +14,7 @@ import {
   getOrderDetails,
   getAddress,
   getUserName,
+  getCourierStats,
 } from "../../../services/courierService.jsx";
 import { getUserProfile } from "../../../services/loginServices";
 
@@ -33,14 +34,14 @@ export default function CourierDashboard({ onShowPOD }) {
     email: "",
     role: null,
   });
-
+  
   const [confirmationDialog, setConfirmationDialog] = useState({
     open: false,
     type: "pickup",
     jobId: "",
     name: "",
   });
-
+  
   const [cancelDialog, setCancelDialog] = useState({
     open: false,
     jobId: "",
@@ -48,11 +49,12 @@ export default function CourierDashboard({ onShowPOD }) {
   });
 
   const [stats, setStats] = useState({
-    mealsDelivered: 342,
-    peopleHelped: 89,
-    completed: 18,
-    rating: 4.9,
+    mealsDelivered: 0,
+    peopleHelped: 0,
+    totalRescues: 0,
+    impactScore: 0,
   });
+  const [statsLoading, setStatsLoading] = useState(false);
 
   const addressCacheRef = useRef({});
   const orderCacheRef = useRef({});
@@ -64,6 +66,35 @@ export default function CourierDashboard({ onShowPOD }) {
     }
     const { street, city, state, postalCode, country } = address;
     return [street, city, state, postalCode, country].filter(Boolean).join(", ");
+  };
+
+  const formatNumber = (value) => {
+    const number = Number(value);
+    if (!Number.isFinite(number)) {
+      return "0";
+    }
+    return number.toLocaleString();
+  };
+
+  const formatImpactScore = (value) => {
+    const number = Number(value);
+    if (!Number.isFinite(number)) {
+      return "0.0";
+    }
+    return number.toFixed(1);
+  };
+
+  const impactMessage = () => {
+    if (!Number.isFinite(stats.impactScore) || stats.impactScore <= 0) {
+      return "Complete a delivery to see your score.";
+    }
+    if (stats.impactScore >= 4.5) {
+      return "Outstanding volunteer!";
+    }
+    if (stats.impactScore >= 3.8) {
+      return "Great progress!";
+    }
+    return "Momentum is building!";
   };
 
   const loadOrderDetails = async (orderId) => {
@@ -117,12 +148,36 @@ export default function CourierDashboard({ onShowPOD }) {
     }
   };
 
+  const refreshCourierStats = async (courierIdOverride) => {
+    const courierId = courierIdOverride || getCourierId();
+    if (!courierId) {
+      return;
+    }
+    setStatsLoading(true);
+    try {
+      const data = await getCourierStats(courierId);
+      setStats({
+        mealsDelivered: data?.mealsDelivered ?? 0,
+        peopleHelped: data?.peopleHelped ?? 0,
+        totalRescues: data?.totalRescues ?? 0,
+        impactScore: Number.isFinite(data?.impactScore)
+          ? Number(data.impactScore)
+          : 0,
+      });
+    } catch (error) {
+      console.error("Failed to fetch courier stats:", error);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
   const fetchAndSetCourierFullName = async (courierId) => {
     try {
       const courierName = await loadUserNameById(courierId);
       if (courierName) {
         setUser((prev) => ({ ...prev, name: courierName }));
       }
+      await refreshCourierStats(courierId);
     } catch (error) {
       console.error("Failed to fetch courier full name:", error);
     }
@@ -186,7 +241,7 @@ export default function CourierDashboard({ onShowPOD }) {
             (profile.email ? profile.email.split("@")[0] : null) ||
             "Courier";
 
-          setUser({
+        setUser({
             name: baseName,
             id: profile.userId,
             email: profile.email || "",
@@ -215,6 +270,13 @@ export default function CourierDashboard({ onShowPOD }) {
 
     initUserFromMe();
   }, []);
+
+  useEffect(() => {
+    if (user.id) {
+      refreshCourierStats(user.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user.id]);
 
   // Get courier ID from state or localStorage
   const getCourierId = () => {
@@ -326,7 +388,7 @@ export default function CourierDashboard({ onShowPOD }) {
     // my-jobs will load once user.id is ready
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
+  
   // Once courier id is known, fetch my jobs
   useEffect(() => {
     if (user.id) {
@@ -380,8 +442,8 @@ export default function CourierDashboard({ onShowPOD }) {
         );
       }
 
-      const acceptedJob = {
-        ...job,
+      const acceptedJob = { 
+        ...job, 
         courierId: courierId,
         assigned_at: new Date().toISOString(),
         status: "ASSIGNED",
@@ -392,11 +454,11 @@ export default function CourierDashboard({ onShowPOD }) {
       setAvailableJobs((prev) => prev.filter((j) => j.id !== jobId));
 
       await fetchAvailableJobs();
-
+      
       setTimeout(() => {
         setActiveTab("my-jobs");
       }, 300);
-
+      
       toast.success("Job accepted! OTPs generated. Get ready for pickup.", {
         duration: 4000,
       });
@@ -468,17 +530,18 @@ export default function CourierDashboard({ onShowPOD }) {
 
       setMyJobs([]);
       setCancelDialog({ open: false, jobId: "", jobName: "" });
-
+      
       await fetchAvailableJobs();
-
+      await refreshCourierStats();
+      
       setTimeout(() => {
         setActiveTab("available");
       }, 500);
-
+      
       toast.success(
         "Job cancelled successfully. It's now available for other couriers.",
         {
-          duration: 4000,
+        duration: 4000,
         }
       );
     } catch (error) {
@@ -492,7 +555,7 @@ export default function CourierDashboard({ onShowPOD }) {
   const handleConfirmation = (method, code) => {
     const { jobId, type } = confirmationDialog;
     const job = myJobs.find((j) => j.id === jobId);
-
+    
     if (job) {
       if (type === "pickup") {
         const updatedJob = { ...job, status: "delivery_pending" };
@@ -503,17 +566,12 @@ export default function CourierDashboard({ onShowPOD }) {
       } else {
         const completedJob = { ...job, completed_at: new Date().toISOString() };
         setMyJobs([]);
-        setStats({
-          ...stats,
-          mealsDelivered: stats.mealsDelivered + job.servings,
-          peopleHelped: stats.peopleHelped + Math.floor(job.servings / 3),
-          completed: stats.completed + 1,
-        });
-
+        refreshCourierStats();
+        
         setTimeout(() => {
           setActiveTab("available");
         }, 1500);
-
+        
         toast.success("Delivery completed! 🎉", {
           duration: 4000,
         });
@@ -578,7 +636,7 @@ export default function CourierDashboard({ onShowPOD }) {
       job.status === "OUT_FOR_DELIVERY" ||
       job.status === "DELIVERED";
     const isDeliveryCompleted = job.status === "DELIVERED";
-
+    
     const pickupJob = {
       ...job,
       jobType: "pickup",
@@ -605,7 +663,7 @@ export default function CourierDashboard({ onShowPOD }) {
   const getJobStatusBadge = (status, jobType) => {
     const isPending = status === "pending";
     const isCompleted = status === "completed" || status === "verified";
-
+    
     if (jobType === "pickup") {
       if (isPending)
         return (
@@ -703,11 +761,17 @@ export default function CourierDashboard({ onShowPOD }) {
                     className="fw-bold"
                     style={{ fontSize: "1.75rem", color: "#111827" }}
                   >
-                    {stats.mealsDelivered}
+                    {formatNumber(stats.mealsDelivered)}
                   </div>
                 </div>
               </div>
-              <div className="text-success small fw-semibold">+45 this week</div>
+              <div className="text-success small fw-semibold">
+                {statsLoading
+                  ? "Updating…"
+                  : stats.totalRescues > 0
+                  ? `${formatNumber(stats.totalRescues)} deliveries completed`
+                  : "Complete your first delivery to unlock stats."}
+              </div>
             </Card.Body>
           </Card>
         </Col>
@@ -740,11 +804,17 @@ export default function CourierDashboard({ onShowPOD }) {
                     className="fw-bold"
                     style={{ fontSize: "1.75rem", color: "#111827" }}
                   >
-                    {stats.peopleHelped}
+                    {formatNumber(stats.peopleHelped)}
                   </div>
                 </div>
               </div>
-              <div className="text-primary small fw-semibold">+12 this week</div>
+              <div className="text-primary small fw-semibold">
+                {statsLoading
+                  ? "Updating…"
+                  : stats.peopleHelped > 0
+                  ? `Supporting about ${formatNumber(stats.peopleHelped)} people`
+                  : "Help is on the way!"}
+              </div>
             </Card.Body>
           </Card>
         </Col>
@@ -777,7 +847,7 @@ export default function CourierDashboard({ onShowPOD }) {
                     className="fw-bold"
                     style={{ fontSize: "1.75rem", color: "#111827" }}
                   >
-                    {stats.completed}
+                    {formatNumber(stats.totalRescues)}
                   </div>
                 </div>
               </div>
@@ -785,7 +855,11 @@ export default function CourierDashboard({ onShowPOD }) {
                 className="small fw-semibold"
                 style={{ color: "#9333ea" }}
               >
-                Keep up the great work!
+                {statsLoading
+                  ? "Updating…"
+                  : stats.totalRescues > 0
+                  ? "Keep up the great work!"
+                  : "Accept a job to get started!"}
               </div>
             </Card.Body>
           </Card>
@@ -819,12 +893,12 @@ export default function CourierDashboard({ onShowPOD }) {
                     className="fw-bold"
                     style={{ fontSize: "1.75rem", color: "#111827" }}
                   >
-                    {stats.rating}
+                    {formatImpactScore(stats.impactScore)}
                   </div>
                 </div>
               </div>
               <div className="text-warning small fw-semibold">
-                Outstanding volunteer!
+                {statsLoading ? "Updating…" : impactMessage()}
               </div>
             </Card.Body>
           </Card>
@@ -1107,7 +1181,7 @@ export default function CourierDashboard({ onShowPOD }) {
                             <div className="ms-2">{getUrgencyBadge(job.urgency)}</div>
                           </div>
                         </div>
-
+                        
                         <div
                           className="mb-4"
                           style={{
@@ -1896,3 +1970,4 @@ export default function CourierDashboard({ onShowPOD }) {
     </div>
   );
 }
+
