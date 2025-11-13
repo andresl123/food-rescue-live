@@ -413,29 +413,54 @@ if (error) {
           </div>
 
           {/* Additional Addresses */}
-          <div className="mb-2 text-secondary fw-semibold">Additional Addresses</div>
+{/*           <div className="mb-2 text-secondary fw-semibold">Additional Addresses</div> */}
 {/*           {user.addresses.map((addr, idx) => ( */}
-              {user?.addresses?.length > 0 && user.addresses.map((addr, idx) => (
-            <div className="addr-card p-3 p-md-4 mb-3" key={addr.id || idx}>
-              <div className="d-flex align-items-start justify-content-between">
-                <div className="d-flex align-items-start gap-3">
-                  <i className="bi bi-geo-alt text-secondary fs-5 mt-1" />
-                  <div>
-                    <div className="fw-semibold">Address {idx + 1}</div>
-                    <div className="mt-2 text-body">{formatAddress(addr)}</div>
-                  </div>
-                </div>
-                <button
-                  className="btn btn-outline-secondary btn-sm edit-btn"
-                  onClick={() => openAdditionalAddressModal(idx)}
-                  title="Edit address"
-                >
-                  <i className="bi bi-pencil" />
-                </button>
-              </div>
-            </div>
-          ))}
+{/*               {user?.addresses?.length > 0 && user.addresses.map((addr, idx) => ( */}
+{/*             <div className="addr-card p-3 p-md-4 mb-3" key={addr.id || idx}> */}
+{/*               <div className="d-flex align-items-start justify-content-between"> */}
+{/*                 <div className="d-flex align-items-start gap-3"> */}
+{/*                   <i className="bi bi-geo-alt text-secondary fs-5 mt-1" /> */}
+{/*                   <div> */}
+{/*                     <div className="fw-semibold">Address {idx + 1}</div> */}
+{/*                     <div className="mt-2 text-body">{formatAddress(addr)}</div> */}
+{/*                   </div> */}
+{/*                 </div> */}
+{/*                 <button */}
+{/*                   className="btn btn-outline-secondary btn-sm edit-btn" */}
+{/*                   onClick={() => openAdditionalAddressModal(idx)} */}
+{/*                   title="Edit address" */}
+{/*                 > */}
+{/*                   <i className="bi bi-pencil" /> */}
+{/*                 </button> */}
+{/*               </div> */}
+{/*             </div> */}
+{/*           ))} */}
 
+            {user?.addresses?.length > 0 && (
+              <>
+                <div className="mb-2 text-secondary fw-semibold">Additional Addresses</div>
+                {user.addresses.map((addr, idx) => (
+                  <div className="addr-card p-3 p-md-4 mb-3" key={addr.id || idx}>
+                    <div className="d-flex align-items-start justify-content-between">
+                      <div className="d-flex align-items-start gap-3">
+                        <i className="bi bi-geo-alt text-secondary fs-5 mt-1" />
+                        <div>
+                          <div className="fw-semibold">Address {idx + 1}</div>
+                          <div className="mt-2 text-body">{formatAddress(addr)}</div>
+                        </div>
+                      </div>
+                      <button
+                        className="btn btn-outline-secondary btn-sm edit-btn"
+                        onClick={() => openAdditionalAddressModal(idx)}
+                        title="Edit address"
+                      >
+                        <i className="bi bi-pencil" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
           <div className="my-4 divider" />
 
           {/* Account Details */}

@@ -208,7 +208,16 @@ export default function DonorDashboard() {
         {/* Right: Create button */}
         <button
           className="btn fw-semibold"
-          onClick={() => setShowModal(true)}
+//           onClick={() => setShowModal(true)}
+        onClick={() => {
+          const hasEmptyLot = lots.some(lot => !lot.items || lot.items.length === 0);
+          if (hasEmptyLot) {
+            alert("You already have a lot without food items. Please add at least one item before creating a new lot.");
+            return;
+          }
+          setShowModal(true);
+        }}
+
           style={{
             backgroundColor: "#111827",
             color: "white",

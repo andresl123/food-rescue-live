@@ -11,6 +11,13 @@ export default function EditLotModal({ show, lot, onClose, onLotUpdated }) {
     tags: [],
   });
 
+    const [imageUrl, setImageUrl] = useState("");
+    const [uploading, setUploading] = useState(false);
+    const isStatusLocked =
+      ["PENDING", "EXPIRING_SOON", "DELIVERED"].includes(
+        (lot?.status || "").toUpperCase()
+      );
+
   // same options as in create modal
   const CATEGORY_OPTIONS = [
     { value: "produce", label: "Produce" },
@@ -43,16 +50,28 @@ export default function EditLotModal({ show, lot, onClose, onLotUpdated }) {
     return lower;
   };
 
-  useEffect(() => {
-    if (lot) {
-      setFormData({
-        description: lot.description || "",
-        status: lot.status || "OPEN",
-        category: toUiValue(lot.category) || "other",
-        tags: Array.isArray(lot.tags) ? lot.tags.map((t) => toUiValue(t)) : [],
-      });
-    }
-  }, [lot]);
+//   useEffect(() => {
+//     if (lot) {
+//       setFormData({
+//         description: lot.description || "",
+//         status: lot.status || "OPEN",
+//         category: toUiValue(lot.category) || "other",
+//         tags: Array.isArray(lot.tags) ? lot.tags.map((t) => toUiValue(t)) : [],
+//       });
+//     }
+//   }, [lot]);
+
+    useEffect(() => {
+      if (lot) {
+        setFormData({
+          description: lot.description || "",
+          status: lot.status || "OPEN",
+          category: toUiValue(lot.category) || "other",
+          tags: Array.isArray(lot.tags) ? lot.tags.map((t) => toUiValue(t)) : [],
+        });
+        setImageUrl(lot.imageUrl || ""); // ✅ prefill if already has image
+      }
+    }, [lot]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -77,6 +96,35 @@ export default function EditLotModal({ show, lot, onClose, onLotUpdated }) {
     });
   };
 
+const handleImageUpload = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  setUploading(true);
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", "foodrescue_lot_uploads");
+
+  try {
+    const res = await fetch("https://api.cloudinary.com/v1_1/da8bvrcjg/image/upload", {
+      method: "POST",
+      body: formData,
+    });
+    const data = await res.json();
+    if (data.secure_url) {
+      setImageUrl(data.secure_url);
+      toast.success("Image uploaded successfully!");
+    } else {
+      toast.error("Image upload failed");
+    }
+  } catch (err) {
+    toast.error("Failed to upload image");
+  } finally {
+    setUploading(false);
+  }
+};
+
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -87,15 +135,23 @@ export default function EditLotModal({ show, lot, onClose, onLotUpdated }) {
 
     try {
       // send only what your backend accepts — we now include category + tags
-      const payload = {
-        description: formData.description,
-        status: formData.status,
-        category: formData.category || "other",
-        tags: formData.tags || [],
-      };
+//       const payload = {
+//         description: formData.description,
+//         status: formData.status,
+//         category: formData.category || "other",
+//         tags: formData.tags || [],
+//       };
+
+        const payload = {
+          description: formData.description,
+          status: formData.status,
+          category: formData.category || "other",
+          tags: formData.tags || [],
+          imageUrl: imageUrl || lot.imageUrl || null,
+        };
 
       const res = await updateLot(lot.lotId, payload);
-      if (res.success) {
+      if (res && (res.success || res.lotId)) {
         toast.success("Lot updated successfully!");
         onLotUpdated();
         onClose();
@@ -173,26 +229,84 @@ export default function EditLotModal({ show, lot, onClose, onLotUpdated }) {
               </div>
 
               {/* Status Dropdown */}
-              <div className="mb-4">
-                <label
-                  className="form-label fw-semibold text-secondary"
-                  style={{ fontSize: "0.9rem" }}
-                >
-                  Status
-                </label>
-                <select
-                  className="form-select shadow-sm"
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  style={{
-                    borderRadius: "10px",
-                    border: "1px solid #d1d5db",
-                    fontSize: "0.95rem",
-                    padding: "10px 12px",
-                  }}
-                >
-                  {Object.values(Status).map((status) => (
+{/*               <div className="mb-4"> */}
+{/*                 <label */}
+{/*                   className="form-label fw-semibold text-secondary" */}
+{/*                   style={{ fontSize: "0.9rem" }} */}
+{/*                 > */}
+{/*                   Status */}
+{/*                 </label> */}
+{/*                 <select */}
+{/*                   className="form-select shadow-sm" */}
+{/*                   name="status" */}
+{/*                   value={formData.status} */}
+{/*                   onChange={handleChange} */}
+{/*                   style={{ */}
+{/*                     borderRadius: "10px", */}
+{/*                     border: "1px solid #d1d5db", */}
+{/*                     fontSize: "0.95rem", */}
+{/*                     padding: "10px 12px", */}
+{/*                   }} */}
+{/*                 > */}
+{/*                   {Object.values(Status).map((status) => ( */}
+{/*                     <option key={status} value={status}> */}
+{/*                       {status.charAt(0) + */}
+{/*                         status */}
+{/*                           .slice(1) */}
+{/*                           .toLowerCase() */}
+{/*                           .replace("_", " ")} */}
+{/*                     </option> */}
+{/*                   ))} */}
+
+{/*                 {Object.values(Status) */}
+{/*                   // ✅ Filter out system-controlled statuses */}
+{/*                   .filter( */}
+{/*                     (status) => */}
+{/*                       !["PENDING", "EXPIRING_SOON", "DELIVERED"].includes(status.toUpperCase()) */}
+{/*                   ) */}
+{/*                   .map((status) => ( */}
+{/*                     <option key={status} value={status}> */}
+{/*                       {status.charAt(0) + */}
+{/*                         status */}
+{/*                           .slice(1) */}
+{/*                           .toLowerCase() */}
+{/*                           .replace("_", " ")} */}
+{/*                     </option> */}
+{/*                   ))} */}
+{/*                 </select> */}
+{/*               </div> */}
+
+            <div className="mb-4">
+              <label
+                className="form-label fw-semibold text-secondary"
+                style={{ fontSize: "0.9rem" }}
+              >
+                Status {isStatusLocked && <small className="text-muted">(locked)</small>}
+              </label>
+              <select
+                className="form-select shadow-sm"
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+                disabled={isStatusLocked}
+                style={{
+                  borderRadius: "10px",
+                  border: "1px solid #d1d5db",
+                  fontSize: "0.95rem",
+                  padding: "10px 12px",
+                  backgroundColor: isStatusLocked ? "#f3f4f6" : "white",
+                  cursor: isStatusLocked ? "not-allowed" : "pointer",
+                  opacity: isStatusLocked ? 0.7 : 1,
+                }}
+              >
+                {Object.values(Status)
+                  .filter(
+                    (status) =>
+                      !["PENDING", "EXPIRING_SOON", "DELIVERED"].includes(
+                        status.toUpperCase()
+                      )
+                  )
+                  .map((status) => (
                     <option key={status} value={status}>
                       {status.charAt(0) +
                         status
@@ -201,8 +315,46 @@ export default function EditLotModal({ show, lot, onClose, onLotUpdated }) {
                           .replace("_", " ")}
                     </option>
                   ))}
-                </select>
-              </div>
+              </select>
+            </div>
+
+
+              {/* ✅ Image Upload (only if no image already) */}
+              {!lot.imageUrl && (
+                <div className="mb-4">
+                  <label className="form-label fw-semibold text-secondary" style={{ fontSize: "0.9rem" }}>
+                    Add Image (optional)
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="form-control"
+                    onChange={handleImageUpload}
+                  />
+                  {uploading && (
+                    <div className="small text-muted mt-1 d-flex align-items-center">
+                      <div className="spinner-border spinner-border-sm text-secondary me-2" role="status"></div>
+                      Uploading...
+                    </div>
+                  )}
+                  {imageUrl && (
+                    <div className="mt-2">
+                      <img
+                        src={imageUrl}
+                        alt="Lot Preview"
+                        style={{
+                          width: "100%",
+                          maxHeight: "160px",
+                          objectFit: "cover",
+                          borderRadius: "10px",
+                          border: "1px solid #ddd",
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
 
               {/* ✅ Category pills */}
               <div className="mb-3">

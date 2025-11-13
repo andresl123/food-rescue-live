@@ -1,40 +1,47 @@
 import React, { useState, useEffect } from "react";
 import { Dropdown } from "react-bootstrap";
-import LotDetailsModal from "./LotDetailsModal"; // ✅ import the modal
+import LotDetailsModal from "./LotDetailsModal";
 
 export default function DonationList({ donations, onAddItem, onEditLot }) {
   const [selectedLot, setSelectedLot] = useState(null);
   const [addressMap, setAddressMap] = useState({});
+  const [openDropdownId, setOpenDropdownId] = useState(null);
 
-  useEffect(() => {
-    const fetchAddresses = async () => {
-      const token = localStorage.getItem("accessToken");
-      if (!token || !donations?.length) return;
 
-      const newMap = {};
-      await Promise.all(
-        donations.map(async (lot) => {
-          if (lot.addressId && !addressMap[lot.addressId]) {
-            try {
-              const res = await fetch(`http://localhost:8080/api/v1/addresses/${lot.addressId}`, {
-                headers: { Authorization: `Bearer ${token}` },
-              });
-              const addrData = await res.json();
-              if (addrData?.data) newMap[lot.addressId] = addrData.data;
-            } catch (err) {
-              console.error("Error fetching address for lot:", lot.lotId, err);
-            }
-          }
-        })
-      );
-      setAddressMap((prev) => ({ ...prev, ...newMap }));
-    };
-
-    fetchAddresses();
-  }, [donations]);
+//   useEffect(() => {
+//     const fetchAddresses = async () => {
+//       const token = localStorage.getItem("accessToken");
+//       if (!token || !donations?.length) return;
+//
+//       const newMap = {};
+//       await Promise.all(
+//         donations.map(async (lot) => {
+//           if (lot.addressId && !addressMap[lot.addressId]) {
+//             try {
+//               const res = await fetch(`http://localhost:8080/api/v1/addresses/${lot.addressId}`, {
+//                 headers: { Authorization: `Bearer ${token}` },
+//               });
+//               const addrData = await res.json();
+//               if (addrData?.data) newMap[lot.addressId] = addrData.data;
+//             } catch (err) {
+//               console.error("Error fetching address for lot:", lot.lotId, err);
+//             }
+//           }
+//         })
+//       );
+//       setAddressMap((prev) => ({ ...prev, ...newMap }));
+//     };
+//
+//     fetchAddresses();
+//   }, [donations]);
 
 
   const handleViewDetails = (lot) => setSelectedLot(lot);
+
+  const handleToggleDropdown = (lotId) => {
+    setOpenDropdownId((prev) => (prev === lotId ? null : lotId)); // open one, close others
+  };
+
 
   if (!donations || donations.length === 0) {
     return (
@@ -47,7 +54,7 @@ export default function DonationList({ donations, onAddItem, onEditLot }) {
         }}
       >
         <i className="bi bi-box-seam mb-2" style={{ fontSize: "2rem" }}></i>
-        <p className="mb-0 fw-semibold">No lots created yet</p>
+        <p className="mb-0 fw-semibold">No lots</p>
         <small>Create your first donation lot to get started</small>
       </div>
     );
@@ -201,7 +208,10 @@ export default function DonationList({ donations, onAddItem, onEditLot }) {
             >
               <small className="text-muted">Total: {lot.totalItems || 0}</small>
 
-              <Dropdown align="end">
+              <Dropdown align="end"
+                        show={openDropdownId === lot.lotId}
+                        onToggle={() => handleToggleDropdown(lot.lotId)}
+              >
                 <Dropdown.Toggle
                   as="button"
                   className="btn btn-light border-0 rounded-circle p-2 dropdown-toggle-no-caret"
