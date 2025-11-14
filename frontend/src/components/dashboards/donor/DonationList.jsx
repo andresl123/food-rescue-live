@@ -7,6 +7,15 @@ export default function DonationList({ donations, onAddItem, onEditLot }) {
   const [addressMap, setAddressMap] = useState({});
   const [openDropdownId, setOpenDropdownId] = useState(null);
 
+
+    const handleLotUpdated = () => {
+      // REFETCH donations from parent
+      if (typeof onAddItem === "function") {
+        onAddItem(); // parent can re-fetch
+      }
+    };
+
+
     const getEarliestExpiry = (items = []) => {
       if (!Array.isArray(items) || items.length === 0) return null;
 
@@ -280,6 +289,7 @@ export default function DonationList({ donations, onAddItem, onEditLot }) {
           show={true}
           lot={selectedLot}
           onClose={() => setSelectedLot(null)}
+          onItemAdded={handleLotUpdated}
         />
       )}
     </>
