@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Flux;
 
+import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -70,6 +71,17 @@ public class OrderQueryService {
                 order.getDeliveryAddressId(),
                 courierId
         );
+    }
+
+    public Mono<OrderDocument> markOrderAsDelivered(String orderId) {
+        return orderRepository.findById(orderId)
+                .flatMap(order -> {
+                    order.setStatus("DELIVERED");
+                    if (order.getOrderDate() == null) {
+                        order.setOrderDate(Instant.now());
+                    }
+                    return orderRepository.save(order);
+                });
     }
 
     // NEW: used by BFF receiver endpoint (/api/receiver/orders/{orderId})
