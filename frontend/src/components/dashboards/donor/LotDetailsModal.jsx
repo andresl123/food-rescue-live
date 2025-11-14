@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import FoodItemModal from "./FoodItemModal";
 import { getFoodItemsByLot } from "../../../services/lotService";
 import { getAddressById } from "../../../services/addressService";
+import { getPickupOtpDonor } from "../../../services/pickupOtpService";
 
 export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
   const [showFoodItemModal, setShowFoodItemModal] = useState(false);
@@ -26,10 +27,39 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
     return earliest.toLocaleDateString();
   };
 
-  // ✅ Sync modal when selected lot changes
-  useEffect(() => {
-    setCurrentLot(lot);
-  }, [lot]);
+    useEffect(() => {
+      const fetchOtp = async () => {
+        console.log("➡️ fetchOtp() called");
+
+        if (!currentLot?.lotId && !currentLot?.id) {
+          return;
+        }
+
+        const lotId = currentLot.lotId || currentLot.id || currentLot._id;
+
+        const isPending =
+          currentLot.status === "PENDING" ||
+          currentLot.status === "WAITING_FOR_PICKUP";
+
+        if (isPending) {
+          try {
+            const response = await getPickupOtpDonor(lotId);
+            console.log("✅ OTP API response:", response);
+
+            setPickupOtp(response.pickupOtp);
+          } catch (err) {
+            console.error("🔥 Error fetching pickup OTP:", err);
+            setPickupOtp(null);
+          }
+        } else {
+          setPickupOtp(null);
+        }
+      };
+
+      fetchOtp();
+    }, [currentLot]);
+
+
 
     useEffect(() => {
       const fetchAddress = async () => {
@@ -46,7 +76,7 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
     }, [currentLot]);
 
     useEffect(() => {
-      setPickupOtp(currentLot.pickupOtp || 5847);
+      setPickupOtp(currentLot.pickupOtp || "------");
     }, [currentLot]);
 
   // ✅ Refresh food items when a new one is added
