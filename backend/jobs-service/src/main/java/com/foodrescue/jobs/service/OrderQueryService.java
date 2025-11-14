@@ -6,9 +6,10 @@ import com.foodrescue.jobs.repository.JobRepository;
 import com.foodrescue.jobs.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Mono;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
+import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -65,6 +66,17 @@ public class OrderQueryService {
                 order.getDeliveryAddressId(),
                 courierId
         );
+    }
+
+    public Mono<OrderDocument> markOrderAsDelivered(String orderId) {
+        return orderRepository.findById(orderId)
+                .flatMap(order -> {
+                    order.setStatus("DELIVERED");
+                    if (order.getOrderDate() == null) {
+                        order.setOrderDate(Instant.now());
+                    }
+                    return orderRepository.save(order);
+                });
     }
 
     // DTOs

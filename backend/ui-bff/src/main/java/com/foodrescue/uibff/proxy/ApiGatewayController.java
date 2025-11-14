@@ -143,6 +143,19 @@ public class ApiGatewayController {
     }
 
     @RequestMapping(
+            path = "/orders/**",
+            method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.PATCH, RequestMethod.DELETE}
+    )
+    public Mono<ResponseEntity<byte[]>> orders(@RequestBody(required = false) String body,
+                                               @RequestHeader(name = "Content-Type", required = false) MediaType contentType,
+                                               ServerWebExchange exchange) {
+        String incoming = exchange.getRequest().getURI().getPath();
+        String afterApi = incoming.replaceFirst("^/api", "");
+        String downstreamPath = afterApi.replaceFirst("^/orders", "/api/v1/orders");
+        return forward(jobsBase, exchange, downstreamPath, body, contentType);
+    }
+
+    @RequestMapping(
             path = "/evidence/**",
             method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.PATCH, RequestMethod.DELETE}
     )

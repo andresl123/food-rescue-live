@@ -15,10 +15,11 @@ import {
   getAddress,
   getUserName,
   getCourierStats,
+  getLot,
 } from "../../../services/courierService.jsx";
 import { getUserProfile } from "../../../services/loginServices";
 
-export default function CourierDashboard({ onShowPOD }) {
+export default function CourierDashboard({ onShowPOD, initialTab, onInitialTabHandled }) {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -59,6 +60,7 @@ export default function CourierDashboard({ onShowPOD }) {
   const addressCacheRef = useRef({});
   const orderCacheRef = useRef({});
   const userCacheRef = useRef({});
+  const lotCacheRef = useRef({});
 
   const formatAddress = (address) => {
     if (!address) {
@@ -148,6 +150,23 @@ export default function CourierDashboard({ onShowPOD }) {
     }
   };
 
+  const loadLotById = async (lotId) => {
+    if (!lotId) return null;
+    if (lotCacheRef.current[lotId]) {
+      return lotCacheRef.current[lotId];
+    }
+    try {
+      const lot = await getLot(lotId);
+      if (lot) {
+        lotCacheRef.current[lotId] = lot;
+      }
+      return lot;
+    } catch (error) {
+      console.error("Error fetching lot details:", error);
+      return null;
+    }
+  };
+
   const refreshCourierStats = async (courierIdOverride) => {
     const courierId = courierIdOverride || getCourierId();
     if (!courierId) {
@@ -194,13 +213,20 @@ export default function CourierDashboard({ onShowPOD }) {
         return job;
       }
 
-      const { pickupAddressId, deliveryAddressId, receiverId } = orderDetails;
+      const { pickupAddressId, deliveryAddressId, receiverId, lotId: orderLotId } = orderDetails;
       const [pickupAddress, deliveryAddress] = await Promise.all([
         loadAddressById(pickupAddressId),
         loadAddressById(deliveryAddressId),
       ]);
 
       const receiverName = receiverId ? await loadUserNameById(receiverId) : null;
+      const lotId = orderLotId ?? job.lotId;
+      const lotDetails = lotId ? await loadLotById(lotId) : null;
+      const donorUserId = lotDetails?.userId;
+      const donorName =
+        (donorUserId ? await loadUserNameById(donorUserId) : null) ||
+        job.donorName ||
+        `Donor for ${job.orderId}`;
 
       return {
         ...job,
@@ -210,9 +236,12 @@ export default function CourierDashboard({ onShowPOD }) {
         donorAddress: pickupAddress ? formatAddress(pickupAddress) : job.donorAddress,
         recipientAddress: deliveryAddress ? formatAddress(deliveryAddress) : job.recipientAddress,
         recipientName: receiverName || job.recipientName || `Recipient for ${job.orderId}`,
+        donorName,
         pickupAddress,
         deliveryAddress,
         receiverName,
+        lotId,
+        lotDetails,
       };
     } catch (error) {
       console.error("Failed to enrich job with addresses:", error);
@@ -303,10 +332,7 @@ export default function CourierDashboard({ onShowPOD }) {
         donorAddress: job.donorAddress || "Address unavailable",
         recipientName: job.recipientName || `Recipient for ${job.orderId}`,
         recipientAddress: job.recipientAddress || "Address unavailable",
-        foodItems:
-          job.foodItems && job.foodItems.length
-            ? job.foodItems
-            : ["Food items from order"],
+        foodItems: Array.isArray(job.foodItems) ? job.foodItems.filter(Boolean) : [],
         distance: job.distance || "N/A",
         estimatedTime: job.estimatedTime || "N/A",
         servings: job.servings ?? 0,
@@ -349,10 +375,7 @@ export default function CourierDashboard({ onShowPOD }) {
         donorAddress: job.donorAddress || "Address unavailable",
         recipientName: job.recipientName || `Recipient for ${job.orderId}`,
         recipientAddress: job.recipientAddress || "Address unavailable",
-        foodItems:
-          job.foodItems && job.foodItems.length
-            ? job.foodItems
-            : ["Food items from order"],
+        foodItems: Array.isArray(job.foodItems) ? job.foodItems.filter(Boolean) : [],
         distance: job.distance || "N/A",
         estimatedTime: job.estimatedTime || "N/A",
         servings: job.servings ?? 0,
@@ -381,6 +404,18 @@ export default function CourierDashboard({ onShowPOD }) {
       setActiveTab("my-jobs");
     }
   }, [location.state]);
+
+  useEffect(() => {
+    if (!initialTab) {
+      return;
+    }
+    if (initialTab !== activeTab) {
+      setActiveTab(initialTab);
+    }
+    if (typeof onInitialTabHandled === "function") {
+      onInitialTabHandled();
+    }
+  }, [initialTab, activeTab, onInitialTabHandled]);
 
   // Initial data load
   useEffect(() => {
@@ -1257,20 +1292,69 @@ export default function CourierDashboard({ onShowPOD }) {
                             <i className="bi bi-box-seam me-1"></i>
                             Food Items
                           </small>
+                          {job.lotDetails?.description && (
+                            <Card className="border-0 shadow-sm mb-3" style={{ borderRadius: "10px" }}>
+                              <Card.Body className="p-3">
+                                <div className="d-flex align-items-start gap-3">
+                                  <div
+                                    className="d-inline-flex align-items-center justify-content-center rounded-circle"
+                                    style={{
+                                      width: "42px",
+                                      height: "42px",
+                                      backgroundColor: "rgba(0, 122, 255, 0.1)",
+                                      color: "#0052cc",
+                                    }}
+                                  >
+                                    <i className="bi bi-journal-text" />
+                                  </div>
+                                  <div>
+                                    <div className="d-flex align-items-center gap-2 mb-1">
+                                      <div
+                                        className="text-uppercase fw-semibold small"
+                                        style={{ letterSpacing: "0.5px", color: "#6b7280" }}
+                                      >
+                                        Lot Description
+                                      </div>
+                                      {job.lotDetails?.status && (
+                                        <Badge bg="secondary" className="text-uppercase small">
+                                          {job.lotDetails.status}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <p
+                                      style={{
+                                        fontSize: "0.95rem",
+                                        color: "#111827",
+                                        marginBottom: "0.5rem",
+                                      }}
+                                    >
+                                      {job.lotDetails.description}
+                                    </p>
+                                  </div>
+                                </div>
+                              </Card.Body>
+                            </Card>
+                          )}
                           <div className="d-flex flex-wrap gap-2">
-                            {job.foodItems.map((item, idx) => (
-                              <Badge
-                                key={idx}
-                                bg="secondary"
-                                style={{
-                                  fontSize: "0.75rem",
-                                  padding: "6px 12px",
-                                  borderRadius: "6px",
-                                }}
-                              >
+                            {job.foodItems && job.foodItems.length > 0 ? (
+                              job.foodItems.map((item, idx) => (
+                                <Badge
+                                  key={idx}
+                                  bg="secondary"
+                                  style={{
+                                    fontSize: "0.75rem",
+                                    padding: "6px 12px",
+                                    borderRadius: "6px",
+                                  }}
+                                >
                                 {item}
                               </Badge>
-                            ))}
+                              ))
+                            ) : (
+                              <span className="text-muted small">
+                                No specific items listed
+                              </span>
+                            )}
                           </div>
                         </div>
 
@@ -1697,111 +1781,6 @@ export default function CourierDashboard({ onShowPOD }) {
 
                           <div className="mb-4">
                             <small
-                              className="d-block mb-3"
-                              style={{
-                                fontSize: "0.7rem",
-                                color: "#6b7280",
-                                fontWeight: "600",
-                                textTransform: "uppercase",
-                                letterSpacing: "0.5px",
-                              }}
-                            >
-                              <i className="bi bi-info-circle me-1"></i>
-                              Job Details
-                            </small>
-                            <Row className="g-3">
-                              <Col xs={4}>
-                                <div
-                                  className="text-center p-2"
-                                  style={{
-                                    background: "#f9fafb",
-                                    borderRadius: "6px",
-                                  }}
-                                >
-                                  <div
-                                    style={{
-                                      fontSize: "1.25rem",
-                                      fontWeight: "bold",
-                                      color: "#111827",
-                                      marginBottom: "4px",
-                                    }}
-                                  >
-                                    {job.distance}
-                                  </div>
-                                  <small
-                                    style={{
-                                      fontSize: "0.7rem",
-                                      color: "#6b7280",
-                                    }}
-                                  >
-                                    <i className="bi bi-signpost me-1"></i>
-                                    Distance
-                                  </small>
-                                </div>
-                              </Col>
-                              <Col xs={4}>
-                                <div
-                                  className="text-center p-2"
-                                  style={{
-                                    background: "#f9fafb",
-                                    borderRadius: "6px",
-                                  }}
-                                >
-                                  <div
-                                    style={{
-                                      fontSize: "1.25rem",
-                                      fontWeight: "bold",
-                                      color: "#111827",
-                                      marginBottom: "4px",
-                                    }}
-                                  >
-                                    {job.estimatedTime}
-                                  </div>
-                                  <small
-                                    style={{
-                                      fontSize: "0.7rem",
-                                      color: "#6b7280",
-                                    }}
-                                  >
-                                    <i className="bi bi-clock me-1"></i>
-                                    Time
-                                  </small>
-                                </div>
-                              </Col>
-                              <Col xs={4}>
-                                <div
-                                  className="text-center p-2"
-                                  style={{
-                                    background: "#f9fafb",
-                                    borderRadius: "6px",
-                                  }}
-                                >
-                                  <div
-                                    style={{
-                                      fontSize: "1.25rem",
-                                      fontWeight: "bold",
-                                      color: "#111827",
-                                      marginBottom: "4px",
-                                    }}
-                                  >
-                                    {job.servings}
-                                  </div>
-                                  <small
-                                    style={{
-                                      fontSize: "0.7rem",
-                                      color: "#6b7280",
-                                    }}
-                                  >
-                                    <i className="bi bi-people me-1"></i>
-                                    Servings
-                                  </small>
-                                </div>
-                              </Col>
-                            </Row>
-                          </div>
-
-                          <div className="mb-4">
-                            <small
                               className="d-block mb-2"
                               style={{
                                 fontSize: "0.7rem",
@@ -1814,20 +1793,69 @@ export default function CourierDashboard({ onShowPOD }) {
                               <i className="bi bi-box-seam me-1"></i>
                               Food Items
                             </small>
+                            {job.lotDetails?.description && (
+                              <Card className="border-0 shadow-sm mb-3" style={{ borderRadius: "10px" }}>
+                                <Card.Body className="p-3">
+                                  <div className="d-flex align-items-start gap-3">
+                                    <div
+                                      className="d-inline-flex align-items-center justify-content-center rounded-circle"
+                                      style={{
+                                        width: "42px",
+                                        height: "42px",
+                                        backgroundColor: "rgba(0, 122, 255, 0.1)",
+                                        color: "#0052cc",
+                                      }}
+                                    >
+                                      <i className="bi bi-journal-text" />
+                                  </div>
+                                    <div>
+                                      <div className="d-flex align-items-center gap-2 mb-1">
+                                        <div
+                                          className="text-uppercase fw-semibold small"
+                                          style={{ letterSpacing: "0.5px", color: "#6b7280" }}
+                                        >
+                                          Lot Description
+                                </div>
+                                        {job.lotDetails?.status && (
+                                          <Badge bg="secondary" className="text-uppercase small">
+                                            {job.lotDetails.status}
+                                          </Badge>
+                                        )}
+                                  </div>
+                                      <p
+                                        style={{
+                                          fontSize: "0.95rem",
+                                          color: "#111827",
+                                          marginBottom: "0.5rem",
+                                        }}
+                                      >
+                                        {job.lotDetails.description}
+                                      </p>
+                          </div>
+                                  </div>
+                                </Card.Body>
+                              </Card>
+                            )}
                             <div className="d-flex flex-wrap gap-2">
-                              {job.foodItems.map((item, idx) => (
-                                <Badge
-                                  key={idx}
-                                  bg="secondary"
-                                  style={{
-                                    fontSize: "0.75rem",
-                                    padding: "6px 12px",
-                                    borderRadius: "6px",
-                                  }}
-                                >
-                                  {item}
-                                </Badge>
-                              ))}
+                              {job.foodItems && job.foodItems.length > 0 ? (
+                                job.foodItems.map((item, idx) => (
+                                  <Badge
+                                    key={idx}
+                                    bg="secondary"
+                                    style={{
+                                      fontSize: "0.75rem",
+                                      padding: "6px 12px",
+                                      borderRadius: "6px",
+                                    }}
+                                  >
+                                    {item}
+                                  </Badge>
+                                ))
+                              ) : (
+                                <span className="text-muted small">
+                                  No specific items listed
+                                </span>
+                              )}
                             </div>
                           </div>
 

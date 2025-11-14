@@ -85,7 +85,7 @@ public class JobService {
     public Flux<Job> getByCourierIdAndStatus(String courierId, String status) {
         return jobs.findByCourierIdAndStatus(courierId, status);
     }
-
+    
     public Flux<Job> getAvailableJobs() {
         log.debug("Fetching available jobs");
         return jobs.findAvailableJobs();

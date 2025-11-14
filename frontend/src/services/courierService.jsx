@@ -124,6 +124,26 @@ export async function getOrderDetails(orderId) {
   return payload.data;
 }
 
+export async function markOrderDelivered(orderId) {
+  const response = await fetch(`${API_ROOT}/api/orders/${orderId}/delivered`, {
+    method: "PUT",
+    credentials: "include",
+  });
+  const payload = await parseJson(response);
+  if (!response.ok) {
+    throw new Error(
+      payload?.message || `Failed to mark order delivered (${response.status})`
+    );
+  }
+  if (!payload) {
+    return null;
+  }
+  if (payload.success === false) {
+    throw new Error(payload?.message || "Failed to mark order delivered");
+  }
+  return payload.data ?? payload;
+}
+
 export async function getAddress(addressId) {
   const response = await fetch(`${ADDRESSES_API_BASE}/${addressId}`, {
     method: "GET",
@@ -146,4 +166,46 @@ export async function getUserName(userId) {
     throw new Error(payload?.message || `Failed to fetch user ${userId}`);
   }
   return payload.data?.name ?? null;
+}
+
+export async function updateLotStatus(lotId, status) {
+  const url = `${API_ROOT}/api/lots/${encodeURIComponent(
+    lotId
+  )}/status/ForCourier?status=${encodeURIComponent(status)}`;
+  const response = await fetch(url, {
+    method: "PATCH",
+    credentials: "include",
+  });
+  const payload = await parseJson(response);
+  if (!response.ok) {
+    throw new Error(
+      payload?.message || `Failed to update lot status (${response.status})`
+    );
+  }
+  if (!payload) {
+    return null;
+  }
+  if (payload.success === false) {
+    throw new Error(
+      payload?.message || `Failed to update lot status (${response.status})`
+    );
+  }
+  return payload.data ?? payload;
+}
+
+export async function getLot(lotId) {
+  const response = await fetch(`${API_ROOT}/api/lots/${lotId}`, {
+    method: "GET",
+    credentials: "include",
+  });
+  const payload = await parseJson(response);
+  if (!response.ok) {
+    throw new Error(
+      payload?.message || `Failed to fetch lot ${lotId}`
+    );
+  }
+  if (payload?.success === false) {
+    throw new Error(payload?.message || `Failed to fetch lot ${lotId}`);
+  }
+  return payload?.data ?? payload;
 }
