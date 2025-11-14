@@ -60,7 +60,6 @@ public class OrderQueryController {
                 })
                 .defaultIfEmpty(ResponseEntity.notFound().build());
     }
-}
 
     // ------------------------------------------------------------
     // GET /api/v1/orders/by-lot/{lotId}
