@@ -298,5 +298,9 @@ public class JobService {
     private String generateJobId() {
         return "JOB-" + UUID.randomUUID();
     }
+
+    public Mono<Job> getSingleJobByOrderId(String orderId) {
+        return jobs.findByOrderId(orderId).next(); // takes the first job, if any
+    }
 }
 

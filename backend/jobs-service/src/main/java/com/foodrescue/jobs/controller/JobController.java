@@ -130,6 +130,11 @@ public class JobController {
     public Mono<ResponseEntity<ApiResponse<Job>>> markAsReturned(@PathVariable String jobId) {
         return service.markAsReturned(jobId).map(ResponseEntity::ok);
     }
+
+    @GetMapping("/by-order/{orderId}")
+    public Mono<Job> singleJobByOrder(@PathVariable String orderId) {
+        return service.getSingleJobByOrderId(orderId);
+    }
 }
 
 

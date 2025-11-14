@@ -72,6 +72,16 @@ public class OrderQueryService {
         );
     }
 
+    // NEW: used by BFF receiver endpoint (/api/receiver/orders/{orderId})
+    public Mono<OrderDocument> getOrderById(String orderId) {
+        return orderRepository.findById(orderId);
+    }
+
+    // NEW: used by BFF donor endpoint that works by lotId
+    public Mono<OrderDocument> getOrderByLotId(String lotId) {
+        return orderRepository.findByLotId(lotId);
+    }
+
     // DTOs
     public record OrdersPage(List<OrderRow> current, List<OrderRow> completed) {}
 
