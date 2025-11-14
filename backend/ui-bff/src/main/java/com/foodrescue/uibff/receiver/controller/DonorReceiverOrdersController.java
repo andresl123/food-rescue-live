@@ -89,4 +89,36 @@ public class DonorReceiverOrdersController {
             return null;
         }
     }
+
+    // ------------------------------------------------------------
+// GET /api/donor/otp/pickup/{lotId}
+// Donor sends lotId → returns pickup OTP
+// ------------------------------------------------------------
+    @GetMapping(path = "/donor/otp/pickup/{lotId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<DonorReceiverOrdersService.PickupOtpResponse> getPickupOtpForLot(
+            @PathVariable String lotId,
+            @CookieValue(name = "access_token", required = false) String accessToken
+    ) {
+        final String authHeader = (accessToken != null)
+                ? "Bearer " + accessToken
+                : null;
+
+        return service.getPickupOtpForLot(lotId, authHeader);
+    }
+
+    // ------------------------------------------------------------
+// GET /api/receiver/otp/delivery/{orderId}
+// Receiver sends orderId → returns delivery OTP
+// ------------------------------------------------------------
+    @GetMapping(path = "/receiver/otp/delivery/{orderId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<DonorReceiverOrdersService.DeliveryOtpResponse> getDeliveryOtpForOrder(
+            @PathVariable String orderId,
+            @CookieValue(name = "access_token", required = false) String accessToken
+    ) {
+        final String authHeader = (accessToken != null)
+                ? "Bearer " + accessToken
+                : null;
+
+        return service.getDeliveryOtpForOrder(orderId, authHeader);
+    }
 }

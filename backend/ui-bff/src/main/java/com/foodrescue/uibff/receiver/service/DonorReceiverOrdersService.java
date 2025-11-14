@@ -377,6 +377,52 @@ public class DonorReceiverOrdersService {
     }
 
     // ------------------------------------------------------------
+// DONOR: get pickup OTP by lotId
+//
+// Flow:
+//   1) JOBS  /api/v1/orders/by-lot/{lotId}   → OrderDetailsDto
+//   2) JOBS  /api/v1/jobs/by-order/{orderId} → JobDto
+//   3) EVIDENCE /api/v1/pods/latest/{jobId}  → PodData.pickupCode
+// ------------------------------------------------------------
+    public Mono<PickupOtpResponse> getPickupOtpForLot(String lotId, String authHeader) {
+        String orderUrl = jobsBaseUrl + "/api/v1/orders/by-lot/" + lotId;
+        System.out.println("[BFF] GET " + orderUrl + " (pickup OTP by lot)");
+
+        return webClient.get()
+                .uri(orderUrl)
+                .headers(h -> {
+                    if (authHeader != null) {
+                        h.set(HttpHeaders.AUTHORIZATION, authHeader);
+                    }
+                })
+                .retrieve()
+                .bodyToMono(OrderDetailsDto.class)
+                .flatMap(order -> fetchJobByOrder(order.id(), authHeader))
+                .flatMap(job -> fetchLatestPod(job.jobId(), authHeader))
+                .map(pod -> new PickupOtpResponse(pod != null ? pod.pickupCode() : null))
+                .switchIfEmpty(Mono.just(new PickupOtpResponse(null)));
+    }
+
+    // ------------------------------------------------------------
+// RECEIVER: get delivery OTP by orderId
+//
+// Flow:
+//   1) JOBS  /api/v1/jobs/by-order/{orderId} → JobDto
+//   2) EVIDENCE /api/v1/pods/latest/{jobId}  → PodData.deliveryCode
+// ------------------------------------------------------------
+    public Mono<DeliveryOtpResponse> getDeliveryOtpForOrder(String orderId, String authHeader) {
+        System.out.println("[BFF] Fetching delivery OTP for order " + orderId);
+
+        return fetchJobByOrder(orderId, authHeader)
+                .flatMap(job -> fetchLatestPod(job.jobId(), authHeader))
+                .map(pod -> new DeliveryOtpResponse(pod != null ? pod.deliveryCode() : null))
+                .switchIfEmpty(Mono.just(new DeliveryOtpResponse(null)));
+    }
+
+    public record PickupOtpResponse(String pickupOtp) {}
+    public record DeliveryOtpResponse(String deliveryOtp) {}
+
+    // ------------------------------------------------------------
     // DTOs for remote responses & UI payloads
     // ------------------------------------------------------------
 
