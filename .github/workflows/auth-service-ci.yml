@@ -2,7 +2,7 @@ name: Build and Deploy auth-users-service (ARM64)
 
 on:
   push:
-    branches: ["main"]
+    branches: ["MTC-231"]
     paths:
       - 'backend/auth-users-service/**'
       - '.github/workflows/auth-service-ci.yml'
