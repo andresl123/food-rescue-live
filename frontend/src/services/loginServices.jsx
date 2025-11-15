@@ -54,30 +54,6 @@ export async function addAddressToUser(userId, addressId, setAsDefault = false) 
   }
 }
 
-
-// export async function addAddressToUser(userId, addressId, setAsDefault = false) {
-//   //const token = localStorage.getItem("accessToken");
-//   console.log("AddAddressToUser used")
-//   const response = await fetch(`http://localhost:8090/api/users/${userId}/addresses`, {
-//     method: "PATCH",
-//     headers: {
-//       "Content-Type": "application/json",
-// //       Authorization: `Bearer ${token}`,
-//     },
-//     body: JSON.stringify({ addressId, setAsDefault, credentials }),
-//   });
-//
-//   if (!response.ok) {
-//     const error = await response.text();
-//     console.error("Failed to update user addresses:", error);
-//     throw new Error("Failed to update user addresses");
-//   }
-//
-//   return response.json();
-// }
-
-
-
 // Returns userID, email and role
 export async function getUserProfile() {
   try {
