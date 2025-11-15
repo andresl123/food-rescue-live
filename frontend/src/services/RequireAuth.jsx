@@ -1,3 +1,5 @@
+const BFF_BASE_URL = import.meta.env.VITE_BFF_BASE_URL;
+
 import { useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 
@@ -14,7 +16,7 @@ export default function RequireAuth({ allowed }) {
     let alive = true;
     (async () => {
       try {
-        const res = await fetch("http://localhost:8090/api/me", {
+        const res = await fetch(`${BFF_BASE_URL}/api/me`, {
           credentials: "include",
         });
         if (!alive) return;

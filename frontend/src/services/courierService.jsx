@@ -1,4 +1,4 @@
-const BFF_BASE_URL = import.meta.env.VITE_BFF_BASE_URL ?? "http://localhost:8090/api";
+const BFF_BASE_URL = import.meta.env.VITE_BFF_BASE_URL;
 const JOBS_API_BASE = `${BFF_BASE_URL}/api/jobs`;
 const USERS_API_BASE = `${BFF_BASE_URL}/api/users`;
 const ADDRESSES_API_BASE = `${BFF_BASE_URL}/api/addresses`;

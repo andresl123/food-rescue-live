@@ -2,7 +2,7 @@ name: Build and Deploy jobs-service (ARM64)
 
 on:
   push:
-    branches: ["CI/CD"]
+    branches: ["MTC-231"]
     paths:
       - 'backend/jobs-service/**'
       - '.github/workflows/jobs-service-ci.yml'

@@ -1,4 +1,3 @@
-const BASE_URL = "http://localhost:8081/api/v1";
 const BFF_BASE_URL = import.meta.env.VITE_BFF_BASE_URL;
 
 export async function getLots() {
