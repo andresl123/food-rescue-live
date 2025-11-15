@@ -7,6 +7,7 @@ import com.foodrescue.jobs.repository.JobRepository;
 import com.foodrescue.jobs.repository.OrderRepository;
 import com.foodrescue.jobs.web.response.AddressDto;
 import com.foodrescue.jobs.web.response.ApiResponse;
+import com.foodrescue.jobs.web.response.RecentOrderDto;
 import com.foodrescue.jobs.web.response.UserDto;
 import com.foodrescue.jobs.web.response.UserNameDto;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import java.time.temporal.ChronoUnit;
+import java.time.Instant;
 
 import java.time.Instant;
 import java.util.Map;
@@ -47,6 +50,52 @@ public class JobService {
                     log.error("Failed to create job", ex);
                     return Mono.just(ApiResponse.error("Failed to create job"));
                 });
+    }
+    public Flux<RecentOrderDto> getRecentOrders() {
+        return orders.findTop5ByOrderByOrderDateDesc() // 1. Get recent 5 orders (this is ordered)
+
+                // 2. Use concatMap INSTEAD of flatMap to preserve the order
+                .concatMap(order -> {
+                    // For each order, find its associated job
+                    Mono<Job> jobMono = jobs.findByOrderId(order.getId())
+                            .next()
+                            .defaultIfEmpty(new Job());
+
+                    // And find its recipient's name (reusing your existing helper)
+                    Mono<UserDto> recipientMono = fetchUserById(order.getReceiverId())
+                            .defaultIfEmpty(new UserDto());
+
+                    return Mono.zip(Mono.just(order), jobMono, recipientMono);
+                })
+                .map(tuple -> {
+                    // We now have the Order, Job, and Recipient DTO
+                    OrderDocument order = tuple.getT1();
+                    Job job = tuple.getT2();
+                    UserDto recipient = tuple.getT3();
+
+                    String finalStatus;
+                    if (job.getJobId() == null) {
+                        finalStatus = "PENDING";
+                    } else {
+                        finalStatus = job.getStatus();
+                    }
+
+                    String recipientName = (recipient.getName() == null) ? "Unknown Recipient" : recipient.getName();
+
+                    // Build the DTO
+                    return new RecentOrderDto(
+                            order.getId(),
+                            recipientName,
+                            finalStatus
+                    );
+                });
+    }
+
+    public Mono<Long> countOrdersToday() {
+        // Get the current time and truncate it to the start of the day (in UTC)
+        Instant startOfDay = Instant.now().truncatedTo(ChronoUnit.DAYS);
+
+        return orders.countByOrderDateAfter(startOfDay);
     }
 
     public Mono<ApiResponse<Job>> createFromOrderId(String orderId) {

@@ -5,6 +5,7 @@ import '../../../components/dashboards/admin/Dashboard.css';
 import { getAllLots } from '../../../services/lotService';
 import { getAllFoodItems, getExpiringSoonItems } from '../../../services/foodItemService';
 import { getAllUsers } from '../../../services/userService';
+import { getRecentOrders, getOrdersTodayCount } from '../../../services/jobService';
 import { Status } from '../../../assets/statusValues';
 
 const AdminDashboard = () => {
@@ -13,9 +14,11 @@ const AdminDashboard = () => {
     totalUsers: 0,
     activeLots: 0,
     foodItems: 0,
+    ordersToday: 0,
   });
   const [expiringItems, setExpiringItems] = useState([]);
   const [lotMap, setLotMap] = useState({}); // For lot names
+  const [recentOrders, setRecentOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -27,11 +30,13 @@ const AdminDashboard = () => {
         setError(null);
 
         // Fetch all data in parallel for efficiency
-    const [usersData, lotsData, itemsData, expiringData] = await Promise.all([
+    const [usersData, lotsData, itemsData, expiringData, ordersData, ordersTodayData] = await Promise.all([
           getAllUsers(),
           getAllLots(),
           getAllFoodItems(),
-          getExpiringSoonItems(), // <-- New API call
+          getExpiringSoonItems(),
+          getRecentOrders(),
+          getOrdersTodayCount(),
         ]);
         // CREATE LOT MAP ---
         // this to show lot names in the list
@@ -46,8 +51,9 @@ const AdminDashboard = () => {
         const activeLots = lotsData.filter(lot => lot.status === Status.ACTIVE).length;
         const foodItems = itemsData.length;
 
-        setStats({ totalUsers, activeLots, foodItems });
-        setExpiringItems(expiringData); // <-- Set the new state
+        setStats({ totalUsers, activeLots, foodItems, ordersToday: ordersTodayData });
+        setExpiringItems(expiringData);
+        setRecentOrders(ordersData);
 
       } catch (err) {
         console.error("Failed to fetch dashboard data:", err);
@@ -75,6 +81,15 @@ const AdminDashboard = () => {
     if (days === 1) return "1 day left";
     return `${days} days left`;
   };
+
+    const getOrderStatusBadge = (status) => {
+        let statusClass = "status-pending"; // Default
+        if (status === Status.DELIVERED) statusClass = "status-delivered";
+        if (status === Status.ACTIVE) statusClass = "status-active";
+        if (status === Status.INACTIVE) statusClass = "status-inactive";
+
+        return <span className={`badge ${statusClass}`}>{status}</span>;
+      };
 
   const loadingValue = '...';
 
@@ -120,7 +135,7 @@ const AdminDashboard = () => {
           <StatCard
             icon="bi-cart"
             title="Orders Today"
-            value={127} // This is still static
+            value={isLoading ? loadingValue : stats.ordersToday}
             iconBgColor="#fff4e7"
           />
         </div>
@@ -154,16 +169,32 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          {/* --- "QUICK STATS" CARD (Now for "Recent Orders") --- */}
           <div className="card">
             <div className="card-header">
               <h3>Recent Orders</h3>
             </div>
             <div className="card-body">
-              {/* We'll build this out next */}
-              <p>Recent orders will be displayed here.</p>
-
-              {/* (Old quick stats code removed) */}
+              <ul className="activity-list">
+                {isLoading ? (
+                  <li>Loading...</li>
+                ) : error ? (
+                  <li>Error loading orders.</li>
+                ) : recentOrders.length === 0 ? (
+                  <li>No recent orders.</li>
+                ) : (
+                  recentOrders.map(order => (
+                    <li key={order.orderId}>
+                      <div className="activity-details">
+                        <strong>{order.recipientName}</strong>
+                        <span>Order ID: {order.orderId.substring(0, 8)}...</span>
+                      </div>
+                      <span className="activity-time">
+                        {getOrderStatusBadge(order.status)}
+                      </span>
+                    </li>
+                  ))
+                )}
+              </ul>
             </div>
           </div>
         </div>

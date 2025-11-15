@@ -1,74 +1,144 @@
-import React from 'react';
-import Sidebar from '../../../components/dashboards/admin/Sidebar';
-import '../../../components/dashboards/admin/Dashboard.css';
+import React, { useState, useEffect } from 'react';
+import { getAdminOrderView } from '../../../services/jobService';
 import { Status } from '../../../assets/statusValues';
+import '../../../components/dashboards/admin/Dashboard.css';
 
 const OrdersAndPODPage = () => {
-  // Dummy data for the orders table
-  const orders = [
-    { orderNumber: 'ORD-1001', recipient: 'Carol White', items: 'Organic Apples, Carrots', pickupOTP: '123456', deliveryOTP: '789812', date: '2025-10-29', status: 'completed' },
-    { orderNumber: 'ORD-1002', recipient: 'David Brown', items: 'Whole Wheat Bread, Milk', pickupOTP: '345678', deliveryOTP: '981234', date: '2025-10-30', status: 'processing' },
-    { orderNumber: 'ORD-1003', recipient: 'Emma Davis', items: 'Canned Beans', pickupOTP: '567890', deliveryOTP: '123456', date: '2025-10-31', status: 'pending' },
-    { orderNumber: 'ORD-1004', recipient: 'Frank Wilson', items: 'Fresh Milk, Carrots', pickupOTP: '678901', deliveryOTP: '234561', date: '2025-10-28', status: 'completed' },
-  ];
+  const [orders, setOrders] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Helper function to get badge class for status
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        setIsLoading(true);
+        const data = await getAdminOrderView();
+        setOrders(data);
+        setError(null);
+      } catch (err) {
+        setError(err.message);
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchOrders();
+  }, []);
+
+  // Helper for status badges
   const getStatusBadgeClass = (status) => {
-    return `badge status-${status}`;
+    // Map job statuses to your standard statuses
+    let mappedStatus = Status.PENDING; // Default
+    if (status === "DELIVERED" || status === "COMPLETED") mappedStatus = Status.DELIVERED;
+    if (status === "CANCELLED" || status === "FAILED" || status === "RETURNED") mappedStatus = Status.INACTIVE;
+    if (status === "ASSIGNED" || status === "PICKED_UP" || status === "IN_TRANSIT" || status === "OUT_FOR_DELIVERY") mappedStatus = Status.ACTIVE;
+
+    return `badge status-${mappedStatus.toLowerCase()}`;
+  };
+
+  // Filter logic
+  const filteredOrders = orders.filter(order => {
+    const query = searchQuery.toLowerCase();
+    return (
+      order.orderId.toLowerCase().includes(query) ||
+      order.recipientName.toLowerCase().includes(query) ||
+      order.status.toLowerCase().includes(query)
+    );
+  });
+
+  // Render logic
+  const renderTableBody = () => {
+    if (isLoading) {
+      return (
+        <tr>
+          <td colSpan="8" style={{ textAlign: 'center' }}>Loading...</td>
+        </tr>
+      );
+    }
+    if (error) {
+      return (
+        <tr>
+          <td colSpan="8" style={{ textAlign: 'center', color: 'red' }}>
+            Error: {error}
+          </td>
+        </tr>
+      );
+    }
+    if (filteredOrders.length === 0) {
+      return (
+        <tr>
+          <td colSpan="8" style={{ textAlign: 'center' }}>
+            {orders.length === 0 ? "No orders found." : "No orders match your search."}
+          </td>
+        </tr>
+      );
+    }
+
+    return filteredOrders.map((order) => {
+      const isInactive = order.status === "CANCELLED" || order.status === "FAILED";
+      const rowClass = isInactive ? 'row-inactive' : ''; // Apply strikethrough
+
+      return (
+        <tr key={order.orderId} className={rowClass}>
+          <td>{order.orderId.substring(0, 8)}...</td>
+          <td>{order.recipientName}</td>
+          <td>{order.items}</td>
+          <td className="otp-code">{order.pickupOtp}</td>
+          <td className="otp-code">{order.deliveryOtp}</td>
+          <td>{order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString() : 'N/A'}</td>
+          <td>
+            <span className={getStatusBadgeClass(order.status)}>{order.status}</span>
+          </td>
+          <td>
+            <div className="action-icons">
+              {/* We can wire these up next */}
+              <i className="bi bi-pencil-fill edit-icon"></i>
+              <i className="bi bi-trash-fill delete-icon"></i>
+            </div>
+          </td>
+        </tr>
+      );
+    });
   };
 
   return (
-      <main className="main-content">
-        <header className="page-header">
-          <div>
-            <h1>Orders & Proof of Delivery (POD)</h1>
-            <p>Manage orders, deliveries and OTP verification</p>
-          </div>
-        </header>
-
-        <div className="search-bar">
-          <i className="bi bi-search"></i>
-          <input type="text" placeholder="Search orders..." />
+    <main className="main-content">
+      <header className="page-header">
+        <div>
+          <h1>Orders & Proof of Delivery (POD)</h1>
+          <p>Manage orders, deliveries and OTP verification</p>
         </div>
+      </header>
 
-        <div className="table-container">
-          <table className="users-table">
-            <thead>
-              <tr>
-                <th>Order Number</th>
-                <th>Recipient</th>
-                <th>Items</th>
-                <th>Pickup OTP</th>
-                <th>Delivery OTP</th>
-                <th>Delivery Date</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map((order, index) => (
-                <tr key={index}>
-                  <td>{order.orderNumber}</td>
-                  <td>{order.recipient}</td>
-                  <td>{order.items}</td>
-                  <td className="otp-code">{order.pickupOTP}</td>
-                  <td className="otp-code">{order.deliveryOTP}</td>
-                  <td>{order.date}</td>
-                  <td>
-                    <span className={getStatusBadgeClass(order.status)}>{order.status}</span>
-                  </td>
-                  <td>
-                    <div className="action-icons">
-                       <i className="bi bi-pencil-fill edit-icon"></i>
-                       <i className="bi bi-trash-fill delete-icon"></i>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </main>
+      <div className="search-bar">
+        <i className="bi bi-search"></i>
+        <input
+          type="text"
+          placeholder="Search by Order ID, Recipient, or Status..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
+
+      <div className="table-container">
+        <table className="users-table">
+          <thead>
+            <tr>
+              <th>Order Number</th>
+              <th>Recipient</th>
+              <th>Items</th>
+              <th>Pickup OTP</th>
+              <th>Delivery OTP</th>
+              <th>Delivery Date</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>{renderTableBody()}</tbody>
+        </table>
+      </div>
+    </main>
   );
 };
 

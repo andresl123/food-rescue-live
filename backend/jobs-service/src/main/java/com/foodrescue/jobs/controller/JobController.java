@@ -1,5 +1,7 @@
 package com.foodrescue.jobs.controller;
 
+import com.foodrescue.jobs.web.response.RecentOrderDto;
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.foodrescue.jobs.entity.OrderDocument;
 import com.foodrescue.jobs.model.Job;
 import com.foodrescue.jobs.service.JobService;
@@ -20,6 +22,19 @@ import reactor.core.publisher.Mono;
 public class JobController {
 
     private final JobService service;
+
+    @GetMapping("/admin/recent-orders")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Flux<RecentOrderDto> getRecentOrders() {
+        return service.getRecentOrders();
+    }
+
+    @GetMapping("/admin/orders-today-count")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Mono<Long> getOrdersTodayCount() {
+        // This returns the number directly (e.g., 127)
+        return service.countOrdersToday();
+    }
 
     @PostMapping
     public Mono<ResponseEntity<ApiResponse<Job>>> create(@RequestBody Job job) {
