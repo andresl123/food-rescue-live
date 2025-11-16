@@ -1,8 +1,10 @@
 package com.foodrescue.jobs.controller;
 
 import com.foodrescue.jobs.entity.OrderDocument;
+import com.foodrescue.jobs.model.CourierStats;
 import com.foodrescue.jobs.model.Job;
 import com.foodrescue.jobs.service.JobService;
+import com.foodrescue.jobs.service.CourierStatsService;
 import com.foodrescue.jobs.web.response.AddressDto;
 import com.foodrescue.jobs.web.response.ApiResponse;
 import com.foodrescue.jobs.web.response.UserDto;
@@ -13,6 +15,8 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Instant;
+
 @RestController
 @RequestMapping("/api/v1/jobs")
 @CrossOrigin(origins = "*")
@@ -20,6 +24,7 @@ import reactor.core.publisher.Mono;
 public class JobController {
 
     private final JobService service;
+    private final CourierStatsService courierStatsService;
 
     @PostMapping
     public Mono<ResponseEntity<ApiResponse<Job>>> create(@RequestBody Job job) {
@@ -76,6 +81,24 @@ public class JobController {
         return service.getByCourierIdAndStatus(courierId, status);
     }
 
+    @GetMapping("/courier/{courierId}/stats")
+    public Mono<ResponseEntity<ApiResponse<CourierStats>>> getCourierStats(@PathVariable String courierId) {
+        return courierStatsService.getStats(courierId)
+                .map(stats -> ResponseEntity.ok(ApiResponse.ok(stats)))
+                .switchIfEmpty(Mono.just(ResponseEntity.ok(ApiResponse.ok(
+                        CourierStats.builder()
+                                .courierId(courierId)
+                                .mealsDelivered(0)
+                                .peopleHelped(0)
+                                .totalRescues(0)
+                                .impactScore(4.5)
+                                .failedDeliveries(0)
+                                .cancelledDeliveries(0)
+                                .updatedAt(Instant.now())
+                                .build()
+                ))));
+    }
+
     @GetMapping("/{id}")
     public Mono<ResponseEntity<ApiResponse<Job>>> get(@PathVariable String id) {
         return service.getById(id).map(ResponseEntity::ok);
@@ -129,6 +152,11 @@ public class JobController {
     @PutMapping("/{jobId}/returned")
     public Mono<ResponseEntity<ApiResponse<Job>>> markAsReturned(@PathVariable String jobId) {
         return service.markAsReturned(jobId).map(ResponseEntity::ok);
+    }
+
+    @GetMapping("/by-order/{orderId}")
+    public Mono<Job> singleJobByOrder(@PathVariable String orderId) {
+        return service.getSingleJobByOrderId(orderId);
     }
 }
 

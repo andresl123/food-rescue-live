@@ -164,18 +164,12 @@ export default function DonorDashboard() {
         lot.description?.toLowerCase().includes(searchTerm.toLowerCase())
       );
 
-
-
-
-
   // -------------------- MAIN RETURN --------------------
   return (
     <div
       className="container-fluid px-4"
       style={{
-//         background: "linear-gradient(to bottom, #f9fdf9, #f0f0f0)", // light gray bottom tint
-        minHeight: "calc(100vh - 80px)", // prevents white overlap under navbar
-//         borderTop: "1px solid #e5e7eb",
+        minHeight: "calc(100vh - 80px)",
       }}
     >
 
@@ -338,6 +332,7 @@ export default function DonorDashboard() {
               donations={filteredLots}
               onAddItem={handleAddItem}
               onEditLot={handleEditLot}
+              onRefreshLots={fetchLots}
             />
           </div>
         </div>
@@ -381,11 +376,11 @@ export default function DonorDashboard() {
                   color: "#3b82f6",
                   count: lots.filter((l) => l.status?.toLowerCase() === "delivered").length,
                 },
-                {
-                  label: "Expiring Soon",
-                  color: "#f97316",
-                  count: lots.filter((l) => l.status?.toLowerCase() === "expiring_soon").length,
-                },
+//                 {
+//                   label: "Expiring Soon",
+//                   color: "#f97316",
+//                   count: lots.filter((l) => l.status?.toLowerCase() === "expiring_soon").length,
+//                 },
                 {
                   label: "Inactive",
                   color: "#374151",
@@ -438,107 +433,6 @@ export default function DonorDashboard() {
               ))}
             </div>
           </div>
-
-
-          {/* Tips for Success */}
-{/*           <div */}
-{/*             className="bg-white shadow-sm rounded-4 p-4 mt-3" */}
-{/*             style={{ */}
-{/*               border: "1px solid #e5e7eb", */}
-{/*             }} */}
-{/*           > */}
-{/*             <h6 */}
-{/*               className="fw-semibold mb-4" */}
-{/*               style={{ color: "#111827", fontSize: "1.05rem" }} */}
-{/*             > */}
-{/*               Tips for Success */}
-{/*             </h6> */}
-
-{/*             <ul className="list-unstyled d-flex flex-column gap-4 mb-0"> */}
-{/*                */}{/* Tip 1 */}
-{/*               <li className="d-flex align-items-start"> */}
-{/*                 <div */}
-{/*                   className="d-flex align-items-center justify-content-center me-3" */}
-{/*                   style={{ */}
-{/*                     backgroundColor: "rgba(34,197,94,0.1)", */}
-{/*                     color: "#16a34a", */}
-{/*                     width: "36px", */}
-{/*                     height: "36px", */}
-{/*                     borderRadius: "50%", */}
-{/*                   }} */}
-{/*                 > */}
-{/*                   <i className="bi bi-check-circle" style={{ fontSize: "1.1rem" }}></i> */}
-{/*                 </div> */}
-{/*                 <div> */}
-{/*                   <h6 */}
-{/*                     className="fw-semibold mb-1" */}
-{/*                     style={{ color: "#111827", fontSize: "0.95rem" }} */}
-{/*                   > */}
-{/*                     Add clear photos */}
-{/*                   </h6> */}
-{/*                   <p className="mb-0" style={{ color: "#6b7280", fontSize: "0.9rem" }}> */}
-{/*                     Lots with photos get 3x more interest */}
-{/*                   </p> */}
-{/*                 </div> */}
-{/*               </li> */}
-
-{/*                */}{/* Tip 2 */}
-{/*               <li className="d-flex align-items-start"> */}
-{/*                 <div */}
-{/*                   className="d-flex align-items-center justify-content-center me-3" */}
-{/*                   style={{ */}
-{/*                     backgroundColor: "rgba(59,130,246,0.1)", */}
-{/*                     color: "#2563eb", */}
-{/*                     width: "36px", */}
-{/*                     height: "36px", */}
-{/*                     borderRadius: "50%", */}
-{/*                   }} */}
-{/*                 > */}
-{/*                   <i className="bi bi-clock" style={{ fontSize: "1.1rem" }}></i> */}
-{/*                 </div> */}
-{/*                 <div> */}
-{/*                   <h6 */}
-{/*                     className="fw-semibold mb-1" */}
-{/*                     style={{ color: "#111827", fontSize: "0.95rem" }} */}
-{/*                   > */}
-{/*                     Flexible pickup times */}
-{/*                   </h6> */}
-{/*                   <p className="mb-0" style={{ color: "#6b7280", fontSize: "0.9rem" }}> */}
-{/*                     Wider windows help more people */}
-{/*                   </p> */}
-{/*                 </div> */}
-{/*               </li> */}
-
-{/*                */}{/* Tip 3 */}
-{/*               <li className="d-flex align-items-start"> */}
-{/*                 <div */}
-{/*                   className="d-flex align-items-center justify-content-center me-3" */}
-{/*                   style={{ */}
-{/*                     backgroundColor: "rgba(168,85,247,0.1)", */}
-{/*                     color: "#9333ea", */}
-{/*                     width: "36px", */}
-{/*                     height: "36px", */}
-{/*                     borderRadius: "50%", */}
-{/*                   }} */}
-{/*                 > */}
-{/*                   <i className="bi bi-exclamation-circle" style={{ fontSize: "1.1rem" }}></i> */}
-{/*                 </div> */}
-{/*                 <div> */}
-{/*                   <h6 */}
-{/*                     className="fw-semibold mb-1" */}
-{/*                     style={{ color: "#111827", fontSize: "0.95rem" }} */}
-{/*                   > */}
-{/*                     Update availability */}
-{/*                   </h6> */}
-{/*                   <p className="mb-0" style={{ color: "#6b7280", fontSize: "0.9rem" }}> */}
-{/*                     Keep quantities current for better trust */}
-{/*                   </p> */}
-{/*                 </div> */}
-{/*               </li> */}
-{/*             </ul> */}
-{/*           </div> */}
-
-
         </div>
       </div>
 

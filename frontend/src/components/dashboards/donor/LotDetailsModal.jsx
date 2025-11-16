@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import FoodItemModal from "./FoodItemModal";
 import { getFoodItemsByLot } from "../../../services/lotService";
 import { getAddressById } from "../../../services/addressService";
+import { getPickupOtpDonor } from "../../../services/pickupOtpService";
 
 export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
   const [showFoodItemModal, setShowFoodItemModal] = useState(false);
@@ -9,27 +10,58 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
   const [address, setAddress] = useState(null);
   const [pickupOtp, setPickupOtp] = useState(null);
 
+    const getEarliestExpiry = (items = []) => {
+      if (!Array.isArray(items) || items.length === 0) return null;
 
-  const getEarliestExpiry = (items = []) => {
-    if (!Array.isArray(items) || items.length === 0) return null;
+      const validDates = items
+        .map((i) => i.expiryDate)
+        .filter(Boolean);
 
-    // extract valid dates
-    const validDates = items
-      .map((i) => new Date(i.expiryDate))
-      .filter((d) => !isNaN(d));
+      if (validDates.length === 0) return null;
 
-    if (validDates.length === 0) return null;
+      // Find earliest date by comparing raw strings
+      const earliest = validDates.reduce((min, curr) =>
+        curr < min ? curr : min
+      );
 
-    // earliest date
-    const earliest = new Date(Math.min(...validDates));
+      // return raw unchanged string (no timezone conversion)
+      return earliest;
+    };
 
-    return earliest.toLocaleDateString();
-  };
 
-  // ✅ Sync modal when selected lot changes
-  useEffect(() => {
-    setCurrentLot(lot);
-  }, [lot]);
+    useEffect(() => {
+      const fetchOtp = async () => {
+        console.log("➡️ fetchOtp() called");
+
+        if (!currentLot?.lotId && !currentLot?.id) {
+          return;
+        }
+
+        const lotId = currentLot.lotId || currentLot.id || currentLot._id;
+
+        const isPending =
+          currentLot.status === "PENDING" ||
+          currentLot.status === "WAITING_FOR_PICKUP";
+
+        if (isPending) {
+          try {
+            const response = await getPickupOtpDonor(lotId);
+            console.log("✅ OTP API response:", response);
+
+            setPickupOtp(response.pickupOtp);
+          } catch (err) {
+            console.error("🔥 Error fetching pickup OTP:", err);
+            setPickupOtp(null);
+          }
+        } else {
+          setPickupOtp(null);
+        }
+      };
+
+      fetchOtp();
+    }, [currentLot]);
+
+
 
     useEffect(() => {
       const fetchAddress = async () => {
@@ -46,7 +78,7 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
     }, [currentLot]);
 
     useEffect(() => {
-      setPickupOtp(currentLot.pickupOtp || 5847);
+      setPickupOtp(currentLot.pickupOtp || "------");
     }, [currentLot]);
 
   // ✅ Refresh food items when a new one is added
@@ -102,6 +134,14 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
           )
           .join(", ")
       : null;
+
+  const isExpired = (dateStr) => {
+    if (!dateStr) return false;
+    const today = new Date().setHours(0, 0, 0, 0);
+    const exp = new Date(dateStr).setHours(0, 0, 0, 0);
+    return exp < today;
+  };
+
 
   return (
     <>
@@ -175,12 +215,11 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
                       ? `${address.street || ""}, ${address.city || ""}, ${address.state || ""} ${address.postalCode || ""}`
                       : "Address not available"}
                   </p>
+                    <p className="mb-0 text-muted small">
+                      <i className="bi bi-calendar-event me-1"></i>
+                      Expires: <span style={{ fontStyle: "italic" }}>{getEarliestExpiry(currentLot.items) || "N/A"}</span>
+                    </p>
 
-                  <p className="mb-0 text-muted small">
-                    <i className="bi bi-calendar-event me-1"></i>
-{/*                     Expires: {currentLot.expiry || "3d left"} */}
-                        Expires: {getEarliestExpiry(currentLot.items) || "N/A"}
-                  </p>
                   {/* ✅ tags CSV under expiry */}
                   {tagsCsv && (
                     <p className="mb-0 text-muted small mt-1">
@@ -219,7 +258,6 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
               </div>
             </div>
 
-
             {/* ---------- FOOD ITEMS ---------- */}
             <hr className="my-4" />
             <div className="px-4 pb-4">
@@ -235,13 +273,29 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
                     </span>
                   </h6>
                   {/* + Add Item Button */}
+
+                <span
+                  title={
+                    !["ACTIVE", "INACTIVE"].includes(currentLot.status)
+                      ? "You can only add items when the lot is Active or Inactive"
+                      : ""
+                  }
+                >
                   <button
                     type="button"
                     className="btn btn-outline-dark btn-sm ms-2"
                     onClick={() => setShowFoodItemModal(true)}
+                    disabled={!["ACTIVE", "INACTIVE"].includes(currentLot.status)}
+                    style={{
+                      opacity: !["ACTIVE", "INACTIVE"].includes(currentLot.status) ? 0.5 : 1,
+                      cursor: !["ACTIVE", "INACTIVE"].includes(currentLot.status) ? "not-allowed" : "pointer",
+                      pointerEvents: !["ACTIVE", "INACTIVE"].includes(currentLot.status) ? "none" : "auto"
+                    }}
                   >
                     + Add Item
                   </button>
+                </span>
+
                 </div>
 
                 <small className="text-muted">
@@ -263,39 +317,59 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
                     {currentLot.items.map((item, idx) => (
                       <div
                         key={idx}
-                        className="d-flex justify-content-between align-items-center bg-white border p-3 rounded-3 shadow-sm"
+                        className="d-flex justify-content-between align-items-center p-3 rounded-3 shadow-sm"
                         style={{
-                          transition: "background 0.2s ease",
+                          border: isExpired(item.expiryDate) ? "1px solid #f5c2c7" : "1px solid #d1d5db",
+                          backgroundColor: isExpired(item.expiryDate) ? "#fff6f6" : "#ffffff",
                           cursor: "default",
+                          transition: "background 0.2s ease",
                         }}
-                        onMouseEnter={(e) =>
-                          (e.currentTarget.style.backgroundColor = "#f9fafb")
-                        }
-                        onMouseLeave={(e) =>
-                          (e.currentTarget.style.backgroundColor = "#ffffff")
-                        }
                       >
+
                         <div>
                           <div
                             className="fw-semibold text-dark"
                             style={{ fontSize: "0.95rem" }}
                           >
                             {item.itemName}
+
+                            {isExpired(item.expiryDate) && (
+                              <span
+                                className="ms-2"
+                                style={{
+                                  backgroundColor: "#fdecea",
+                                  color: "#d32f2f",
+                                  fontSize: "0.75rem",
+                                  padding: "2px 6px",
+                                  borderRadius: "6px",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                }}
+                              >
+                                <i className="bi bi-exclamation-triangle-fill" style={{ fontSize: "0.8rem" }}></i>
+                                Expired
+                              </span>
+                            )}
+
+
                           </div>
                           <small className="text-muted">
                             {item.quantity} {item.unitOfMeasure} • {item.category}
                           </small>
                         </div>
                         <div>
-                          <small
-                            className="text-muted"
-                            style={{
-                              fontSize: "0.8rem",
-                              fontStyle: "italic",
-                            }}
-                          >
-                            Exp: {item.expiryDate}
-                          </small>
+                        <small
+                          style={{
+                            fontSize: "0.8rem",
+                            color: isExpired(item.expiryDate) ? "#d32f2f" : "#6b7280",
+                            fontStyle: "italic",
+                          }}
+                        >
+                          Exp: {item.expiryDate}
+                        </small>
+
+
                         </div>
                       </div>
                     ))}

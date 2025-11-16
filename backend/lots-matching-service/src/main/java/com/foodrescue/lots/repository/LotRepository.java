@@ -10,4 +10,5 @@ import reactor.core.publisher.Mono;
 public interface LotRepository extends ReactiveMongoRepository<Lot, String> {
     Flux<Lot> findByUserId(String userId);
     Mono<Boolean> existsByLotIdAndUserId(String lotId, String userId);
+    
 }

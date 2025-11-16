@@ -29,6 +29,16 @@ export default function FoodItemModal({
     e.preventDefault();
     setLoading(true);
 
+  // Expiry date cannot be in the past
+  const todayStr = new Date().toISOString().split("T")[0];
+  const selectedStr = formData.expiryDate;
+
+  if (selectedStr < todayStr) {
+    toast.error("Expiry date cannot be in the past.");
+    setLoading(false);
+    return;
+  }
+
     if (isLocalAdd) {
       // Case 1: Lot not yet created — add item locally
       onItemAdded(formData);
