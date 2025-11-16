@@ -3,11 +3,12 @@ package com.foodrescue.uibff.receiver.controller;
 import com.foodrescue.uibff.receiver.service.BffJobService;
 import com.foodrescue.uibff.web.response.RecentOrderDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import com.foodrescue.uibff.web.response.ApiResponse;
+import com.foodrescue.uibff.web.response.JobDto;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import com.foodrescue.uibff.web.response.AdminOrderView;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -33,5 +34,15 @@ public class BffJobController {
     @PreAuthorize("hasRole('ADMIN')")
     public Flux<AdminOrderView> getAdminOrderView(Mono<Authentication> authMono) {
         return bffJobService.getAdminOrderView(authMono);
+    }
+    @PutMapping("/{jobId}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Mono<ResponseEntity<ApiResponse<JobDto>>> updateJobStatus(
+            @PathVariable String jobId,
+            @RequestParam String status,
+            Mono<Authentication> authMono) {
+
+        return bffJobService.updateJobStatus(jobId, status, authMono)
+                .map(ResponseEntity::ok);
     }
 }

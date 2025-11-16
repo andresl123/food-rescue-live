@@ -29,3 +29,21 @@ export const getAdminOrderView = async () => {
   if (!response.ok) throw new Error(`Failed to fetch admin order view: ${response.status}`);
   return response.json();
 };
+/**
+ * Updates a job's status (Admin only).
+ */
+export const updateJobStatus = async (jobId, status) => {
+  const response = await fetch(`${BFF_BASE_URL}/jobs/${jobId}/status?status=${status}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update job status: ${response.status}`);
+  }
+
+  return response.json(); // Returns { success: true, data: { jobId: ..., status: ... } }
+};
