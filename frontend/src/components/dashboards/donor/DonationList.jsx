@@ -7,7 +7,6 @@ export default function DonationList({ donations, onAddItem, onEditLot }) {
   const [addressMap, setAddressMap] = useState({});
   const [openDropdownId, setOpenDropdownId] = useState(null);
 
-
     const handleLotUpdated = () => {
       // REFETCH donations from parent
       if (typeof onAddItem === "function") {
@@ -16,21 +15,78 @@ export default function DonationList({ donations, onAddItem, onEditLot }) {
     };
 
 
-    const getEarliestExpiry = (items = []) => {
-      if (!Array.isArray(items) || items.length === 0) return null;
+//     const getEarliestExpiry = (items = []) => {
+//       if (!Array.isArray(items) || items.length === 0) return null;
+//
+//       // extract valid dates
+//       const validDates = items
+//         .map((i) => new Date(i.expiryDate))
+//         .filter((d) => !isNaN(d));
+//
+//       if (validDates.length === 0) return null;
+//
+//       // earliest date
+//       const earliest = new Date(Math.min(...validDates));
+//
+//       return earliest.toLocaleDateString();
+//     };
 
-      // extract valid dates
-      const validDates = items
-        .map((i) => new Date(i.expiryDate))
-        .filter((d) => !isNaN(d));
+// const getEarliestExpiry = (items = []) => {
+//   if (!Array.isArray(items) || items.length === 0) return null;
+//
+//   const validDates = items
+//     .map((i) => i.expiryDate)
+//     .filter(Boolean);
+//
+//   if (validDates.length === 0) return null;
+//
+//   // Find earliest date by comparing raw strings
+//   const earliest = validDates.reduce((min, curr) =>
+//     curr < min ? curr : min
+//   );
+//
+//   // return raw unchanged string (no timezone conversion)
+//   return earliest;
+// };
 
-      if (validDates.length === 0) return null;
+const getEarliestExpiry = (items = []) => {
+  if (!Array.isArray(items) || items.length === 0) return null;
 
-      // earliest date
-      const earliest = new Date(Math.min(...validDates));
+  // Normalize dates (support expiryDate or expiry_date)
+  const validDates = items
+    .map((i) => i.expiryDate || i.expiry_date)
+    .filter(Boolean);
 
-      return earliest.toLocaleDateString();
-    };
+  if (validDates.length === 0) return null;
+
+  const today = new Date().setHours(0, 0, 0, 0);
+
+  // Split into expired and non-expired
+  const futureDates = [];
+  const expiredDates = [];
+
+  validDates.forEach(dateStr => {
+    const d = new Date(dateStr).setHours(0, 0, 0, 0);
+    if (d >= today) {
+      futureDates.push(dateStr);
+    } else {
+      expiredDates.push(dateStr);
+    }
+  });
+
+  // If there are future dates, return the earliest future one
+  if (futureDates.length > 0) {
+    return futureDates.reduce((min, curr) =>
+      curr < min ? curr : min
+    );
+  }
+
+  // All items expired — fallback to earliest expired date
+  return expiredDates.reduce((min, curr) =>
+    curr < min ? curr : min
+  );
+};
+
 
 
 //   useEffect(() => {
@@ -180,7 +236,7 @@ export default function DonationList({ donations, onAddItem, onEditLot }) {
                   <div>
                     <i className="bi bi-calendar3 me-2"></i>
 {/*                     {new Date(lot.created_at || lot.createdAt).toLocaleDateString()} */}
-                        {getEarliestExpiry(lot.items) || "N/A"}
+                        Exp: <span style={{ fontStyle: "italic" }}>{getEarliestExpiry(lot.items) || "N/A"}</span>
                   </div>
                   {lot.addressId && addressMap[lot.addressId] && (
                     <div>
@@ -256,18 +312,46 @@ export default function DonationList({ donations, onAddItem, onEditLot }) {
 {/*                     Add Item */}
 {/*                   </Dropdown.Item> */}
 
-                <Dropdown.Item
-                  disabled={
+{/*                 <Dropdown.Item */}
+{/*                   disabled={ */}
+{/*                     ["pending", "delivered"].includes(lot.status?.toLowerCase()) */}
+{/*                   } */}
+{/*                   onClick={() => { */}
+{/*                     if (!["pending", "delivered"].includes(lot.status?.toLowerCase())) { */}
+{/*                       onAddItem(lot.lotId); */}
+{/*                     } */}
+{/*                   }} */}
+{/*                 > */}
+{/*                   Add Item */}
+{/*                 </Dropdown.Item> */}
+
+                <span
+                  title={
                     ["pending", "delivered"].includes(lot.status?.toLowerCase())
+                      ? "You can only add items when the lot is Active or Inactive"
+                      : ""
                   }
-                  onClick={() => {
-                    if (!["pending", "delivered"].includes(lot.status?.toLowerCase())) {
-                      onAddItem(lot.lotId);
-                    }
-                  }}
                 >
-                  Add Item
-                </Dropdown.Item>
+                  <Dropdown.Item
+                    disabled={["pending", "delivered"].includes(lot.status?.toLowerCase())}
+                    onClick={() => {
+                      if (!["pending", "delivered"].includes(lot.status?.toLowerCase())) {
+                        onAddItem(lot.lotId);
+                      }
+                    }}
+                    style={{
+                      cursor: ["pending", "delivered"].includes(lot.status?.toLowerCase())
+                        ? "not-allowed"
+                        : "pointer",
+                      pointerEvents: ["pending", "delivered"].includes(lot.status?.toLowerCase())
+                        ? "none"
+                        : "auto"
+                    }}
+                  >
+                    Add Item
+                  </Dropdown.Item>
+                </span>
+
 
                   <Dropdown.Item
                     onClick={() => onEditLot(lot)}

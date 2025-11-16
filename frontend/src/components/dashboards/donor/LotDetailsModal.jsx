@@ -11,21 +11,40 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
   const [pickupOtp, setPickupOtp] = useState(null);
 
 
-  const getEarliestExpiry = (items = []) => {
-    if (!Array.isArray(items) || items.length === 0) return null;
+//   const getEarliestExpiry = (items = []) => {
+//     if (!Array.isArray(items) || items.length === 0) return null;
+//
+//     // extract valid dates
+//     const validDates = items
+//       .map((i) => new Date(i.expiryDate))
+//       .filter((d) => !isNaN(d));
+//
+//     if (validDates.length === 0) return null;
+//
+//     // earliest date
+//     const earliest = new Date(Math.min(...validDates));
+//
+//     return earliest.toLocaleDateString();
+//   };
 
-    // extract valid dates
-    const validDates = items
-      .map((i) => new Date(i.expiryDate))
-      .filter((d) => !isNaN(d));
+    const getEarliestExpiry = (items = []) => {
+      if (!Array.isArray(items) || items.length === 0) return null;
 
-    if (validDates.length === 0) return null;
+      const validDates = items
+        .map((i) => i.expiryDate)
+        .filter(Boolean);
 
-    // earliest date
-    const earliest = new Date(Math.min(...validDates));
+      if (validDates.length === 0) return null;
 
-    return earliest.toLocaleDateString();
-  };
+      // Find earliest date by comparing raw strings
+      const earliest = validDates.reduce((min, curr) =>
+        curr < min ? curr : min
+      );
+
+      // return raw unchanged string (no timezone conversion)
+      return earliest;
+    };
+
 
     useEffect(() => {
       const fetchOtp = async () => {
@@ -133,6 +152,14 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
           .join(", ")
       : null;
 
+  const isExpired = (dateStr) => {
+    if (!dateStr) return false;
+    const today = new Date().setHours(0, 0, 0, 0);
+    const exp = new Date(dateStr).setHours(0, 0, 0, 0);
+    return exp < today;
+  };
+
+
   return (
     <>
       <div
@@ -206,11 +233,17 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
                       : "Address not available"}
                   </p>
 
-                  <p className="mb-0 text-muted small">
-                    <i className="bi bi-calendar-event me-1"></i>
+{/*                   <p className="mb-0 text-muted small"> */}
+{/*                     <i className="bi bi-calendar-event me-1"></i> */}
 {/*                     Expires: {currentLot.expiry || "3d left"} */}
-                        Expires: {getEarliestExpiry(currentLot.items) || "N/A"}
-                  </p>
+{/*                         Expires: {getEarliestExpiry(currentLot.items) || "N/A"} */}
+{/*                   </p> */}
+
+                    <p className="mb-0 text-muted small">
+                      <i className="bi bi-calendar-event me-1"></i>
+                      Expires: <span style={{ fontStyle: "italic" }}>{getEarliestExpiry(currentLot.items) || "N/A"}</span>
+                    </p>
+
                   {/* ✅ tags CSV under expiry */}
                   {tagsCsv && (
                     <p className="mb-0 text-muted small mt-1">
@@ -265,13 +298,56 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
                     </span>
                   </h6>
                   {/* + Add Item Button */}
+{/*                   <button */}
+{/*                     type="button" */}
+{/*                     className="btn btn-outline-dark btn-sm ms-2" */}
+{/*                     onClick={() => setShowFoodItemModal(true)} */}
+{/*                   > */}
+{/*                     + Add Item */}
+{/*                   </button> */}
+
+{/*                 <button */}
+{/*                   type="button" */}
+{/*                   className="btn btn-outline-dark btn-sm ms-2" */}
+{/*                   onClick={() => setShowFoodItemModal(true)} */}
+{/*                   disabled={!["ACTIVE", "INACTIVE"].includes(currentLot.status)} */}
+{/*                   title={ */}
+{/*                       !["ACTIVE", "INACTIVE"].includes(currentLot.status) */}
+{/*                         ? "You can only add items when the lot is Active or Inactive" */}
+{/*                         : "" */}
+{/*                     } */}
+{/*                   style={{ */}
+{/*                     opacity: !["ACTIVE", "INACTIVE"].includes(currentLot.status) ? 0.5 : 1, */}
+{/*                     cursor: !["ACTIVE", "INACTIVE"].includes(currentLot.status) ? "not-allowed" : "pointer" */}
+{/*                   }} */}
+{/*                 > */}
+{/*                   + Add Item */}
+{/*                 </button> */}
+
+                <span
+                  title={
+                    !["ACTIVE", "INACTIVE"].includes(currentLot.status)
+                      ? "You can only add items when the lot is Active or Inactive"
+                      : ""
+                  }
+                >
                   <button
                     type="button"
                     className="btn btn-outline-dark btn-sm ms-2"
                     onClick={() => setShowFoodItemModal(true)}
+                    disabled={!["ACTIVE", "INACTIVE"].includes(currentLot.status)}
+                    style={{
+                      opacity: !["ACTIVE", "INACTIVE"].includes(currentLot.status) ? 0.5 : 1,
+                      cursor: !["ACTIVE", "INACTIVE"].includes(currentLot.status) ? "not-allowed" : "pointer",
+                      pointerEvents: !["ACTIVE", "INACTIVE"].includes(currentLot.status) ? "none" : "auto"
+                    }}
                   >
                     + Add Item
                   </button>
+                </span>
+
+
+
                 </div>
 
                 <small className="text-muted">
@@ -293,39 +369,69 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
                     {currentLot.items.map((item, idx) => (
                       <div
                         key={idx}
-                        className="d-flex justify-content-between align-items-center bg-white border p-3 rounded-3 shadow-sm"
+                        className="d-flex justify-content-between align-items-center p-3 rounded-3 shadow-sm"
                         style={{
-                          transition: "background 0.2s ease",
+                          border: isExpired(item.expiryDate) ? "1px solid #f5c2c7" : "1px solid #d1d5db",
+                          backgroundColor: isExpired(item.expiryDate) ? "#fff6f6" : "#ffffff",
                           cursor: "default",
+                          transition: "background 0.2s ease",
                         }}
-                        onMouseEnter={(e) =>
-                          (e.currentTarget.style.backgroundColor = "#f9fafb")
-                        }
-                        onMouseLeave={(e) =>
-                          (e.currentTarget.style.backgroundColor = "#ffffff")
-                        }
                       >
+
                         <div>
                           <div
                             className="fw-semibold text-dark"
                             style={{ fontSize: "0.95rem" }}
                           >
                             {item.itemName}
+
+                            {isExpired(item.expiryDate) && (
+                              <span
+                                className="ms-2"
+                                style={{
+                                  backgroundColor: "#fdecea",
+                                  color: "#d32f2f",
+                                  fontSize: "0.75rem",
+                                  padding: "2px 6px",
+                                  borderRadius: "6px",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                }}
+                              >
+                                <i className="bi bi-exclamation-triangle-fill" style={{ fontSize: "0.8rem" }}></i>
+                                Expired
+                              </span>
+                            )}
+
+
                           </div>
                           <small className="text-muted">
                             {item.quantity} {item.unitOfMeasure} • {item.category}
                           </small>
                         </div>
                         <div>
-                          <small
-                            className="text-muted"
-                            style={{
-                              fontSize: "0.8rem",
-                              fontStyle: "italic",
-                            }}
-                          >
-                            Exp: {item.expiryDate}
-                          </small>
+{/*                           <small */}
+{/*                             className="text-muted" */}
+{/*                             style={{ */}
+{/*                               fontSize: "0.8rem", */}
+{/*                               fontStyle: "italic", */}
+{/*                             }} */}
+{/*                           > */}
+{/*                             Exp: {item.expiryDate} */}
+{/*                           </small> */}
+
+                        <small
+                          style={{
+                            fontSize: "0.8rem",
+                            color: isExpired(item.expiryDate) ? "#d32f2f" : "#6b7280",
+                            fontStyle: "italic",
+                          }}
+                        >
+                          Exp: {item.expiryDate}
+                        </small>
+
+
                         </div>
                       </div>
                     ))}
