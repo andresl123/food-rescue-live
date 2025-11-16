@@ -84,8 +84,8 @@ const OrdersAndPODPage = () => {
           <td>{order.orderId.substring(0, 8)}...</td>
           <td>{order.recipientName}</td>
           <td>{order.items}</td>
-          <td className="otp-code">{order.pickupOtp}</td>
-          <td className="otp-code">{order.deliveryOtp}</td>
+          <td className="otp-code">{order.pickupCode}</td>
+          <td className="otp-code">{order.deliveryCode}</td>
           <td>{order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString() : 'N/A'}</td>
           <td>
             <span className={getStatusBadgeClass(order.status)}>{order.status}</span>

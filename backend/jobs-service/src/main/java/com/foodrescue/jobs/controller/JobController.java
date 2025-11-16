@@ -2,6 +2,7 @@ package com.foodrescue.jobs.controller;
 
 import com.foodrescue.jobs.web.response.RecentOrderDto;
 import org.springframework.security.access.prepost.PreAuthorize;
+import com.foodrescue.jobs.web.response.AdminOrderView;
 import com.foodrescue.jobs.entity.OrderDocument;
 import com.foodrescue.jobs.model.Job;
 import com.foodrescue.jobs.service.JobService;
@@ -14,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import org.springframework.security.core.Authentication;
 
 @RestController
 @RequestMapping("/api/v1/jobs")
@@ -25,8 +27,8 @@ public class JobController {
 
     @GetMapping("/admin/recent-orders")
     @PreAuthorize("hasRole('ADMIN')")
-    public Flux<RecentOrderDto> getRecentOrders() {
-        return service.getRecentOrders();
+    public Flux<RecentOrderDto> getRecentOrders(Mono<Authentication> authMono) {
+        return service.getRecentOrders(authMono);
     }
 
     @GetMapping("/admin/orders-today-count")
@@ -57,13 +59,19 @@ public class JobController {
     }
 
     @GetMapping("/orders/details/{orderId}/receiver")
-    public Mono<ResponseEntity<ApiResponse<UserDto>>> getOrderReceiver(@PathVariable String orderId) {
-        return service.getReceiverForOrder(orderId).map(ResponseEntity::ok);
+    public Mono<ResponseEntity<ApiResponse<UserDto>>> getOrderReceiver(
+            @PathVariable String orderId,
+            Mono<Authentication> authMono) { // <-- 1. ADD THIS
+
+        return service.getReceiverForOrder(orderId, authMono).map(ResponseEntity::ok); // <-- 2. PASS IT
     }
 
     @GetMapping("/users/{userId}")
-    public Mono<ResponseEntity<ApiResponse<UserNameDto>>> getUserById(@PathVariable String userId) {
-        return service.getUserById(userId).map(ResponseEntity::ok);
+    public Mono<ResponseEntity<ApiResponse<UserNameDto>>> getUserById(
+            @PathVariable String userId,
+            Mono<Authentication> authMono) { // <-- 1. ADD THIS
+
+        return service.getUserById(userId, authMono).map(ResponseEntity::ok); // <-- 2. PASS IT
     }
 
     @GetMapping("/address/{addressId}")
@@ -144,6 +152,12 @@ public class JobController {
     @PutMapping("/{jobId}/returned")
     public Mono<ResponseEntity<ApiResponse<Job>>> markAsReturned(@PathVariable String jobId) {
         return service.markAsReturned(jobId).map(ResponseEntity::ok);
+    }
+
+    @GetMapping("/admin/order-view")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Flux<AdminOrderView> getAdminOrderView(Mono<Authentication> authMono) { // <-- Accept authMono
+        return service.getAdminOrderView(authMono); // <-- Pass authMono
     }
 }
 

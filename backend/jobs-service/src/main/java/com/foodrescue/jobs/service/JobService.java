@@ -20,6 +20,13 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import java.time.temporal.ChronoUnit;
 import java.time.Instant;
+import com.foodrescue.jobs.web.response.AdminOrderView;
+import org.springframework.http.HttpHeaders;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.jwt.Jwt;
+import com.foodrescue.jobs.web.response.FoodItemDto;
+import com.foodrescue.jobs.web.response.PodDto;
+import java.util.stream.Collectors;
 
 import java.time.Instant;
 import java.util.Map;
@@ -36,6 +43,12 @@ public class JobService {
     private final WebClient.Builder webClientBuilder;
     private final ObjectMapper objectMapper;
 
+    @Value("${services.pods.base-url:http://localhost:8083/api/v1}") // PODs service
+    private String podsBaseUrl;
+
+    @Value("${services.fooditems.base-url:http://localhost:8081/api/v1}") // Food-Items service
+    private String foodItemsBaseUrl;
+
     @Value("${auth.base-url:http://localhost:8080/api/v1}")
     private String authBaseUrl;
 
@@ -51,24 +64,18 @@ public class JobService {
                     return Mono.just(ApiResponse.error("Failed to create job"));
                 });
     }
-    public Flux<RecentOrderDto> getRecentOrders() {
-        return orders.findTop5ByOrderByOrderDateDesc() // 1. Get recent 5 orders (this is ordered)
-
-                // 2. Use concatMap INSTEAD of flatMap to preserve the order
+    public Flux<RecentOrderDto> getRecentOrders(Mono<Authentication> authMono) {
+        return orders.findTop5ByOrderByOrderDateDesc()
                 .concatMap(order -> {
-                    // For each order, find its associated job
                     Mono<Job> jobMono = jobs.findByOrderId(order.getId())
                             .next()
                             .defaultIfEmpty(new Job());
-
-                    // And find its recipient's name (reusing your existing helper)
-                    Mono<UserDto> recipientMono = fetchUserById(order.getReceiverId())
+                    Mono<UserDto> recipientMono = fetchUserById(order.getReceiverId(), authMono) // Pass authMono
                             .defaultIfEmpty(new UserDto());
 
                     return Mono.zip(Mono.just(order), jobMono, recipientMono);
                 })
                 .map(tuple -> {
-                    // We now have the Order, Job, and Recipient DTO
                     OrderDocument order = tuple.getT1();
                     Job job = tuple.getT2();
                     UserDto recipient = tuple.getT3();
@@ -79,10 +86,8 @@ public class JobService {
                     } else {
                         finalStatus = job.getStatus();
                     }
-
                     String recipientName = (recipient.getName() == null) ? "Unknown Recipient" : recipient.getName();
 
-                    // Build the DTO
                     return new RecentOrderDto(
                             order.getId(),
                             recipientName,
@@ -182,9 +187,13 @@ public class JobService {
                 });
     }
 
-    public Mono<ApiResponse<UserDto>> getReceiverForOrder(String orderId) {
+    public Mono<ApiResponse<UserDto>> getReceiverForOrder(
+            String orderId,
+            Mono<Authentication> authMono) {
+
+        log.info("Fetching receiver info for order {}", orderId);
         return orders.findById(orderId)
-                .flatMap(order -> fetchUserById(order.getReceiverId())
+                .flatMap(order -> fetchUserById(order.getReceiverId(), authMono) // Pass authMono
                         .map(ApiResponse::ok)
                         .switchIfEmpty(Mono.just(ApiResponse.error("Receiver user not found"))))
                 .switchIfEmpty(Mono.just(ApiResponse.error("Order not found")))
@@ -194,8 +203,11 @@ public class JobService {
                 });
     }
 
-    public Mono<ApiResponse<UserNameDto>> getUserById(String userId) {
-        return fetchUserById(userId)
+    public Mono<ApiResponse<UserNameDto>> getUserById(
+            String userId,
+            Mono<Authentication> authMono) {
+
+        return fetchUserById(userId, authMono)
                 .map(user -> {
                     UserNameDto dto = new UserNameDto();
                     dto.setId(user.getId());
@@ -310,28 +322,31 @@ public class JobService {
                 .switchIfEmpty(Mono.just(ApiResponse.error("Job not found")));
     }
 
-    private Mono<UserDto> fetchUserById(String userId) {
-        if (userId == null || userId.isBlank()) {
+    private Mono<UserDto> fetchUserById(String userId, Mono<Authentication> authMono) {
+        if (userId == null || userId.trim().isEmpty()) {
             return Mono.empty();
         }
 
-        return webClientBuilder.build()
-                .get()
-                .uri(authBaseUrl + "/users/{id}", userId)
-                .retrieve()
-                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
-                .map(response -> {
-                    boolean success = Boolean.TRUE.equals(response.get("success"));
-                    if (success && response.get("data") != null) {
-                        return objectMapper.convertValue(response.get("data"), UserDto.class);
-                    }
-                    return null;
-                })
-                .filter(Objects::nonNull)
-                .onErrorResume(ex -> {
-                    log.error("Failed to fetch user {}", userId, ex);
-                    return Mono.empty();
-                });
+        return authMono.flatMap(auth -> Mono.just(((Jwt) auth.getPrincipal()).getTokenValue()))
+                .flatMap(token ->
+                        webClientBuilder.build()
+                                .get()
+                                .uri(authBaseUrl + "/api/v1/users/{id}", userId)
+                                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token) // <-- Add auth header
+                                .retrieve()
+                                .bodyToMono(new ParameterizedTypeReference<ApiResponse<UserDto>>() {})
+                                .map(apiResponse -> {
+                                    if (apiResponse.success() && apiResponse.data() != null) {
+                                        return apiResponse.data();
+                                    }
+                                    return null;
+                                })
+                                .filter(Objects::nonNull)
+                                .onErrorResume(ex -> {
+                                    log.error("Failed to fetch user {}", userId, ex);
+                                    return Mono.empty();
+                                })
+                );
     }
 
     private boolean isTerminalStatus(String status) {
@@ -346,6 +361,95 @@ public class JobService {
 
     private String generateJobId() {
         return "JOB-" + UUID.randomUUID();
+    }
+
+    // --- Fetch POD ---
+    private Mono<PodDto> fetchPodByJobId(String jobId, Mono<Authentication> authMono) {
+        if (jobId == null || jobId.trim().isEmpty()) {
+            return Mono.just(new PodDto("N/A", "N/A"));
+        }
+
+        return authMono.flatMap(auth -> Mono.just(((Jwt) auth.getPrincipal()).getTokenValue()))
+                .flatMap(token ->
+                        webClientBuilder.build()
+                                .get()
+                                .uri(podsBaseUrl + "/api/v1/pods/latest/{jobId}", jobId)
+                                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token) // <-- Add auth header
+                                .retrieve()
+                                .bodyToMono(new ParameterizedTypeReference<ApiResponse<PodDto>>() {})
+                                .map(apiResponse -> {
+                                    if (apiResponse.success() && apiResponse.data() != null) {
+                                        return apiResponse.data();
+                                    }
+                                    return new PodDto("N/A", "N/A");
+                                })
+                                .defaultIfEmpty(new PodDto("N/A", "N/A"))
+                                .onErrorResume(ex -> {
+                                    log.error("Failed to fetch POD for job {}: {}", jobId, ex.getMessage());
+                                    return Mono.just(new PodDto("N/A", "N/A"));
+                                })
+                );
+    }
+
+    // --- Fetch Food Items ---
+    private Mono<String> fetchItemsByLotId(String lotId, Mono<Authentication> authMono) {
+        if (lotId == null || lotId.trim().isEmpty()) {
+            return Mono.just("Unknown Items");
+        }
+
+        return authMono.flatMap(auth -> Mono.just(((Jwt) auth.getPrincipal()).getTokenValue()))
+                .flatMap(token ->
+                        webClientBuilder.build()
+                                .get()
+                                .uri(foodItemsBaseUrl + "/api/v1/lots/{lotId}/items", lotId)
+                                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token) // <-- Add auth header
+                                .retrieve()
+                                .bodyToFlux(FoodItemDto.class)
+                                .map(FoodItemDto::itemName)
+                                .collect(Collectors.joining(", "))
+                                .defaultIfEmpty("No items found")
+                                .onErrorResume(ex -> Mono.just("Error fetching items"))
+                );
+    }
+
+    // --- AGGREGATION METHOD ---
+    public Flux<AdminOrderView> getAdminOrderView(Mono<Authentication> authMono) {
+        return jobs.findAll()
+                .concatMap(job -> {
+                    Mono<OrderDocument> orderMono = orders.findById(job.getOrderId())
+                            .defaultIfEmpty(new OrderDocument());
+                    Mono<PodDto> podMono = fetchPodByJobId(job.getJobId(), authMono); // Pass authMono
+
+                    return Mono.zip(Mono.just(job), orderMono, podMono);
+                })
+                .concatMap(tuple -> {
+                    Job job = tuple.getT1();
+                    OrderDocument order = tuple.getT2();
+                    PodDto pod = tuple.getT3();
+
+                    Mono<UserDto> recipientMono = fetchUserById(order.getReceiverId(), authMono) // Pass authMono
+                            .defaultIfEmpty(new UserDto());
+                    Mono<String> itemsMono = fetchItemsByLotId(order.getLotId(), authMono); // Pass authMono
+
+                    return Mono.zip(
+                            Mono.just(job),
+                            Mono.just(pod),
+                            recipientMono,
+                            itemsMono
+                    );
+                })
+                .map(tuple -> {
+                    Job job = tuple.getT1();
+                    PodDto pod = tuple.getT2();
+                    UserDto recipient = tuple.getT3();
+                    String items = tuple.getT4();
+                    String recipientName = (recipient.getName() == null) ? "Unknown Recipient" : recipient.getName();
+
+                    return new AdminOrderView(
+                            job.getOrderId(), job.getJobId(), recipientName, items,
+                            pod.getPickupCode(), pod.getDeliveryCode(), job.getCompletedAt(), job.getStatus()
+                    );
+                });
     }
 }
 

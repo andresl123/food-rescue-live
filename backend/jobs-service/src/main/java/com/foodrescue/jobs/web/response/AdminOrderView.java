@@ -1,4 +1,4 @@
-package com.foodrescue.uibff.web.response;
+package com.foodrescue.jobs.web.response;
 
 import java.time.Instant;
 
@@ -7,8 +7,8 @@ public record AdminOrderView(
         String jobId,
         String recipientName,
         String items,
-        String pickupCode,
-        String deliveryCode,
+        String pickupCode,   // <-- This name is correct
+        String deliveryCode, // <-- This name is correct
         Instant deliveryDate,
         String status
 ) {}
