@@ -338,6 +338,7 @@ export default function DonorDashboard() {
               donations={filteredLots}
               onAddItem={handleAddItem}
               onEditLot={handleEditLot}
+              onRefreshLots={fetchLots}
             />
           </div>
         </div>
@@ -381,11 +382,11 @@ export default function DonorDashboard() {
                   color: "#3b82f6",
                   count: lots.filter((l) => l.status?.toLowerCase() === "delivered").length,
                 },
-                {
-                  label: "Expiring Soon",
-                  color: "#f97316",
-                  count: lots.filter((l) => l.status?.toLowerCase() === "expiring_soon").length,
-                },
+//                 {
+//                   label: "Expiring Soon",
+//                   color: "#f97316",
+//                   count: lots.filter((l) => l.status?.toLowerCase() === "expiring_soon").length,
+//                 },
                 {
                   label: "Inactive",
                   color: "#374151",

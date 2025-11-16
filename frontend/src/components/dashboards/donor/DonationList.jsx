@@ -2,17 +2,25 @@ import React, { useState, useEffect } from "react";
 import { Dropdown } from "react-bootstrap";
 import LotDetailsModal from "./LotDetailsModal";
 
-export default function DonationList({ donations, onAddItem, onEditLot }) {
+export default function DonationList({ donations, onAddItem, onEditLot, onRefreshLots }) {
+// export default function DonationList({ donations, onAddItem, onEditLot }) {
   const [selectedLot, setSelectedLot] = useState(null);
   const [addressMap, setAddressMap] = useState({});
   const [openDropdownId, setOpenDropdownId] = useState(null);
 
-    const handleLotUpdated = () => {
-      // REFETCH donations from parent
-      if (typeof onAddItem === "function") {
-        onAddItem(); // parent can re-fetch
-      }
-    };
+//     const handleLotUpdated = () => {
+//       // REFETCH donations from parent
+//       if (typeof onAddItem === "function") {
+//         onAddItem(); // parent can re-fetch
+//       }
+//     };
+
+const handleLotUpdated = () => {
+    // Just refresh lots, don't open any modal
+    if (typeof onRefreshLots === "function") {
+      onRefreshLots();
+    }
+  };
 
 
 //     const getEarliestExpiry = (items = []) => {
