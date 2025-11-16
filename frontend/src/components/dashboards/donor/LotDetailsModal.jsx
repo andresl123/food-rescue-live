@@ -10,23 +10,6 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
   const [address, setAddress] = useState(null);
   const [pickupOtp, setPickupOtp] = useState(null);
 
-
-//   const getEarliestExpiry = (items = []) => {
-//     if (!Array.isArray(items) || items.length === 0) return null;
-//
-//     // extract valid dates
-//     const validDates = items
-//       .map((i) => new Date(i.expiryDate))
-//       .filter((d) => !isNaN(d));
-//
-//     if (validDates.length === 0) return null;
-//
-//     // earliest date
-//     const earliest = new Date(Math.min(...validDates));
-//
-//     return earliest.toLocaleDateString();
-//   };
-
     const getEarliestExpiry = (items = []) => {
       if (!Array.isArray(items) || items.length === 0) return null;
 
@@ -232,13 +215,6 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
                       ? `${address.street || ""}, ${address.city || ""}, ${address.state || ""} ${address.postalCode || ""}`
                       : "Address not available"}
                   </p>
-
-{/*                   <p className="mb-0 text-muted small"> */}
-{/*                     <i className="bi bi-calendar-event me-1"></i> */}
-{/*                     Expires: {currentLot.expiry || "3d left"} */}
-{/*                         Expires: {getEarliestExpiry(currentLot.items) || "N/A"} */}
-{/*                   </p> */}
-
                     <p className="mb-0 text-muted small">
                       <i className="bi bi-calendar-event me-1"></i>
                       Expires: <span style={{ fontStyle: "italic" }}>{getEarliestExpiry(currentLot.items) || "N/A"}</span>
@@ -282,7 +258,6 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
               </div>
             </div>
 
-
             {/* ---------- FOOD ITEMS ---------- */}
             <hr className="my-4" />
             <div className="px-4 pb-4">
@@ -298,31 +273,6 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
                     </span>
                   </h6>
                   {/* + Add Item Button */}
-{/*                   <button */}
-{/*                     type="button" */}
-{/*                     className="btn btn-outline-dark btn-sm ms-2" */}
-{/*                     onClick={() => setShowFoodItemModal(true)} */}
-{/*                   > */}
-{/*                     + Add Item */}
-{/*                   </button> */}
-
-{/*                 <button */}
-{/*                   type="button" */}
-{/*                   className="btn btn-outline-dark btn-sm ms-2" */}
-{/*                   onClick={() => setShowFoodItemModal(true)} */}
-{/*                   disabled={!["ACTIVE", "INACTIVE"].includes(currentLot.status)} */}
-{/*                   title={ */}
-{/*                       !["ACTIVE", "INACTIVE"].includes(currentLot.status) */}
-{/*                         ? "You can only add items when the lot is Active or Inactive" */}
-{/*                         : "" */}
-{/*                     } */}
-{/*                   style={{ */}
-{/*                     opacity: !["ACTIVE", "INACTIVE"].includes(currentLot.status) ? 0.5 : 1, */}
-{/*                     cursor: !["ACTIVE", "INACTIVE"].includes(currentLot.status) ? "not-allowed" : "pointer" */}
-{/*                   }} */}
-{/*                 > */}
-{/*                   + Add Item */}
-{/*                 </button> */}
 
                 <span
                   title={
@@ -345,8 +295,6 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
                     + Add Item
                   </button>
                 </span>
-
-
 
                 </div>
 
@@ -411,16 +359,6 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
                           </small>
                         </div>
                         <div>
-{/*                           <small */}
-{/*                             className="text-muted" */}
-{/*                             style={{ */}
-{/*                               fontSize: "0.8rem", */}
-{/*                               fontStyle: "italic", */}
-{/*                             }} */}
-{/*                           > */}
-{/*                             Exp: {item.expiryDate} */}
-{/*                           </small> */}
-
                         <small
                           style={{
                             fontSize: "0.8rem",
