@@ -1,6 +1,5 @@
 // Use a relative URL for the proxy. This should match the key in your vite.config.js proxy setup.
-const BASE_URL = "http://localhost:8080/api";
-const BFF_BASE_URL = "http://localhost:8090/api";
+const BFF_BASE_URL = `${import.meta.env.VITE_BFF_BASE_URL}/api`;
 
 export async function generateResetCode(email, purpose = "FORGOT_PASSWORD") {
   try {

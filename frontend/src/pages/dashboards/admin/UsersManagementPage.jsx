@@ -296,9 +296,9 @@ const renderTableBody = () => {
                   value={formData.role} onChange={handleFormChange} required
                 >
                   <option value="DONOR">DONOR</option>
-                  <option value="RECIPIENT">RECIPIENT</option>
+                  <option value="RECEIVER">RECEIVER</option>
                   <option value="ADMIN">ADMIN</option>
-                  <option value="USER">USER</option>
+                  <option value="COURIER">COURIER</option>
                   {/* Add any other primary roles you support */}
                 </select>
               </div>

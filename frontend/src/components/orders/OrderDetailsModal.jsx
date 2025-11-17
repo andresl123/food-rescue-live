@@ -644,11 +644,5 @@ export default function OrderDetailsModal({ show, onClose, order }) {
     </div>
   );
 
-  return createPortal(
-    <>
-      <Toaster position="top-center" />
-      {dialog}
-    </>,
-    document.body
-  );
+  return createPortal(dialog, document.body);
 }
