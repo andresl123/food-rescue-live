@@ -2,7 +2,7 @@ name: Build and Deploy evidence-service (ARM64)
 
 on:
   push:
-    branches: ["MTC-231"]
+    branches: ["main"]
     paths:
       - 'backend/evidence-service/**'
       - '.github/workflows/evidence-service-ci.yml'

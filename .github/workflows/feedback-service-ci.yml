@@ -2,7 +2,7 @@ name: Build and Deploy feedback-service (ARM64)
 
 on:
   push:
-    branches: ["MTC-231"]
+    branches: ["main"]
     paths:
       - 'backend/feedback-service/**'
       - '.github/workflows/feedback-service-ci.yml'

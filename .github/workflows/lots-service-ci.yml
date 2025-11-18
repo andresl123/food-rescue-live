@@ -2,7 +2,7 @@ name: Build and Deploy lots-matching-service (ARM64)
 
 on:
   push:
-    branches: ["MTC-231"] # Or your main branch
+    branches: ["main"] # Or your main branch
     paths:
       - 'backend/lots-matching-service/**' # <- Triggers on changes to this service
       - '.github/workflows/lots-service-ci.yml'
