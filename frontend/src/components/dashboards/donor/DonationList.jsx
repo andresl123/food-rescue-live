@@ -2,55 +2,56 @@ import React, { useState, useEffect } from "react";
 import { Dropdown } from "react-bootstrap";
 import LotDetailsModal from "./LotDetailsModal";
 
-export default function DonationList({ donations, onAddItem, onEditLot }) {
+export default function DonationList({ donations, onAddItem, onEditLot, onRefreshLots }) {
+// export default function DonationList({ donations, onAddItem, onEditLot }) {
   const [selectedLot, setSelectedLot] = useState(null);
   const [addressMap, setAddressMap] = useState({});
   const [openDropdownId, setOpenDropdownId] = useState(null);
 
-    const getEarliestExpiry = (items = []) => {
-      if (!Array.isArray(items) || items.length === 0) return null;
+const handleLotUpdated = () => {
+    // Just refresh lots, don't open any modal
+    if (typeof onRefreshLots === "function") {
+      onRefreshLots();
+    }
+  };
 
-      // extract valid dates
-      const validDates = items
-        .map((i) => new Date(i.expiryDate))
-        .filter((d) => !isNaN(d));
+const getEarliestExpiry = (items = []) => {
+  if (!Array.isArray(items) || items.length === 0) return null;
 
-      if (validDates.length === 0) return null;
+  // Normalize dates (support expiryDate or expiry_date)
+  const validDates = items
+    .map((i) => i.expiryDate || i.expiry_date)
+    .filter(Boolean);
 
-      // earliest date
-      const earliest = new Date(Math.min(...validDates));
+  if (validDates.length === 0) return null;
 
-      return earliest.toLocaleDateString();
-    };
+  const today = new Date().setHours(0, 0, 0, 0);
 
+  // Split into expired and non-expired
+  const futureDates = [];
+  const expiredDates = [];
 
-//   useEffect(() => {
-//     const fetchAddresses = async () => {
-//       const token = localStorage.getItem("accessToken");
-//       if (!token || !donations?.length) return;
-//
-//       const newMap = {};
-//       await Promise.all(
-//         donations.map(async (lot) => {
-//           if (lot.addressId && !addressMap[lot.addressId]) {
-//             try {
-//               const res = await fetch(`http://localhost:8080/api/v1/addresses/${lot.addressId}`, {
-//                 headers: { Authorization: `Bearer ${token}` },
-//               });
-//               const addrData = await res.json();
-//               if (addrData?.data) newMap[lot.addressId] = addrData.data;
-//             } catch (err) {
-//               console.error("Error fetching address for lot:", lot.lotId, err);
-//             }
-//           }
-//         })
-//       );
-//       setAddressMap((prev) => ({ ...prev, ...newMap }));
-//     };
-//
-//     fetchAddresses();
-//   }, [donations]);
+  validDates.forEach(dateStr => {
+    const d = new Date(dateStr).setHours(0, 0, 0, 0);
+    if (d >= today) {
+      futureDates.push(dateStr);
+    } else {
+      expiredDates.push(dateStr);
+    }
+  });
 
+  // If there are future dates, return the earliest future one
+  if (futureDates.length > 0) {
+    return futureDates.reduce((min, curr) =>
+      curr < min ? curr : min
+    );
+  }
+
+  // All items expired — fallback to earliest expired date
+  return expiredDates.reduce((min, curr) =>
+    curr < min ? curr : min
+  );
+};
 
   const handleViewDetails = (lot) => setSelectedLot(lot);
 
@@ -170,8 +171,7 @@ export default function DonationList({ donations, onAddItem, onEditLot }) {
                   </div>
                   <div>
                     <i className="bi bi-calendar3 me-2"></i>
-{/*                     {new Date(lot.created_at || lot.createdAt).toLocaleDateString()} */}
-                        {getEarliestExpiry(lot.items) || "N/A"}
+                        Exp: <span style={{ fontStyle: "italic" }}>{getEarliestExpiry(lot.items) || "N/A"}</span>
                   </div>
                   {lot.addressId && addressMap[lot.addressId] && (
                     <div>
@@ -241,24 +241,33 @@ export default function DonationList({ donations, onAddItem, onEditLot }) {
                 </Dropdown.Toggle>
 
                 <Dropdown.Menu>
-{/*                   <Dropdown.Item */}
-{/*                     onClick={() => onAddItem(lot.lotId)} */}
-{/*                   > */}
-{/*                     Add Item */}
-{/*                   </Dropdown.Item> */}
-
-                <Dropdown.Item
-                  disabled={
+                <span
+                  title={
                     ["pending", "delivered"].includes(lot.status?.toLowerCase())
+                      ? "You can only add items when the lot is Active or Inactive"
+                      : ""
                   }
-                  onClick={() => {
-                    if (!["pending", "delivered"].includes(lot.status?.toLowerCase())) {
-                      onAddItem(lot.lotId);
-                    }
-                  }}
                 >
-                  Add Item
-                </Dropdown.Item>
+                  <Dropdown.Item
+                    disabled={["pending", "delivered"].includes(lot.status?.toLowerCase())}
+                    onClick={() => {
+                      if (!["pending", "delivered"].includes(lot.status?.toLowerCase())) {
+                        onAddItem(lot.lotId);
+                      }
+                    }}
+                    style={{
+                      cursor: ["pending", "delivered"].includes(lot.status?.toLowerCase())
+                        ? "not-allowed"
+                        : "pointer",
+                      pointerEvents: ["pending", "delivered"].includes(lot.status?.toLowerCase())
+                        ? "none"
+                        : "auto"
+                    }}
+                  >
+                    Add Item
+                  </Dropdown.Item>
+                </span>
+
 
                   <Dropdown.Item
                     onClick={() => onEditLot(lot)}
@@ -280,6 +289,7 @@ export default function DonationList({ donations, onAddItem, onEditLot }) {
           show={true}
           lot={selectedLot}
           onClose={() => setSelectedLot(null)}
+          onItemAdded={handleLotUpdated}
         />
       )}
     </>

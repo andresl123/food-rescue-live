@@ -129,4 +129,12 @@ public class LotController {
                 .map(ResponseEntity::ok);
     }
 
+    @GetMapping("/by-donor/{donorId}")
+    public Flux<Lot> getLotsByDonor(
+            @PathVariable String donorId,
+            Mono<Authentication> authenticationMono
+    ) {
+        return lotService.getLotsByDonor(donorId, authenticationMono);
+    }
+
 }
