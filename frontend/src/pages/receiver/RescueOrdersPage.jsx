@@ -1,19 +1,17 @@
 // pages/RescueOrdersPage.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import UserLayout from "../../layout/UserLayout";
 import RescueOrderCard from "../../components/orders/RescueOrderCard";
-import OrderDetailsModal from "../../components/orders/OrderDetailsModal"; // ⬅️ new
+import OrderDetailsModal from "../../components/orders/OrderDetailsModal";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 const BFF_BASE_URL = import.meta.env.VITE_BFF_BASE_URL;
 
 export default function RescueOrdersPage() {
-  const [tab, setTab] = useState("completed");
-  const [data, setData] = useState({ current: [], completed: [] });
+  const [orders, setOrders] = useState([]);        // only completed orders
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
-  // NEW: modal state
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
@@ -24,7 +22,7 @@ export default function RescueOrdersPage() {
       try {
         const res = await fetch(`${BFF_BASE_URL}/api/ui/orders`, {
           method: "GET",
-          credentials: "include", // send cookies (httpOnly access_token)
+          credentials: "include",
           headers: {
             Accept: "application/json",
           },
@@ -38,10 +36,8 @@ export default function RescueOrdersPage() {
         }
 
         const json = await res.json();
-        setData({
-          current: json.current || [],
-          completed: json.completed || [],
-        });
+        // 🔹 Only keep completed / past orders
+        setOrders(json.completed || []);
       } catch (e) {
         console.error("orders fetch error", e);
         setErr("Network error fetching orders");
@@ -53,18 +49,7 @@ export default function RescueOrdersPage() {
     fetchOrders();
   }, []);
 
-  const { currentCount, completedCount, list } = useMemo(() => {
-    const current = data?.current ?? [];
-    const completed = data?.completed ?? [];
-    return {
-      currentCount: current.length,
-      completedCount: completed.length,
-      list: tab === "current" ? current : completed,
-    };
-  }, [data, tab]);
-
   const onViewDetails = (order) => {
-    // open modal with this order
     setSelectedOrder(order);
     setShowModal(true);
   };
@@ -73,43 +58,26 @@ export default function RescueOrdersPage() {
     <UserLayout>
       <div className="container py-4">
         <style>{`
-          .pill-toggle { border-radius:14px; background:#f1f5f9; padding:.5rem; }
-          .pill-btn { border:0; background:transparent; padding:.6rem 1rem; border-radius:10px; font-weight:600; color:#334155; }
-          .pill-btn.active { background:#059669; color:#fff; }
-          .pill-badge { display:inline-flex; align-items:center; gap:.4rem; }
-          .pill-badge .dot { width:6px; height:6px; border-radius:999px; background:currentColor; display:inline-block; }
+          .rescue-page-title {
+            font-weight: 700;
+            letter-spacing: 0.02em;
+          }
+          .rescue-page-subtitle {
+            max-width: 520px;
+          }
         `}</style>
 
-        {/* Toggle */}
-        <div className="d-flex justify-content-center mb-4">
-          <div className="pill-toggle d-flex gap-2 shadow-sm">
-            <button
-              className={`pill-btn ${tab === "current" ? "active" : ""}`}
-              onClick={() => setTab("current")}
-              disabled={loading}
-            >
-              <span className="pill-badge">
-                <i className="bi bi-clock-history"></i>
-                Current Rescues
-                <span className="badge bg-transparent border border-2 ms-1">
-                  {currentCount}
-                </span>
-              </span>
-            </button>
-            <button
-              className={`pill-btn ${tab === "completed" ? "active" : ""}`}
-              onClick={() => setTab("completed")}
-              disabled={loading}
-            >
-              <span className="pill-badge">
-                <i className="bi bi-leaf"></i>
-                Completed Rescues
-                <span className="badge bg-transparent border border-2 ms-1">
-                  {completedCount}
-                </span>
-              </span>
-            </button>
+        {/* Header text – responsive alignment */}
+        <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+          <div>
+            <h2 className="rescue-page-title mb-1">Your Past Rescues</h2>
+            <p className="text-muted rescue-page-subtitle mb-0">
+              A history of all completed food rescues associated with your account.
+            </p>
           </div>
+          <span className="badge bg-light text-secondary fw-semibold px-3 py-2">
+            Total completed: {orders.length}
+          </span>
         </div>
 
         {/* States */}
@@ -117,18 +85,22 @@ export default function RescueOrdersPage() {
         {err && !loading && <p className="text-danger">{err}</p>}
 
         {/* Cards */}
-        {!loading &&
-          !err &&
-          list.map((o) => (
-            <RescueOrderCard key={o.id} order={o} onView={onViewDetails} />
-          ))}
+        {!loading && !err && (
+          <div className="d-flex flex-column gap-3">
+            {orders.map((o) => (
+              <RescueOrderCard key={o.id} order={o} onView={onViewDetails} />
+            ))}
+          </div>
+        )}
 
-        {!loading && !err && list.length === 0 && (
-          <p className="text-muted text-center mt-4">No orders in this tab.</p>
+        {!loading && !err && orders.length === 0 && (
+          <p className="text-muted text-center mt-4">
+            You don’t have any completed rescues yet.
+          </p>
         )}
       </div>
 
-      {/* NEW: modal render */}
+      {/* Modal */}
       <OrderDetailsModal
         show={showModal}
         onClose={() => setShowModal(false)}
