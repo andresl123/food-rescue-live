@@ -10,6 +10,7 @@ import ProfilePage from "../pages/common/ProfilePage";
 import RescueOrdersPage from "../pages/receiver/RescueOrdersPage";
 import FoodItemList from "../components/dashboards/donor/FoodItemList";
 import TestLotImport from "../pages/common/TestLotImport";
+import CurrentRescueOrdersPage from "../pages/receiver/CurrentRescueOrdersPage";
 
 // --- Admin Page Imports ---
 import AdminLayout from "../components/dashboards/admin/AdminLayout";
@@ -41,6 +42,7 @@ function AppRoutes() {
         {/* RECEIVER-only */}
         <Route element={<RequireAuth allowed={["RECEIVER"]} />}>
           <Route path="/orders" element={<RescueOrdersPage />} />
+          <Route path="/current-orders" element={<CurrentRescueOrdersPage />} />
         </Route>
 
         {/* COURIER- only */}
