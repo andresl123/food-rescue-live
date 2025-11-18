@@ -2,6 +2,10 @@ import React, { useMemo, useState } from "react";
 import { Card, Button, Form, InputGroup, Badge } from "react-bootstrap";
 import toast from "react-hot-toast";
 import { verifyPodCode, updateJobStatus } from "../../services/podService.jsx";
+import {
+  markOrderDelivered,
+  updateLotStatus,
+} from "../../services/courierService.jsx";
 
 const verificationCopy = {
   pickup: {
@@ -42,6 +46,7 @@ export default function POD({
 
   const jobId = jobData?.id ?? jobData?.jobId ?? "N/A";
   const orderId = jobData?.orderId ?? "N/A";
+  const lotIdFromJob = jobData?.lotId;
 
   const locationName =
     verificationType === "pickup"
@@ -98,6 +103,36 @@ export default function POD({
   const handlePostVerification = async () => {
     try {
       await updateJobStatus(jobId, verificationType);
+
+      if (verificationType === "delivery" && orderId && orderId !== "N/A") {
+        try {
+          const orderUpdate = await markOrderDelivered(orderId);
+          const lotId =
+            lotIdFromJob ||
+            orderUpdate?.lot_id ||
+            orderUpdate?.lotId ||
+            orderUpdate?.lotID ||
+            orderUpdate?.lot;
+
+          if (lotId) {
+            try {
+              await updateLotStatus(lotId, "DELIVERED");
+            } catch (lotError) {
+              console.error("Failed to update lot status:", lotError);
+              toast.error(
+                lotError?.message ||
+                  "Order updated, but lot status change failed."
+              );
+            }
+          }
+        } catch (orderError) {
+          console.error("Failed to update order status:", orderError);
+          toast.error(
+            orderError?.message ||
+              "Delivery verified, but order status update failed."
+          );
+        }
+      }
 
       toast.success(
         verificationType === "pickup"

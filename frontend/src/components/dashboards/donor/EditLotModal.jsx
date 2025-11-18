@@ -276,13 +276,57 @@ const handleImageUpload = async (e) => {
 {/*                 </select> */}
 {/*               </div> */}
 
+{/*             <div className="mb-4"> */}
+{/*               <label */}
+{/*                 className="form-label fw-semibold text-secondary" */}
+{/*                 style={{ fontSize: "0.9rem" }} */}
+{/*               > */}
+{/*                 Status {isStatusLocked && <small className="text-muted">(locked)</small>} */}
+{/*                 Status */}
+{/*               </label> */}
+{/*               <select */}
+{/*                 className="form-select shadow-sm" */}
+{/*                 name="status" */}
+{/*                 value={formData.status} */}
+{/*                 onChange={handleChange} */}
+{/*                 disabled={isStatusLocked} */}
+{/*                 style={{ */}
+{/*                   borderRadius: "10px", */}
+{/*                   border: "1px solid #d1d5db", */}
+{/*                   fontSize: "0.95rem", */}
+{/*                   padding: "10px 12px", */}
+{/*                   backgroundColor: isStatusLocked ? "#f3f4f6" : "white", */}
+{/*                   cursor: isStatusLocked ? "not-allowed" : "pointer", */}
+{/*                   opacity: isStatusLocked ? 0.7 : 1, */}
+{/*                 }} */}
+{/*               > */}
+{/*                 {Object.values(Status) */}
+{/*                   .filter( */}
+{/*                     (status) => */}
+{/*                       !["PENDING", "EXPIRING_SOON", "DELIVERED"].includes( */}
+{/*                         status.toUpperCase() */}
+{/*                       ) */}
+{/*                   ) */}
+{/*                   .map((status) => ( */}
+{/*                     <option key={status} value={status}> */}
+{/*                       {status.charAt(0) + */}
+{/*                         status */}
+{/*                           .slice(1) */}
+{/*                           .toLowerCase() */}
+{/*                           .replace("_", " ")} */}
+{/*                     </option> */}
+{/*                   ))} */}
+{/*               </select> */}
+{/*             </div> */}
+
             <div className="mb-4">
               <label
                 className="form-label fw-semibold text-secondary"
                 style={{ fontSize: "0.9rem" }}
               >
-                Status {isStatusLocked && <small className="text-muted">(locked)</small>}
+                Status
               </label>
+
               <select
                 className="form-select shadow-sm"
                 name="status"
@@ -299,24 +343,28 @@ const handleImageUpload = async (e) => {
                   opacity: isStatusLocked ? 0.7 : 1,
                 }}
               >
-                {Object.values(Status)
-                  .filter(
-                    (status) =>
-                      !["PENDING", "EXPIRING_SOON", "DELIVERED"].includes(
-                        status.toUpperCase()
-                      )
-                  )
-                  .map((status) => (
+                {(() => {
+                  const current = (lot?.status || "").toUpperCase();
+
+                  // 🔒 CASE 1: Locked statuses → show only CURRENT value
+                  if (["PENDING", "EXPIRING_SOON", "DELIVERED"].includes(current)) {
+                    return (
+                      <option value={current}>
+                        {current.charAt(0) + current.slice(1).toLowerCase().replace("_", " ")}
+                      </option>
+                    );
+                  }
+
+                  // 🔓 CASE 2: Editable statuses → show ACTIVE + INACTIVE only
+                  return ["ACTIVE", "INACTIVE"].map((status) => (
                     <option key={status} value={status}>
-                      {status.charAt(0) +
-                        status
-                          .slice(1)
-                          .toLowerCase()
-                          .replace("_", " ")}
+                      {status.charAt(0) + status.slice(1).toLowerCase()}
                     </option>
-                  ))}
+                  ));
+                })()}
               </select>
             </div>
+
 
 
               {/* ✅ Image Upload (only if no image already) */}
