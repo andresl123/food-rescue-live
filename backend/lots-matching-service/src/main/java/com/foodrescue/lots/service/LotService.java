@@ -9,9 +9,11 @@ import com.foodrescue.lots.exception.AccessDeniedException;
 import com.foodrescue.lots.exception.LotNotFoundException;
 import com.foodrescue.lots.repository.FoodItemRepository;
 import com.foodrescue.lots.repository.LotRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -234,5 +236,22 @@ public class LotService {
                                     return lotRepository.save(lot);
                                 })
                 );
+    }
+
+    public Flux<Lot> getLotsByDonor(String donorId, Mono<Authentication> authenticationMono) {
+        return authenticationMono
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthenticated")))
+                .flatMapMany(auth -> {
+                    String principalId = auth.getName();
+                    boolean isAdmin = auth.getAuthorities().stream()
+                            .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+
+                    // DONOR can only access their own lots, ADMIN can access any donorId
+                    if (!isAdmin && !principalId.equals(donorId)) {
+                        return Flux.error(new ResponseStatusException(HttpStatus.FORBIDDEN, "Not allowed"));
+                    }
+
+                    return lotRepository.findByUserId(donorId);
+                });
     }
 }

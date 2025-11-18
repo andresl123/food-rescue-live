@@ -20,6 +20,7 @@ export default function UserDashboard() {
   const [showPOD, setShowPOD] = useState(false);
   const [podJobData, setPodJobData] = useState(null);
   const [podVerificationType, setPodVerificationType] = useState(null);
+  const [courierInitialTab, setCourierInitialTab] = useState(null);
 
   const location = useLocation();
 
@@ -55,11 +56,13 @@ export default function UserDashboard() {
   const handleShowPOD = (jobData, verificationType) => {
     setPodJobData(jobData);
     setPodVerificationType(verificationType);
+    setCourierInitialTab(null);
     setShowPOD(true);
   };
 
   // Callback to close POD
   const handleHidePOD = () => {
+    setCourierInitialTab("my-jobs");
     setShowPOD(false);
     setPodJobData(null);
     setPodVerificationType(null);
@@ -103,7 +106,13 @@ export default function UserDashboard() {
         return <ReceiverDashboard />;
 
       case "COURIER":
-        return <CourierDashboard onShowPOD={handleShowPOD} />;
+        return (
+          <CourierDashboard
+            onShowPOD={handleShowPOD}
+            initialTab={courierInitialTab}
+            onInitialTabHandled={() => setCourierInitialTab(null)}
+          />
+        );
 
       case "ADMIN":
         return <Navigate to="/admin-dashboard" replace />;

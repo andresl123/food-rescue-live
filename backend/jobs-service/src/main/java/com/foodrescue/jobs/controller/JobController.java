@@ -4,8 +4,10 @@ import com.foodrescue.jobs.web.response.RecentOrderDto;
 import org.springframework.security.access.prepost.PreAuthorize;
 import com.foodrescue.jobs.web.response.AdminOrderView;
 import com.foodrescue.jobs.entity.OrderDocument;
+import com.foodrescue.jobs.model.CourierStats;
 import com.foodrescue.jobs.model.Job;
 import com.foodrescue.jobs.service.JobService;
+import com.foodrescue.jobs.service.CourierStatsService;
 import com.foodrescue.jobs.web.response.AddressDto;
 import com.foodrescue.jobs.web.response.ApiResponse;
 import com.foodrescue.jobs.web.response.UserDto;
@@ -17,6 +19,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import org.springframework.security.core.Authentication;
 
+import java.time.Instant;
+
 @RestController
 @RequestMapping("/api/v1/jobs")
 @CrossOrigin(origins = "*")
@@ -24,6 +28,7 @@ import org.springframework.security.core.Authentication;
 public class JobController {
 
     private final JobService service;
+    private final CourierStatsService courierStatsService;
 
     @GetMapping("/admin/recent-orders")
     @PreAuthorize("hasRole('ADMIN')")
@@ -99,6 +104,24 @@ public class JobController {
         return service.getByCourierIdAndStatus(courierId, status);
     }
 
+    @GetMapping("/courier/{courierId}/stats")
+    public Mono<ResponseEntity<ApiResponse<CourierStats>>> getCourierStats(@PathVariable String courierId) {
+        return courierStatsService.getStats(courierId)
+                .map(stats -> ResponseEntity.ok(ApiResponse.ok(stats)))
+                .switchIfEmpty(Mono.just(ResponseEntity.ok(ApiResponse.ok(
+                        CourierStats.builder()
+                                .courierId(courierId)
+                                .mealsDelivered(0)
+                                .peopleHelped(0)
+                                .totalRescues(0)
+                                .impactScore(4.5)
+                                .failedDeliveries(0)
+                                .cancelledDeliveries(0)
+                                .updatedAt(Instant.now())
+                                .build()
+                ))));
+    }
+
     @GetMapping("/{id}")
     public Mono<ResponseEntity<ApiResponse<Job>>> get(@PathVariable String id) {
         return service.getById(id).map(ResponseEntity::ok);
@@ -156,8 +179,12 @@ public class JobController {
 
     @GetMapping("/admin/order-view")
     @PreAuthorize("hasRole('ADMIN')")
-    public Flux<AdminOrderView> getAdminOrderView(Mono<Authentication> authMono) { // <-- Accept authMono
-        return service.getAdminOrderView(authMono); // <-- Pass authMono
+    public Flux<AdminOrderView> getAdminOrderView(Mono<Authentication> authMono) { 
+        return service.getAdminOrderView(authMono);
+    }
+    @GetMapping("/by-order/{orderId}")
+    public Mono<Job> singleJobByOrder(@PathVariable String orderId) {
+        return service.getSingleJobByOrderId(orderId);
     }
 }
 

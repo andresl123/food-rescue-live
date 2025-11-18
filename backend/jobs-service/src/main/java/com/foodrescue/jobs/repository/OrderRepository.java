@@ -11,4 +11,8 @@ public interface OrderRepository extends ReactiveMongoRepository<OrderDocument, 
     Mono<Long> countByOrderDateAfter(Instant startOfDay);
     Mono<Long> countByStatusNotIgnoreCase(String status);
     Mono<Boolean> existsByReceiverIdAndStatusNotIgnoreCase(String receiverId, String status);
+    // NEW: used by OrderQueryService.getOrdersForReceiver
+    Flux<OrderDocument> findByReceiverId(String receiverId);
+    // NEW: used by BFF donor flow (get order from lotId)
+    Mono<OrderDocument> findByLotId(String lotId);
 }

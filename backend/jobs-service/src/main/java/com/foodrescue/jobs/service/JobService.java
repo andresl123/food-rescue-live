@@ -42,6 +42,7 @@ public class JobService {
     private final OrderRepository orders;
     private final WebClient.Builder webClientBuilder;
     private final ObjectMapper objectMapper;
+    private final CourierStatsService courierStatsService;
 
     @Value("${services.pods.base-url:http://localhost:8083/api/v1}") // PODs service
     private String podsBaseUrl;
@@ -225,7 +226,7 @@ public class JobService {
                     if (isTerminalStatus(status) && job.getCompletedAt() == null) {
                         job.setCompletedAt(Instant.now());
                     }
-                    return jobs.save(job);
+                    return saveAndRefresh(job);
                 })
                 .map(ApiResponse::ok)
                 .switchIfEmpty(Mono.just(ApiResponse.error("Job not found")));
@@ -241,7 +242,7 @@ public class JobService {
                     if (job.getAssignedAt() == null) {
                         job.setAssignedAt(Instant.now());
                     }
-                    return jobs.save(job);
+                    return saveAndRefresh(job);
                 })
                 .map(ApiResponse::ok)
                 .switchIfEmpty(Mono.just(ApiResponse.error("Job not found")));
@@ -251,13 +252,14 @@ public class JobService {
         log.info("Unassigning courier from job {}", jobId);
         return jobs.findById(jobId)
                 .flatMap(job -> {
+                    String previousCourier = job.getCourierId();
                     job.setCourierId(null);
                     job.setStatus("CANCELLED");
                     job.setUpdatedAt(Instant.now());
                     if (job.getCompletedAt() == null) {
                         job.setCompletedAt(Instant.now());
                     }
-                    return jobs.save(job);
+                    return saveAndRefresh(job, previousCourier);
                 })
                 .map(ApiResponse::ok)
                 .switchIfEmpty(Mono.just(ApiResponse.error("Job not found")));
@@ -283,7 +285,7 @@ public class JobService {
                     if (job.getCompletedAt() == null) {
                         job.setCompletedAt(Instant.now());
                     }
-                    return jobs.save(job);
+                    return saveAndRefresh(job);
                 })
                 .map(ApiResponse::ok)
                 .switchIfEmpty(Mono.just(ApiResponse.error("Job not found")));
@@ -301,7 +303,7 @@ public class JobService {
                     if (job.getCompletedAt() == null) {
                         job.setCompletedAt(Instant.now());
                     }
-                    return jobs.save(job);
+                    return saveAndRefresh(job);
                 })
                 .map(ApiResponse::ok)
                 .switchIfEmpty(Mono.just(ApiResponse.error("Job not found")));
@@ -316,7 +318,7 @@ public class JobService {
                 .flatMap(job -> {
                     job.setStatus(status);
                     job.setUpdatedAt(Instant.now());
-                    return jobs.save(job);
+                    return saveAndRefresh(job);
                 })
                 .map(ApiResponse::ok)
                 .switchIfEmpty(Mono.just(ApiResponse.error("Job not found")));
@@ -450,6 +452,21 @@ public class JobService {
                             pod.getPickupCode(), pod.getDeliveryCode(), job.getCompletedAt(), job.getStatus()
                     );
                 });
+    public Mono<Job> getSingleJobByOrderId(String orderId) {
+        return jobs.findByOrderId(orderId).next(); // takes the first job, if any
+    }
+
+    private Mono<Job> saveAndRefresh(Job job) {
+        return jobs.save(job)
+                .flatMap(saved -> courierStatsService.refreshForCourier(saved.getCourierId())
+                        .thenReturn(saved));
+    }
+
+    private Mono<Job> saveAndRefresh(Job job, String courierIdToRefresh) {
+        return jobs.save(job)
+                .flatMap(saved -> courierStatsService.refreshForCourier(
+                                courierIdToRefresh != null ? courierIdToRefresh : saved.getCourierId())
+                        .thenReturn(saved));
     }
 }
 
