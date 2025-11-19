@@ -1,46 +1,40 @@
-// pages/RescueOrdersPage.jsx
 import React, { useEffect, useState } from "react";
 import UserLayout from "../../layout/UserLayout";
-import RescueOrderCard from "../../components/orders/RescueOrderCard";
-import OrderDetailsModal from "../../components/orders/OrderDetailsModal";
+import DeliveryUpdateCard from "../../components/orders/DeliveryUpdateCard";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 const BFF_BASE_URL = import.meta.env.VITE_BFF_BASE_URL;
 
-export default function RescueOrdersPage() {
-  const [orders, setOrders] = useState([]);        // only completed orders
+export default function CurrentRescueOrdersPage() {
+  const [orders, setOrders] = useState([]); // only current orders
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
-
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     const fetchOrders = async () => {
       setLoading(true);
       setErr("");
       try {
+        // ⬅️ same endpoint as other page
         const res = await fetch(`${BFF_BASE_URL}/api/ui/orders`, {
           method: "GET",
           credentials: "include",
-          headers: {
-            Accept: "application/json",
-          },
+          headers: { Accept: "application/json" },
         });
 
         if (!res.ok) {
           const msg = await res.text();
-          setErr(msg || "Failed to load orders");
+          setErr(msg || "Failed to load current orders");
           setLoading(false);
           return;
         }
 
         const json = await res.json();
-        // 🔹 Only keep completed / past orders
-        setOrders(json.completed || []);
+        // only current / active rescues
+        setOrders(json.current || []);
       } catch (e) {
-        console.error("orders fetch error", e);
-        setErr("Network error fetching orders");
+        console.error("current orders fetch error", e);
+        setErr("Network error fetching current orders");
       } finally {
         setLoading(false);
       }
@@ -49,63 +43,51 @@ export default function RescueOrdersPage() {
     fetchOrders();
   }, []);
 
-  const onViewDetails = (order) => {
-    setSelectedOrder(order);
-    setShowModal(true);
-  };
-
   return (
     <UserLayout>
       <div className="container py-4">
         <style>{`
-          .rescue-page-title {
+          .current-rescue-title {
             font-weight: 700;
             letter-spacing: 0.02em;
           }
-          .rescue-page-subtitle {
+          .current-rescue-subtitle {
             max-width: 520px;
           }
         `}</style>
 
-        {/* Header text – responsive alignment */}
+        {/* Header */}
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
           <div>
-            <h2 className="rescue-page-title mb-1">Your Past Rescues</h2>
-            <p className="text-muted rescue-page-subtitle mb-0">
-              A history of all completed food rescues associated with your account.
+            <h2 className="current-rescue-title mb-1">Current Deliveries</h2>
+            <p className="text-muted current-rescue-subtitle mb-0">
+              Track your in-progress food rescues and see live delivery OTPs.
             </p>
           </div>
           <span className="badge bg-light text-secondary fw-semibold px-3 py-2">
-            Total completed: {orders.length}
+            Active rescues: {orders.length}
           </span>
         </div>
 
         {/* States */}
-        {loading && <p>Loading orders…</p>}
+        {loading && <p>Loading current orders…</p>}
         {err && !loading && <p className="text-danger">{err}</p>}
 
         {/* Cards */}
         {!loading && !err && (
           <div className="d-flex flex-column gap-3">
             {orders.map((o) => (
-              <RescueOrderCard key={o.id} order={o} onView={onViewDetails} />
+              <DeliveryUpdateCard key={o.id} order={o} />
             ))}
           </div>
         )}
 
         {!loading && !err && orders.length === 0 && (
           <p className="text-muted text-center mt-4">
-            You don’t have any completed rescues yet.
+            You don’t have any active rescues right now.
           </p>
         )}
       </div>
-
-      {/* Modal */}
-      <OrderDetailsModal
-        show={showModal}
-        onClose={() => setShowModal(false)}
-        order={selectedOrder}
-      />
     </UserLayout>
   );
 }
