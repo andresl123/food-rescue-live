@@ -260,7 +260,7 @@ export default function CourierDashboard({ onShowPOD, initialTab, onInitialTabHa
   useEffect(() => {
     const initUserFromMe = async () => {
       try {
-        const result = await getUserProfile(); // should call http://localhost:8090/api/me with credentials
+        const result = await getUserProfile();
 
         if (result.success && result.data) {
           const profile = result.data; // { userId, email, role }

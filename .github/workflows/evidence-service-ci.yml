@@ -1,11 +1,11 @@
-name: Build and Deploy feedback-service (ARM64)
+name: Build and Deploy evidence-service (ARM64)
 
 on:
   push:
     branches: ["main"]
     paths:
-      - 'backend/feedback-service/**'
-      - '.github/workflows/feedback-service-ci.yml'
+      - 'backend/evidence-service/**'
+      - '.github/workflows/evidence-service-ci.yml'
 
 jobs:
   build-and-push-image:
@@ -33,11 +33,10 @@ jobs:
       - name: Build and push ARM64 image
         uses: docker/build-push-action@v6
         with:
-          context: backend/feedback-service
+          context: backend/evidence-service
           platforms: linux/arm64
           push: true
-          tags: ${{ vars.DOCKERHUB_USERNAME }}/feedback-service:${{ steps.vars.outputs.TAG }}
-          # Use the secret for the private package
+          tags: ${{ vars.DOCKERHUB_USERNAME }}/evidence-service:${{ steps.vars.outputs.TAG }}
           secrets: |
             "GH_PACKAGES_TOKEN=${{ secrets.GH_PACKAGES_TOKEN }}"
 
@@ -53,8 +52,8 @@ jobs:
       - name: Update image tag in GitOps manifest
         run: |
           set -euo pipefail
-          file_path="gitops/feedback-service/feedback-deployment.yaml"
-          image_name="${{ vars.DOCKERHUB_USERNAME }}/feedback-service:${{ steps.vars.outputs.TAG }}"
+          file_path="gitops/evidence-service/evidence-deployment.yaml"
+          image_name="${{ vars.DOCKERHUB_USERNAME }}/evidence-service:${{ steps.vars.outputs.TAG }}"
           
           # Update the image line
           sed -i "s#^[[:space:]]*image:.*#          image: $image_name#" "$file_path"
@@ -67,7 +66,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if ! git diff --quiet; then
             git add -A
-            git commit -m "Update feedback-service image to ${{ steps.vars.outputs.TAG }}"
+            git commit -m "Update evidence-service image to ${{ steps.vars.outputs.TAG }}"
             git push
           else
             echo "No changes to commit."
