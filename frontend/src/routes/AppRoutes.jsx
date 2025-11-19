@@ -11,6 +11,7 @@ import RescueOrdersPage from "../pages/receiver/RescueOrdersPage";
 import FoodItemList from "../components/dashboards/donor/FoodItemList";
 import TestLotImport from "../pages/common/TestLotImport";
 import CurrentRescueOrdersPage from "../pages/receiver/CurrentRescueOrdersPage";
+import CompletedDeliveries from "../components/dashboards/Courier/CompletedDeliveries";
 
 // --- Admin Page Imports ---
 import AdminLayout from "../components/dashboards/admin/AdminLayout";
@@ -47,7 +48,7 @@ function AppRoutes() {
 
         {/* COURIER- only */}
         <Route element={<RequireAuth allowed={["COURIER"]} />}>
-          {/* <Route path="/courier-jobs" element={<CourierJobsPage />} /> */}
+          <Route path="/Completed-Deliveries" element={<CompletedDeliveries />} />
         </Route>
 
         {/* ADMIN-only */}
