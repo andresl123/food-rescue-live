@@ -288,8 +288,28 @@ export default function CompletedDeliveries() {
             <div className="d-flex align-items-center gap-3">
               <button
                 onClick={() => navigate("/dashboard")}
-                className="btn btn-link p-0 text-dark"
-                style={{ fontSize: "1.5rem", textDecoration: "none" }}
+                className="btn p-2 d-flex align-items-center justify-content-center"
+                style={{
+                  backgroundColor: "#10b981",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "10px",
+                  width: "40px",
+                  height: "40px",
+                  fontSize: "1.2rem",
+                  transition: "all 0.2s",
+                  boxShadow: "0 2px 4px rgba(16, 185, 129, 0.3)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "#059669";
+                  e.currentTarget.style.transform = "scale(1.05)";
+                  e.currentTarget.style.boxShadow = "0 4px 8px rgba(16, 185, 129, 0.4)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "#10b981";
+                  e.currentTarget.style.transform = "scale(1)";
+                  e.currentTarget.style.boxShadow = "0 2px 4px rgba(16, 185, 129, 0.3)";
+                }}
               >
                 <i className="bi bi-arrow-left"></i>
               </button>
