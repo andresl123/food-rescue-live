@@ -48,7 +48,6 @@ useEffect(() => {
 
   const roleNavMap = {
     COURIER: [
-      { path: "/orders", label: "Previous Orders", icon: "bi-clock-history" },
       { path: "/profile", label: "Profile", icon: "bi-person" },
     ],
     RECEIVER: [
