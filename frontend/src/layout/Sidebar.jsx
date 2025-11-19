@@ -54,6 +54,7 @@ useEffect(() => {
     RECEIVER: [
       { path: "/profile", label: "Profile", icon: "bi-person" },
       { path: "/orders", label: "Previous Orders", icon: "bi-clock-history" },
+      { path: "/current-orders", label: "Current Orders", icon: "bi-clock-history" },
     ],
     DONOR: [
       { path: "/profile", label: "Profile", icon: "bi-person" },
