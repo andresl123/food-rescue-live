@@ -452,6 +452,7 @@ public class JobService {
                             pod.getPickupCode(), pod.getDeliveryCode(), job.getCompletedAt(), job.getStatus()
                     );
                 });
+    }
     public Mono<Job> getSingleJobByOrderId(String orderId) {
         return jobs.findByOrderId(orderId).next(); // takes the first job, if any
     }
