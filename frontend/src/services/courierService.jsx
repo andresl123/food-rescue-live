@@ -209,3 +209,15 @@ export async function getLot(lotId) {
   }
   return payload?.data ?? payload;
 }
+
+export async function updateOrderStatus(orderId, status) {
+  const response = await fetch(`${API_ROOT}/api/orders/${orderId}/status/${status}`, {
+    method: "PUT",
+    credentials: "include",
+  });
+
+  const payload = await parseJson(response);
+  if (!response.ok) throw new Error(`Failed to update status to ${status}`);
+  return payload;
+}
+

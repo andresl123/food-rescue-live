@@ -84,6 +84,14 @@ public class OrderQueryService {
                 });
     }
 
+    public Mono<OrderDocument> updateOrderStatus(String orderId, String newStatus) {
+        return orderRepository.findById(orderId)
+                .flatMap(order -> {
+                    order.setStatus(newStatus.toUpperCase());
+                    return orderRepository.save(order);
+                });
+    }
+
     // NEW: used by BFF receiver endpoint (/api/receiver/orders/{orderId})
     public Mono<OrderDocument> getOrderById(String orderId) {
         return orderRepository.findById(orderId);

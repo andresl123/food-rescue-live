@@ -69,4 +69,16 @@ public class OrderQueryController {
     public Mono<OrderDocument> getOrderByLotId(@PathVariable String lotId) {
         return orderQueryService.getOrderByLotId(lotId);
     }
+
+    @PutMapping("/{orderId}/status/{newStatus}")
+    public Mono<ResponseEntity<OrderDocument>> updateOrderStatus(
+            @PathVariable String orderId,
+            @PathVariable String newStatus
+    ) {
+        return orderQueryService.updateOrderStatus(orderId, newStatus)
+                .map(ResponseEntity::ok)
+                .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+
+
 }

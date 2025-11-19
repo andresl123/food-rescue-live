@@ -16,13 +16,17 @@ import {
   getUserName,
   getCourierStats,
   getLot,
+  updateOrderStatus
 } from "../../../services/courierService.jsx";
 import { getUserProfile } from "../../../services/loginServices";
 
+
 export default function CourierDashboard({ onShowPOD, initialTab, onInitialTabHandled }) {
+
+
   const navigate = useNavigate();
   const location = useLocation();
-
+  const BFF_BASE = import.meta.env.VITE_BFF_BASE_URL;
   const [availableJobs, setAvailableJobs] = useState([]);
   const [myJobs, setMyJobs] = useState([]);
   const [activeTab, setActiveTab] = useState("available");
@@ -467,6 +471,7 @@ export default function CourierDashboard({ onShowPOD, initialTab, onInitialTabHa
       }
 
       await assignCourierToJob(jobId, courierId);
+      await updateOrderStatus(job.orderId, "ASSIGNED");
 
       try {
         await generatePodOtps(jobId);
@@ -507,9 +512,15 @@ export default function CourierDashboard({ onShowPOD, initialTab, onInitialTabHa
     }
   };
 
-  const handleConfirmPickup = (jobId) => {
+  const handleConfirmPickup = async (jobId) => {
     const job = myJobs.find((j) => j.id === jobId);
-    if (job) {
+    if (!job) return;
+
+    try {
+      await updateOrderStatus(job.orderId, "PICKED_UP");
+
+      toast.success("Pickup status updated");
+
       if (onShowPOD) {
         onShowPOD(job, "pickup");
       } else {
@@ -517,6 +528,10 @@ export default function CourierDashboard({ onShowPOD, initialTab, onInitialTabHa
           state: { jobData: job, verificationType: "pickup" },
         });
       }
+
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update pickup status");
     }
   };
 
@@ -584,33 +599,6 @@ export default function CourierDashboard({ onShowPOD, initialTab, onInitialTabHa
       toast.error(`Failed to cancel job: ${error.message}`, {
         duration: 4000,
       });
-    }
-  };
-
-  const handleConfirmation = (method, code) => {
-    const { jobId, type } = confirmationDialog;
-    const job = myJobs.find((j) => j.id === jobId);
-    
-    if (job) {
-      if (type === "pickup") {
-        const updatedJob = { ...job, status: "delivery_pending" };
-        setMyJobs(myJobs.map((j) => (j.id === jobId ? updatedJob : j)));
-        toast.success("Pickup confirmed!", {
-          duration: 4000,
-        });
-      } else {
-        const completedJob = { ...job, completed_at: new Date().toISOString() };
-        setMyJobs([]);
-        refreshCourierStats();
-        
-        setTimeout(() => {
-          setActiveTab("available");
-        }, 1500);
-        
-        toast.success("Delivery completed! 🎉", {
-          duration: 4000,
-        });
-      }
     }
   };
 
