@@ -35,7 +35,7 @@ export default function UserDashboard() {
         setEmail(result.data.email || null);
       } else {
         console.error("❌ Failed to fetch profile:", result.message);
-      }
+  }
 
       setLoading(false);
     };
@@ -89,7 +89,7 @@ export default function UserDashboard() {
     // POD view (for courier flow – takes priority when active)
     if (showPOD && podJobData) {
       return (
-        <POD
+        <POD 
           jobData={podJobData}
           verificationType={podVerificationType}
           onClose={handleHidePOD}
