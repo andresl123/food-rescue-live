@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import Sidebar from '../../../components/dashboards/admin/Sidebar';
+// --- 1. IMPORT USER LAYOUT ---
+import UserLayout from '../../../layout/UserLayout';
 import { getAllLots } from '../../../services/lotService';
 import { getAllFoodItems, updateFoodItem, deleteFoodItem } from '../../../services/foodItemService';
 import '../../../components/dashboards/admin/Dashboard.css';
@@ -7,10 +8,9 @@ import toast from 'react-hot-toast';
 
 const FoodItemsManagementPage = () => {
   const [foodItems, setFoodItems] = useState([]);
-  const [lotMap, setLotMap] = useState({}); // To store {lotId: lotName}
+  const [lotMap, setLotMap] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-
   const [searchQuery, setSearchQuery] = useState("");
 
   // --- Modal States ---
@@ -34,15 +34,13 @@ const FoodItemsManagementPage = () => {
       try {
         setIsLoading(true);
 
-        // Fetch both items and lots at the same time
         const [itemsData, lotsData] = await Promise.all([
           getAllFoodItems(),
           getAllLots(),
         ]);
 
-        // Create a lookup map for lot names
         const newLotMap = lotsData.reduce((map, lot) => {
-          map[lot.lotId] = lot.description; // 'description' is the lot name
+          map[lot.lotId] = lot.description;
           return map;
         }, {});
 
@@ -66,9 +64,8 @@ const FoodItemsManagementPage = () => {
 
   const calculateStatus = (expiryDate) => {
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Normalize today to start of day
+    today.setHours(0, 0, 0, 0);
     const expiry = new Date(expiryDate);
-
     const diffTime = expiry - today;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
@@ -107,25 +104,19 @@ const FoodItemsManagementPage = () => {
     }));
   };
 
-const handleEditSubmit = async (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!currentItem) return;
 
-    // --- START: NEW VALIDATION ---
-    // Create a date object from the form's 'YYYY-MM-DD' string.
-    // We split/parse it manually to avoid timezone bugs.
     const parts = formData.expiryDate.split('-');
     const expiryDate = new Date(parts[0], parts[1] - 1, parts[2]);
-
-    // Get the start of today
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     if (expiryDate < today) {
-      toast.error("Expiry date cannot be in the past. Please choose today or a future date.");
-      return; // Stop the function before sending the API request
+      toast.error("Expiry date cannot be in the past.");
+      return;
     }
-    // --- END: NEW VALIDATION ---
 
     const toastId = toast.loading('Updating item...');
     try {
@@ -176,26 +167,23 @@ const handleEditSubmit = async (e) => {
     }
   };
 
-  // CREATE A FILTERED LIST
-const filteredFoodItems = foodItems.filter(item => {
+  // --- Filtered List ---
+  const filteredFoodItems = foodItems.filter(item => {
     const query = searchQuery.toLowerCase();
     const lotName = getLotName(item.lotId).toLowerCase();
-
-    // Calculate status to make it searchable
     const status = calculateStatus(item.expiryDate).toLowerCase();
-    // Replace underscore for easier searching
     const searchableStatus = status.replace('_', ' ');
 
     return (
       item.itemName.toLowerCase().includes(query) ||
       item.category.toLowerCase().includes(query) ||
       lotName.includes(query) ||
-      searchableStatus.includes(query) // <-- ADDED STATUS SEARCH
+      searchableStatus.includes(query)
     );
   });
 
   // --- Render Table Body ---
-const renderTableBody = () => {
+  const renderTableBody = () => {
     if (isLoading) {
       return (
         <tr>
@@ -210,7 +198,6 @@ const renderTableBody = () => {
         </tr>
       );
     }
-    // Check if initial fetch returned no items
     if (foodItems.length === 0) {
       return (
         <tr>
@@ -218,7 +205,6 @@ const renderTableBody = () => {
         </tr>
       );
     }
-    // Check if the filter returned no items
     if (filteredFoodItems.length === 0) {
       return (
         <tr>
@@ -229,12 +215,9 @@ const renderTableBody = () => {
       );
     }
 
-    // Map over the FILTERED list
-return filteredFoodItems.map((item) => {
+    return filteredFoodItems.map((item) => {
       const status = calculateStatus(item.expiryDate);
       const lotName = getLotName(item.lotId);
-
-      // Add a class if the item is EXPIRED
       const rowClass = status === 'EXPIRED' ? 'item-expired' : '';
 
       return (
@@ -267,17 +250,19 @@ return filteredFoodItems.map((item) => {
   };
 
   return (
-    <>
-      <main className="main-content">
-        <header className="page-header">
+    // --- 2. WRAP IN USERLAYOUT ---
+    <UserLayout>
+
+      {/* 3. WRAP CONTENT IN CONTAINER */}
+      <div className="container-fluid py-4">
+        <header className="page-header mb-4">
           <div>
             <h1>Food Items Management</h1>
-            <p>Manage food inventory and stock</p>
+            <p className="text-secondary">Manage food inventory and stock</p>
           </div>
         </header>
 
-        {/* SEARCH INPUT */}
-        <div className="search-bar">
+        <div className="search-bar mb-4">
           <i className="bi bi-search"></i>
           <input
             type="text"
@@ -303,7 +288,7 @@ return filteredFoodItems.map((item) => {
             <tbody>{renderTableBody()}</tbody>
           </table>
         </div>
-      </main>
+      </div>
 
       {/* --- Edit Modal --- */}
       {isEditModalOpen && (
@@ -401,7 +386,7 @@ return filteredFoodItems.map((item) => {
           </div>
         </div>
       )}
-  </>
+    </UserLayout>
   );
 };
 

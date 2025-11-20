@@ -13,8 +13,7 @@ import TestLotImport from "../pages/common/TestLotImport";
 import CurrentRescueOrdersPage from "../pages/receiver/CurrentRescueOrdersPage";
 import CompletedDeliveries from "../components/dashboards/Courier/CompletedDeliveries";
 
-// --- Admin Page Imports ---
-import AdminLayout from "../components/dashboards/admin/AdminLayout";
+// --- ADMIN PAGES ---
 import AdminDashboard from "../pages/dashboards/admin/AdminDashboard";
 import UsersManagementPage from "../pages/dashboards/admin/UsersManagementPage";
 import LotsManagementPage from "../pages/dashboards/admin/LotsManagementPage";
@@ -51,16 +50,11 @@ function AppRoutes() {
           <Route path="/Completed-Deliveries" element={<CompletedDeliveries />} />
         </Route>
 
-        {/* ADMIN-only */}
-        <Route element={<RequireAuth allowed={["ADMIN"]} />}>
-          <Route element={<AdminLayout />}>
-            <Route path="/admin-dashboard" element={<AdminDashboard />} />
-            <Route path="/admin-users" element={<UsersManagementPage />} />
-            <Route path="/admin-lots" element={<LotsManagementPage />} />
-            <Route path="/admin-food-items" element={<FoodItemsManagementPage />} />
-            <Route path="/admin-orders" element={<OrdersAndPODPage />} />
-          </Route>
-        </Route>
+        <Route path="/admin-dashboard" element={<AdminDashboard />} />
+        <Route path="/admin-users" element={<UsersManagementPage />} />
+        <Route path="/admin-lots" element={<LotsManagementPage />} />
+        <Route path="/admin-food-items" element={<FoodItemsManagementPage />} />
+        <Route path="/admin-orders" element={<OrdersAndPODPage />} />
 
       </Routes>
     </BrowserRouter>

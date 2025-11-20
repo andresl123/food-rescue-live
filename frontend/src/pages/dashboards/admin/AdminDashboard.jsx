@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import UserLayout from '../../../layout/UserLayout'; // <-- Used here
 import StatCard from '../../../components/dashboards/admin/StatCard';
 import '../../../components/dashboards/admin/Dashboard.css';
 
@@ -9,7 +10,6 @@ import { getRecentOrders, getOrdersTodayCount } from '../../../services/jobServi
 import { Status } from '../../../assets/statusValues';
 
 const AdminDashboard = () => {
-  // --- 2. Add state for our dynamic data ---
   const [stats, setStats] = useState({
     totalUsers: 0,
     activeLots: 0,
@@ -17,20 +17,18 @@ const AdminDashboard = () => {
     ordersToday: 0,
   });
   const [expiringItems, setExpiringItems] = useState([]);
-  const [lotMap, setLotMap] = useState({}); // For lot names
+  const [lotMap, setLotMap] = useState({});
   const [recentOrders, setRecentOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch all data when the component mounts ---
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setIsLoading(true);
         setError(null);
 
-        // Fetch all data in parallel for efficiency
-    const [usersData, lotsData, itemsData, expiringData, ordersData, ordersTodayData] = await Promise.all([
+        const [usersData, lotsData, itemsData, expiringData, ordersData, ordersTodayData] = await Promise.all([
           getAllUsers(),
           getAllLots(),
           getAllFoodItems(),
@@ -38,15 +36,13 @@ const AdminDashboard = () => {
           getRecentOrders(),
           getOrdersTodayCount(),
         ]);
-        // CREATE LOT MAP ---
-        // this to show lot names in the list
+
         const newLotMap = lotsData.reduce((map, lot) => {
-          map[lot.lotId] = lot.description; // 'description' is the lot name
+          map[lot.lotId] = lot.description;
           return map;
         }, {});
         setLotMap(newLotMap);
 
-        // CALCULATE STATS
         const totalUsers = usersData.length;
         const activeLots = lotsData.filter(lot => lot.status === Status.ACTIVE).length;
         const foodItems = itemsData.length;
@@ -66,7 +62,6 @@ const AdminDashboard = () => {
     fetchDashboardData();
   }, []);
 
-  // HELPER FUNCTIONS
   const getLotName = (lotId) => {
     return lotMap[lotId] || 'Unknown Lot';
   };
@@ -82,37 +77,33 @@ const AdminDashboard = () => {
     return `${days} days left`;
   };
 
-    const getOrderStatusBadge = (status) => {
-        let statusClass = "status-pending"; // Default
-        if (status === Status.DELIVERED) statusClass = "status-delivered";
-        if (status === Status.ACTIVE) statusClass = "status-active";
-        if (status === Status.INACTIVE) statusClass = "status-inactive";
+  const getOrderStatusBadge = (status) => {
+    let statusClass = "status-pending";
+    if (status === Status.DELIVERED) statusClass = "status-delivered";
+    if (status === Status.ACTIVE) statusClass = "status-active";
+    if (status === Status.INACTIVE) statusClass = "status-inactive";
 
-        return <span className={`badge ${statusClass}`}>{status}</span>;
-      };
+    return <span className={`badge ${statusClass}`}>{status}</span>;
+  };
 
   const loadingValue = '...';
 
-  // (These are still dummy data, as we don't have the backend for them yet)
-  const quickStats = [
-    { label: 'Orders Fulfilled', value: 87, color: 'bg-success' },
-    { label: 'Food Items in Stock', value: 64, color: 'bg-primary' },
-    { label: 'Active Users', value: 92, color: 'bg-purple' },
-  ];
-
   return (
-      <main className="main-content">
-        <header className="main-header">
-          <h1>Dashboard Overview</h1>
-          <p>Monitor your food rescue operations</p>
+    <UserLayout>
+      <div className="container-fluid py-4">
+        <header className="page-header mb-4">
+          <div>
+            <h1>Dashboard Overview</h1>
+            <p className="text-secondary">Monitor your food rescue operations</p>
+          </div>
         </header>
 
-        {/* Display an error message if fetching failed */}
         {error && (
           <div className="alert alert-danger" role="alert">
             Could not load dashboard data: {error}
           </div>
         )}
+
         <div className="stat-cards-grid">
           <StatCard
             icon="bi-people"
@@ -139,7 +130,8 @@ const AdminDashboard = () => {
             iconBgColor="#fff4e7"
           />
         </div>
-        <div className="data-grid">
+
+        <div className="data-grid mt-4">
           <div className="card">
             <div className="card-header">
               <h3>Items Nearing Expiry</h3>
@@ -198,7 +190,8 @@ const AdminDashboard = () => {
             </div>
           </div>
         </div>
-      </main>
+      </div>
+    </UserLayout>
   );
 };
 
