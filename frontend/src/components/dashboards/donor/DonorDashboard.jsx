@@ -174,9 +174,10 @@ export default function DonorDashboard() {
     >
 
       {/* -------------------- HEADER -------------------- */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="container-fluid px-0 mb-3">
         {/* Left: Title + subtitle */}
-        <div>
+        <div className="row align-items-center g-3">
+            <div className="col-12 col-md-8">
           <h2
             className=" mb-1"
             style={{
@@ -200,9 +201,9 @@ export default function DonorDashboard() {
         </div>
 
         {/* Right: Create button */}
+        <div className="col-12 col-md-4 d-flex justify-content-md-end">
         <button
-          className="btn fw-semibold"
-//           onClick={() => setShowModal(true)}
+          className="btn btn-primary fw-semibold w-auto d-md-inline-block"
         onClick={() => {
           const hasEmptyLot = lots.some(lot => !lot.items || lot.items.length === 0);
           if (hasEmptyLot) {
@@ -233,6 +234,8 @@ export default function DonorDashboard() {
           <i className="bi bi-plus-lg me-2"></i>
           Create New Lot
         </button>
+        </div>
+        </div>
       </div>
 
       {/* -------------------- STATS -------------------- */}
@@ -305,7 +308,7 @@ export default function DonorDashboard() {
                 </div>
 
                 {/* --- Search Bar --- */}
-                <div className="position-relative" style={{ width: "260px" }}>
+                <div className="position-relative">
                   <i
                     className="bi bi-search position-absolute top-50 translate-middle-y text-muted"
                     style={{ left: "14px" }}

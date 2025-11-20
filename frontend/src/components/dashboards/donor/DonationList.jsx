@@ -130,7 +130,7 @@ const getEarliestExpiry = (items = []) => {
             {/* Left Section */}
             <div className="d-flex align-items-center">
               <div
-                className="rounded-3 me-3 overflow-hidden"
+                className="d-none d-md-block rounded-3 me-3 overflow-hidden"
                 style={{
                   width: "110px",
                   height: "110px",
@@ -226,7 +226,7 @@ const getEarliestExpiry = (items = []) => {
               className="d-flex align-items-center gap-3"
               onClick={(e) => e.stopPropagation()} // prevents modal open when using dropdown
             >
-              <small className="text-muted">Total: {lot.totalItems || 0}</small>
+              <small className="d-none d-md-block text-muted">Total: {lot.totalItems || 0}</small>
 
               <Dropdown align="end"
                         show={openDropdownId === lot.lotId}
