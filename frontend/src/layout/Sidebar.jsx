@@ -65,6 +65,18 @@ useEffect(() => {
     DEFAULT: [
       { path: "/profile", label: "Profile", icon: "bi-person" },
     ],
+
+    ADMIN: [
+      { path: "/admin-dashboard", label: "Overview", icon: "bi-grid-1x2-fill" },
+      { path: "/admin-users", label: "Users", icon: "bi-people-fill" },
+      { path: "/admin-lots", label: "Lots", icon: "bi-box-seam-fill" },
+      { path: "/admin-food-items", label: "Food Items", icon: "bi-egg-fried" },
+      { path: "/admin-orders", label: "Orders & POD", icon: "bi-cart-check-fill" },
+    ],
+
+    DEFAULT: [
+      { path: "/profile", label: "Profile", icon: "bi-person" },
+    ],
   };
 
   const items = [

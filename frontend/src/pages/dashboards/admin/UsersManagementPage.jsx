@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import UserLayout from '../../../layout/UserLayout';
 import Sidebar from '../../../components/dashboards/admin/Sidebar';
 import { getAllUsers, updateUser, deleteUser } from '../../../services/userService'; // <-- Import new service
 import '../../../components/dashboards/admin/Dashboard.css';
@@ -228,17 +229,19 @@ const renderTableBody = () => {
     });
   };
 
-  return (
-    <>
-      <main className="main-content">
-        <header className="page-header">
+return (
+    // --- 2. UserLayout is the single parent ---
+    <UserLayout>
+
+      <div className="container-fluid py-4">
+        <header className="page-header mb-4">
           <div>
             <h1>Users Management</h1>
-            <p>Manage user accounts and roles</p>
+            <p className="text-secondary">Manage user accounts and roles</p>
           </div>
         </header>
 
-        <div className="search-bar">
+        <div className="search-bar mb-4">
           <i className="bi bi-search"></i>
           <input
             type="text"
@@ -263,113 +266,69 @@ const renderTableBody = () => {
             <tbody>{renderTableBody()}</tbody>
           </table>
         </div>
-      </main>
+      </div>
 
-      {/* --- Edit Modal --- */}
-        {isEditModalOpen && (
+      {/* --- Edit Modal (Inside Layout) --- */}
+      {isEditModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content">
             <h2>Edit User</h2>
             <form onSubmit={handleEditSubmit}>
-
               <div className="form-group">
                 <label htmlFor="name">Name</label>
-                <input
-                  type="text" id="name" name="name"
-                  value={formData.name} onChange={handleFormChange} required
-                />
+                <input type="text" id="name" name="name" value={formData.name} onChange={handleFormChange} required />
               </div>
-
               <div className="form-group">
                 <label htmlFor="email">Email</label>
-                <input
-                  type="email" id="email" name="email"
-                  value={formData.email} onChange={handleFormChange} required
-                />
+                <input type="email" id="email" name="email" value={formData.email} onChange={handleFormChange} required />
               </div>
-
-              {/* --- UPDATED: This is now a dropdown select --- */}
               <div className="form-group">
                 <label htmlFor="role">Role</label>
-                <select
-                  id="role" name="role"
-                  value={formData.role} onChange={handleFormChange} required
-                >
+                <select id="role" name="role" value={formData.role} onChange={handleFormChange} required>
                   <option value="DONOR">DONOR</option>
                   <option value="RECEIVER">RECEIVER</option>
                   <option value="ADMIN">ADMIN</option>
                   <option value="COURIER">COURIER</option>
-                  {/* Add any other primary roles you support */}
                 </select>
               </div>
-
               <div className="form-group">
                 <label htmlFor="status">Status</label>
-                <select
-                  id="status" name="status"
-                  value={formData.status} onChange={handleFormChange} required
-                >
+                <select id="status" name="status" value={formData.status} onChange={handleFormChange} required>
                   <option value="ACTIVE">ACTIVE</option>
                   <option value="INACTIVE">INACTIVE</option>
                 </select>
               </div>
-
               <div className="modal-actions">
-                <button type="button" className="btn-cancel" onClick={handleCloseEditModal}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn-submit">
-                  Save Changes
-                </button>
+                <button type="button" className="btn-cancel" onClick={handleCloseEditModal}>Cancel</button>
+                <button type="submit" className="btn-submit">Save Changes</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* --- Delete Modal --- */}
+      {/* --- Delete Modal (Inside Layout) --- */}
       {isDeleteModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content">
             <h2>Delete User</h2>
             <p style={{ margin: '16px 0', lineHeight: '1.5' }}>
-              This will permanently delete:
-              <br />
+              This will permanently delete: <br />
               <strong>{userToDelete?.name} ({userToDelete?.email})</strong>
             </p>
             <div className="form-group">
-              <label htmlFor="deleteConfirm">
-                To confirm, please type "<strong>delete</strong>"
-              </label>
-              <input
-                type="text"
-                id="deleteConfirm"
-                name="deleteConfirm"
-                value={deleteConfirmText}
-                onChange={(e) => setDeleteConfirmText(e.target.value)}
-              />
+              <label htmlFor="deleteConfirm">To confirm, please type "<strong>delete</strong>"</label>
+              <input type="text" id="deleteConfirm" name="deleteConfirm" value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value)} />
             </div>
             <div className="modal-actions" style={{ justifyContent: 'space-between' }}>
-              <button
-                type="button"
-                className="btn-cancel"
-                onClick={handleCloseDeleteModal}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="btn-hard-delete"
-                onClick={handleHardDelete}
-                disabled={deleteConfirmText !== 'delete'}
-              >
-                Delete Permanently
-              </button>
+              <button type="button" className="btn-cancel" onClick={handleCloseDeleteModal}>Cancel</button>
+              <button type="button" className="btn-hard-delete" onClick={handleHardDelete} disabled={deleteConfirmText !== 'delete'}>Delete Permanently</button>
             </div>
           </div>
         </div>
       )}
-  </>
+
+    </UserLayout>
   );
 };
 

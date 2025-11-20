@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import Sidebar from '../../../components/dashboards/admin/Sidebar';
-// Import all three functions
+// --- 1. IMPORT USER LAYOUT ---
+import UserLayout from '../../../layout/UserLayout';
 import { getAllLots, updateLot, deleteLot } from '../../../services/lotService';
 import '../../../components/dashboards/admin/Dashboard.css';
 import { Status } from '../../../assets/statusValues';
@@ -60,19 +60,14 @@ const LotsManagementPage = () => {
     }));
   };
 
-  // --- THIS IS THE FUNCTION TO CHECK ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!currentLot) return;
 
     const toastId = toast.loading('Updating lot...');
     try {
-      // 1. API call returns the *updated* lot object
       const updatedLot = await updateLot(currentLot.lotId, formData);
-      console.log("API response (updatedLot):", updatedLot);
 
-      // 2. THIS IS THE LINE THAT REFRESHES THE LIST
-      // It finds the old lot in the state and replaces it with the new one
       setLots((prevLots) =>
         prevLots.map((lot) =>
           lot.lotId === updatedLot.lotId ? updatedLot : lot
@@ -142,7 +137,9 @@ const LotsManagementPage = () => {
     if (error) {
       return (
         <tr>
-          <td colSpan="5" style={{ textAlign: 'center' }}>Error: {error}</td>
+          <td colSpan="5" style={{ textAlign: 'center', color: 'red' }}>
+            Error: {error}
+          </td>
         </tr>
       );
     }
@@ -191,16 +188,19 @@ const LotsManagementPage = () => {
   };
 
   return (
-    <>
-      <main className="main-content">
-        <header className="page-header">
+    // --- 2. WRAP IN USERLAYOUT ---
+    <UserLayout>
+
+      {/* 3. WRAP CONTENT IN CONTAINER */}
+      <div className="container-fluid py-4">
+        <header className="page-header mb-4">
           <div>
             <h1>Lots Management</h1>
-            <p>Manage storage lots and facilities</p>
+            <p className="text-secondary">Manage storage lots and facilities</p>
           </div>
         </header>
 
-        <div className="search-bar">
+        <div className="search-bar mb-4">
           <i className="bi bi-search"></i>
           <input
             type="text"
@@ -224,10 +224,10 @@ const LotsManagementPage = () => {
             <tbody>{renderTableBody()}</tbody>
           </table>
         </div>
-      </main>
+      </div>
 
       {/* --- Edit Modal --- */}
-{isModalOpen && (
+      {isModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content">
             <h2>Edit Lot</h2>
@@ -258,7 +258,7 @@ const LotsManagementPage = () => {
                 </select>
               </div>
               <div className="modal-actions">
-                <button typeT="button" className="btn-cancel" onClick={handleCloseModal}>
+                <button type="button" className="btn-cancel" onClick={handleCloseModal}>
                   Cancel
                 </button>
                 <button type="submit" className="btn-submit">
@@ -312,7 +312,7 @@ const LotsManagementPage = () => {
           </div>
         </div>
       )}
-    </>
+    </UserLayout>
   );
 };
 
