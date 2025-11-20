@@ -1,5 +1,15 @@
+import { addAddressToUser } from "./loginServices";
+
 // Base URL for all BFF API calls
 const BFF_BASE_URL = `${import.meta.env.VITE_BFF_BASE_URL}/api`;
+
+async function handleResponse(response) {
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `Request failed: ${response.status}`);
+  }
+  return response.json();
+}
 
 export async function createAddress(addressData) {
   try {
@@ -92,4 +102,22 @@ export async function updateAddress(addressId, updatedData) {
     console.error("Error updating address:", error);
     throw error;
   }
+}
+/**
+ * NEW HELPER: Creates an address and immediately links it to the user.
+ */
+export async function createAndLinkAddress(userId, addressData) {
+  // 1. Create the address
+  const createRes = await createAddress(addressData);
+
+  const newAddress = createRes.data || createRes;
+
+  if (!newAddress.id) {
+    throw new Error("Failed to get ID from new address");
+  }
+
+  // 2. Link to user
+  await addAddressToUser(userId, newAddress.id);
+
+  return { success: true, data: newAddress };
 }
