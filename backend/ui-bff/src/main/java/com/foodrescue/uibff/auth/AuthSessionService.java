@@ -3,10 +3,11 @@ package com.foodrescue.uibff.auth;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.ResponseCookie;
+import org.springframework.stereotype.Service;
 import org.springframework.web.server.ServerWebExchange;
 
 import java.time.Duration;
-
+@Service
 public final class AuthSessionService {
     private AuthSessionService() {}
 

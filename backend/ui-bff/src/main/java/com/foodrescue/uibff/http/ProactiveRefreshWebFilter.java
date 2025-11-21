@@ -42,7 +42,8 @@ public class ProactiveRefreshWebFilter implements WebFilter {
                 || path.startsWith("/api/users")
                 || path.startsWith("/api/password/reset/")
                 || path.startsWith("/api/code/generate")
-                || path.startsWith("/api/code/validate")) {
+                || path.startsWith("/api/code/validate")
+                || path.startsWith("/api/google/")) {
             return chain.filter(exchange);
         }
 
