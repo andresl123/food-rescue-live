@@ -475,12 +475,12 @@ export default function CompletedDeliveries() {
                       </div>
 
                       {/* Items Count */}
-                      <div className="d-flex align-items-center justify-content-end gap-2">
-                        <i className="bi bi-box-seam text-secondary" style={{ fontSize: "0.9rem" }}></i>
-                        <span className="text-muted" style={{ fontSize: "0.9rem" }}>
-                          {delivery.servings || delivery.foodItems?.length || 0} items
-                        </span>
-                      </div>
+{/*                       <div className="d-flex align-items-center justify-content-end gap-2"> */}
+{/*                         <i className="bi bi-box-seam text-secondary" style={{ fontSize: "0.9rem" }}></i> */}
+{/*                         <span className="text-muted" style={{ fontSize: "0.9rem" }}> */}
+{/*                           {delivery.servings || delivery.foodItems?.length || 0} items */}
+{/*                         </span> */}
+{/*                       </div> */}
                     </div>
                   </div>
                 </Card.Body>
