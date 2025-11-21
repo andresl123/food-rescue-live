@@ -8,6 +8,7 @@ import org.springframework.util.StringUtils; // Required for checking if the hea
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import java.util.concurrent.ThreadLocalRandom;
 
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -129,7 +130,7 @@ public class DashboardService {
                 .tags(lot.getTags())
                 .pickupWindow("Today 3–6pm") // Static
                 .locationName(locationName)
-                .distanceKm(2) // Static
+                .distanceKm(ThreadLocalRandom.current().nextInt(1, 11))
                 .expiresAt(earliestExpiry)
                 .imageUrl(lot.getImageUrl())
                 .build();
