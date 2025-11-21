@@ -59,13 +59,11 @@ function AppRoutes() {
 
             {/* ADMIN-only */}
             <Route element={<RequireAuth allowed={["ADMIN"]} />}>
-              <Route element={<AdminLayout />}>
-                <Route path="/admin-dashboard" element={<AdminDashboard />} />
-                <Route path="/admin-users" element={<UsersManagementPage />} />
-                <Route path="/admin-lots" element={<LotsManagementPage />} />
-                <Route path="/admin-food-items" element={<FoodItemsManagementPage />} />
-                <Route path="/admin-orders" element={<OrdersAndPODPage />} />
-              </Route>
+              <Route path="/admin-dashboard" element={<AdminDashboard />} />
+              <Route path="/admin-users" element={<UsersManagementPage />} />
+              <Route path="/admin-lots" element={<LotsManagementPage />} />
+              <Route path="/admin-food-items" element={<FoodItemsManagementPage />} />
+              <Route path="/admin-orders" element={<OrdersAndPODPage />} />
             </Route>
 
           </Routes>

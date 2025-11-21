@@ -74,9 +74,6 @@ useEffect(() => {
       { path: "/admin-orders", label: "Orders & POD", icon: "bi-cart-check-fill" },
     ],
 
-    DEFAULT: [
-      { path: "/profile", label: "Profile", icon: "bi-person" },
-    ],
   };
 
   const items = [
