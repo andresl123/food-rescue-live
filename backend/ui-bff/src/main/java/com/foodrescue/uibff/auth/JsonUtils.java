@@ -26,4 +26,14 @@ public final class JsonUtils {
             return null;
         }
     }
+
+    public static Boolean readBoolean(String json, String path) {
+        try {
+            JsonNode n = MAPPER.readTree(json);
+            for (String p : path.split("\\.")) n = n.path(p);
+            return n.isMissingNode() || n.isNull() ? null : n.asBoolean();
+        } catch (Exception e) {
+            return null;
+        }
+    }
 }

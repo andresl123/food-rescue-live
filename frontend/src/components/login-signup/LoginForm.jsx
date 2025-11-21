@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { loginUser } from "../../services/loginServices";
+import axios from "axios";
+import { GoogleLogin } from "@react-oauth/google";
 
 export default function LoginForm({ onForgotPasswordClick }) {
   const navigate = useNavigate();
@@ -16,7 +18,6 @@ export default function LoginForm({ onForgotPasswordClick }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // --- toast-based validation (no browser tooltip) ---
     if (!formData.email.trim()) {
       return toast.error("Email is required.");
     }
@@ -32,14 +33,12 @@ export default function LoginForm({ onForgotPasswordClick }) {
     setIsLoading(true);
 
     try {
-        console.log("login component used")
+      console.log("login component used");
       const result = await loginUser(formData);
       console.log("Login result:", result);
 
       if (result.success) {
         toast.success("Login successful!");
-        //localStorage.setItem("accessToken", result.data.accessToken);
-        //localStorage.setItem("refreshToken", result.data.refreshToken);
         setTimeout(() => navigate("/dashboard"), 800);
       } else {
         toast.error(result.message || "Invalid email or password.");
@@ -52,9 +51,50 @@ export default function LoginForm({ onForgotPasswordClick }) {
     }
   };
 
-  const handleGoogleLogin = () => {
-    toast("Redirecting to Google…");
-    window.location.href = "http://localhost:8080/api/auth/google";
+  // Real Google handler – gets credential (ID token) from GoogleLogin component
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      const credential = credentialResponse.credential;
+      if (!credential) {
+        toast.error("Google did not return a credential.");
+        return;
+      }
+
+      const resp = await axios.post(
+        "http://localhost:8090/api/google/login",
+        { credential },
+        { withCredentials: true }
+      );
+
+      const { success, data, message } = resp.data;
+
+      if (!success) {
+        toast.error(message || "Google login failed");
+        return;
+      }
+
+      if (data.newUser) {
+        // first-time Google user → go to complete-signup
+        navigate("/complete-signup", {
+          state: {
+            userId: data.userId,
+            email: data.email,
+            name: data.name,
+          },
+        });
+      } else {
+        // existing user → tokens set by BFF
+        toast.success("Login successful!");
+        navigate("/dashboard");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.message || "Google sign-in failed");
+    }
+  };
+
+  const handleGoogleError = () => {
+    toast.error("Google sign-in failed");
   };
 
   return (
@@ -67,7 +107,6 @@ export default function LoginForm({ onForgotPasswordClick }) {
           exit={{ x: -100, opacity: 0 }}
           transition={{ duration: 0.4 }}
         >
-          {/* Disable native validation tooltips */}
           <form noValidate onSubmit={handleSubmit}>
             {/* Email */}
             <div className="mb-3">
@@ -126,19 +165,17 @@ export default function LoginForm({ onForgotPasswordClick }) {
             </div>
 
             {/* Google OAuth */}
-            <button
-              type="button"
-              className="btn btn-light w-100 py-2 border fw-semibold d-flex align-items-center justify-content-center gap-2"
-              style={{
-                borderRadius: "15px",
-                backgroundColor: "#fff",
-                border: "1px solid #ccc",
-              }}
-              onClick={handleGoogleLogin}
-              disabled={isLoading}
-            >
-              Continue with Google
-            </button>
+            <div className="d-flex justify-content-center">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={handleGoogleError}
+                useOneTap={false}
+                text="continue_with" // label text
+                shape="pill"
+                theme="outline"
+                width="260"
+              />
+            </div>
           </form>
         </motion.div>
       </AnimatePresence>

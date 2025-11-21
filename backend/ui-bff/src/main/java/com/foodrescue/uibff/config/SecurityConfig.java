@@ -43,6 +43,7 @@ public class SecurityConfig {
                         .pathMatchers("/api/users").permitAll()
                         .pathMatchers("/api/code/generate", "/api/code/validate").permitAll()
                         .pathMatchers("/api/password/**").permitAll()
+                        .pathMatchers("/api/google/login", "/api/google/complete").permitAll()
                         .pathMatchers("/api/auth/jwks", "/.well-known/jwks.json").permitAll()
                         .pathMatchers("/actuator/**").permitAll()
                         .anyExchange().authenticated()

@@ -87,8 +87,6 @@ public class    SecurityConfig {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
 
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
                 .authorizeExchange(ex -> ex
                         .pathMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
                         .pathMatchers(HttpMethod.POST, "/api/v1/auth/logout").permitAll()
@@ -99,6 +97,7 @@ public class    SecurityConfig {
                         .pathMatchers("/api/v1/users").permitAll()
                         .pathMatchers("/api/v1/addresses/**").permitAll()
                         .pathMatchers("/.well-known/jwks.json").permitAll()
+                        .pathMatchers("/api/v1/google/login", "/api/v1/google/complete" ).permitAll()
                         .pathMatchers("/actuator/health", "/v3/api-docs/**", "/swagger-ui/**").permitAll()
                         .anyExchange().authenticated()
                 )
@@ -114,33 +113,7 @@ public class    SecurityConfig {
                 .build();
     }
 
-    // --- THIS BEAN PROVIDES THE CORS CONFIGURATION ---
-//    @Bean
-//    CorsConfigurationSource corsConfigurationSource() {
-//        CorsConfiguration configuration = new CorsConfiguration();
-//        // Allow requests from your React app's development server
-//        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
-//        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-//        configuration.setAllowedHeaders(List.of("*"));
-//        configuration.setAllowCredentials(true);
-//        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-//        source.registerCorsConfiguration("/**", configuration);
-//        return source;
-//    }
 
-    @Bean
-    CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")); // ✅ Added PATCH
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setExposedHeaders(List.of("*")); // ✅ Important for WebFlux
-        configuration.setAllowCredentials(true);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
 
 
     private Mono<Void> writeJson(ServerHttpResponse res, HttpStatus status, String body) {
