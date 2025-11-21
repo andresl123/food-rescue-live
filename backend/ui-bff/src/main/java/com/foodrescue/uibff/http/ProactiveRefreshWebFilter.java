@@ -6,7 +6,10 @@ import com.nimbusds.jwt.SignedJWT;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
-import org.springframework.http.*;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
@@ -37,9 +40,9 @@ public class ProactiveRefreshWebFilter implements WebFilter {
                 path.startsWith("/api/auth/")
                 || path.startsWith("/api/addresses")
                 || path.startsWith("/api/users")
-                || path.startsWith("/password/reset/")
-                || path.startsWith("/code/generate")
-                || path.startsWith("/code/validate")) {
+                || path.startsWith("/api/password/reset/")
+                || path.startsWith("/api/code/generate")
+                || path.startsWith("/api/code/validate")) {
             return chain.filter(exchange);
         }
 
