@@ -67,6 +67,8 @@ export default function ResetPasswordForm({ onBack }) {
     if (!code.trim()) return toast.error("Please enter the 6-digit code.");
     if (!newPassword) return toast.error("Please enter your new password.");
     if (newPassword !== repeatPassword) return toast.error("Passwords do not match.");
+    if (strength < 4) return toast.error("Password must be at least 8 characters with uppercase, numbers, and symbols.");
+
 
     setIsLoading(true);
     const loadingToast = toast.loading("Resetting password...");
