@@ -123,7 +123,7 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="container-fluid vh-100 px-5" style={{ width: "80%" }}>
+    <div className="container vh-100 px-0">
       <div className="row h-100 g-0">
         <div className="col-lg-6 d-none d-lg-flex align-items-center justify-content-center p-4">
           <div className="position-relative w-100 h-100">

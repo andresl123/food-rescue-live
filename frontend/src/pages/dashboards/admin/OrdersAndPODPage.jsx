@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-// --- MAKE SURE ALL 4 OF THESE IMPORTS ARE CORRECT ---
+// --- 1. IMPORT USER LAYOUT ---
+import UserLayout from '../../../layout/UserLayout';
 import { getAdminOrderView, updateJobStatus } from '../../../services/jobService';
 import { Status } from '../../../assets/statusValues';
 import '../../../components/dashboards/admin/Dashboard.css';
-import toast from 'react-hot-toast'; // <-- THIS IS LIKELY THE MISSING IMPORT
+import toast from 'react-hot-toast';
 
 const OrdersAndPODPage = () => {
   const [orders, setOrders] = useState([]);
@@ -15,8 +16,6 @@ const OrdersAndPODPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentOrder, setCurrentOrder] = useState(null);
   const [newStatus, setNewStatus] = useState("");
-
-  // --- 2. Removed Delete Modal State ---
 
   // --- Data Fetching ---
   useEffect(() => {
@@ -38,7 +37,7 @@ const OrdersAndPODPage = () => {
 
   // --- Helper for status badges ---
   const getStatusBadgeClass = (status) => {
-    let mappedStatus = Status.PENDING; // Default
+    let mappedStatus = Status.PENDING;
     if (status === "DELIVERED" || status === "COMPLETED") mappedStatus = Status.DELIVERED;
     if (status === "CANCELLED" || status === "FAILED" || status === "RETURNED") mappedStatus = Status.INACTIVE;
     if (status === "ASSIGNED" || status === "PICKED_UP" || status === "IN_TRANSIT" || status === "OUT_FOR_DELIVERY") mappedStatus = Status.ACTIVE;
@@ -103,8 +102,6 @@ const OrdersAndPODPage = () => {
     }
   };
 
-  // --- 3. Removed Delete Modal Handlers ---
-
   // --- Render Table Body ---
   const renderTableBody = () => {
     if (isLoading) {
@@ -149,7 +146,6 @@ const OrdersAndPODPage = () => {
             <span className={getStatusBadgeClass(order.status)}>{order.status}</span>
           </td>
           <td>
-            {/* 4. Removed trash can icon */}
             <div className="action-icons">
               <i
                 className="bi bi-pencil-fill edit-icon"
@@ -163,17 +159,20 @@ const OrdersAndPODPage = () => {
   };
 
   return (
-    <> {/* Fragment wrapper */}
+    // --- 2. WRAP IN USERLAYOUT ---
+    <UserLayout>
 
-      <main className="main-content">
-        <header className="page-header">
+      {/* 3. WRAP CONTENT IN CONTAINER */}
+      <div className="container-fluid py-4">
+
+        <header className="page-header mb-4">
           <div>
             <h1>Orders & Proof of Delivery (POD)</h1>
             <p>Manage orders, deliveries and OTP verification</p>
           </div>
         </header>
 
-        <div className="search-bar">
+        <div className="search-bar mb-4">
           <i className="bi bi-search"></i>
           <input
             type="text"
@@ -200,7 +199,7 @@ const OrdersAndPODPage = () => {
             <tbody>{renderTableBody()}</tbody>
           </table>
         </div>
-      </main> {/* End of main content */}
+      </div>
 
       {/* --- Edit Modal --- */}
       {isModalOpen && (
@@ -220,9 +219,9 @@ const OrdersAndPODPage = () => {
                   onChange={(e) => setNewStatus(e.target.value)}
                   required
                 >
-                  <option value="ASSIGNED">ASSIGNED</option>
-                  <option value="COMPLETED">COMPLETED</option>
-                  <option value="UNASSIGNED">UNASSIGNED</option>
+                  <option value="ASSIGNED">Assigned</option>
+                  <option value="DELIVERED">Completed</option>
+                  <option value="CANCELLED">Unassigned</option>
                 </select>
               </div>
               <div className="modal-actions">
@@ -238,9 +237,7 @@ const OrdersAndPODPage = () => {
         </div>
       )}
 
-      {/* 5. Removed Delete Modal JSX */}
-
-    </>
+    </UserLayout>
   );
 };
 

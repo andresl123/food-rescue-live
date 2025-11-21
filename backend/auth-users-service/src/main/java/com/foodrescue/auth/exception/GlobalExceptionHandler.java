@@ -3,7 +3,9 @@ package com.foodrescue.auth.exception;
 import com.foodrescue.auth.web.response.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 import reactor.core.publisher.Mono;
 
 @RestControllerAdvice
@@ -28,5 +30,11 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public Mono<ApiResponse<?>> onGeneric(Exception ex) {
         return Mono.just(ApiResponse.error("Internal server error"));
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public Mono<ApiResponse<?>> onUserNotFound(UserNotFoundException ex) {
+        return Mono.just(ApiResponse.error(ex.getMessage()));
     }
 }

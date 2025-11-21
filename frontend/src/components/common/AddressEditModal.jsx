@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
-import { updateAddress } from "../../services/addressService";
+import { updateAddress, createAndLinkAddress } from "../../services/addressService";
 
 
 export default function AddressEditModal({
@@ -63,38 +63,38 @@ export default function AddressEditModal({
   );
 
 const handleSave = async () => {
-  if (!validate()) return;
-  setSaving(true);
-  try {
-    const res = await updateAddress(form.id, form);
-    if (res.success) {
-      setSaved(true);
-      onSaved?.(res.data);
-      setTimeout(onClose, 450);
-    } else {
-      throw new Error(res.message || "Failed to update address");
-    }
-  } catch (e) {
-    console.error("Error saving address:", e);
-    setSaving(false);
-  }
-};
+    if (!validate()) return;
+    setSaving(true);
 
-//   const handleSave = async () => {
-//     if (!validate()) return;
-//     setSaving(true);
-//     try {
-//       // TODO: replace with your API call:
-//       // await api.updateAddress(userId, form.id, form);
-//       await new Promise((r) => setTimeout(r, 900)); // demo delay
-//       setSaved(true);
-//       onSaved?.(form);
-//       // brief success flash before closing
-//       setTimeout(onClose, 450);
-//     } catch (e) {
-//       setSaving(false);
-//     }
-//   };
+    try {
+      let res;
+
+      if (form.id) {
+        // CASE 1: Update existing (Keep ID)
+        const updateRes = await updateAddress(form.id, form);
+        res = { success: true, data: updateRes.data || updateRes };
+      } else {
+        // CASE 2: Create New (REMOVE empty ID)
+        if (!userId) throw new Error("User ID is missing, cannot link address.");
+
+        const { id, ...createPayload } = form; // Exclude 'id'
+        res = await createAndLinkAddress(userId, createPayload);
+      }
+
+      if (res.success) {
+        setSaved(true);
+        // Use the returned data from the server (which includes the real ID)
+        onSaved?.(res.data);
+        setTimeout(onClose, 450);
+      } else {
+        throw new Error(res.message || "Operation failed");
+      }
+    } catch (e) {
+      console.error("Error saving address:", e);
+      toast.error("Error saving address");
+      setSaving(false);
+    }
+  };
 
   return (
     <>

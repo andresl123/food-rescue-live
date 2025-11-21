@@ -187,7 +187,7 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
               {/* ---------- IMAGE + DETAILS ---------- */}
               <div className="d-flex flex-wrap align-items-start gap-3 mt-3">
                 <div
-                  className="rounded-4 overflow-hidden bg-light flex-shrink-0"
+                  className="rounded-4 overflow-hidden bg-light flex-shrink-0 d-none d-md-block"
                   style={{ width: "230px", height: "160px" }}
                 >
                   {currentLot.imageUrl ? (
@@ -298,7 +298,7 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
 
                 </div>
 
-                <small className="text-muted">
+                <small className="d-none d-md-block text-muted">
                   Total quantity: {totalQuantity} units
                 </small>
               </div>
@@ -392,7 +392,7 @@ export default function LotDetailsModal({ show, onClose, lot, onItemAdded }) {
               }}
             >
               <div className="d-flex align-items-center w-100 justify-content-between">
-                <div className="text-muted small d-flex align-items-center">
+                <div className="text-muted small d-flex align-items-center d-none d-md-block">
                   <i className="bi bi-info-circle me-2"></i>
 {/*                   Click <b> + Add Item </b>  to add food to this lot. */}
                 Click <b>&nbsp;+ Add Item&nbsp;</b> to add food to this lot.

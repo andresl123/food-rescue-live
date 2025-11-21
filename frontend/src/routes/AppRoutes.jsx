@@ -14,8 +14,7 @@ import TestLotImport from "../pages/common/TestLotImport";
 import CurrentRescueOrdersPage from "../pages/receiver/CurrentRescueOrdersPage";
 import CompletedDeliveries from "../components/dashboards/Courier/CompletedDeliveries";
 
-// --- Admin Page Imports ---
-import AdminLayout from "../components/dashboards/admin/AdminLayout";
+// --- ADMIN PAGES ---
 import AdminDashboard from "../pages/dashboards/admin/AdminDashboard";
 import UsersManagementPage from "../pages/dashboards/admin/UsersManagementPage";
 import LotsManagementPage from "../pages/dashboards/admin/LotsManagementPage";
