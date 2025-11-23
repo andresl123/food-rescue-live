@@ -6,6 +6,8 @@ import { loginUser } from "../../services/loginServices";
 import axios from "axios";
 import { GoogleLogin } from "@react-oauth/google";
 
+const BFF_BASE_URL = import.meta.env.VITE_BFF_BASE_URL;
+
 export default function LoginForm({ onForgotPasswordClick }) {
   const navigate = useNavigate();
 
@@ -61,7 +63,7 @@ export default function LoginForm({ onForgotPasswordClick }) {
       }
 
       const resp = await axios.post(
-        "http://localhost:8090/api/google/login",
+        `${BFF_BASE_URL}/api/google/login`,
         { credential },
         { withCredentials: true }
       );
