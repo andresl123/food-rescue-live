@@ -27,13 +27,21 @@ RUN rm /usr/share/nginx/html/index.html
 
 # 2. Copy the built static files from the 'build' stage
 # The 'npm run build' command creates a 'dist' folder
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=build --chown=nginx:nginx /app/dist /usr/share/nginx/html
 
 # Copy our custom nginx.conf to override the default
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Expose port 80 (standard HTTP)
-EXPOSE 80
+# Support running as non-root
+RUN chown -R nginx:nginx /var/cache/nginx /var/log/nginx /etc/nginx/conf.d && \
+    touch /var/run/nginx.pid && \
+    chown -R nginx:nginx /var/run/nginx.pid
+
+# Switch to non-root user
+USER nginx
+
+# Expose port 8085 (standard HTTP)
+EXPOSE 8085
 
 # 3. Nginx starts automatically
 CMD ["nginx", "-g", "daemon off;"]

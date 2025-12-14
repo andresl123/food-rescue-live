@@ -19,6 +19,9 @@ RUN mvn package -DskipTests
 # Use a lightweight JRE image for the final, small container
 FROM eclipse-temurin:17-jre-jammy
 
+# Create a system user and group to run as non-root
+RUN addgroup --system javauser && adduser --system --shell /usr/sbin/nologin --ingroup javauser javauser
+
 # Set the working directory
 WORKDIR /app
 
@@ -27,7 +30,10 @@ WORKDIR /app
 ARG JAR_FILE_NAME=auth-users-service-0.0.1-SNAPSHOT.jar
 
 # Copy the built .jar file from the 'build' stage
-COPY --from=build /app/target/${JAR_FILE_NAME} app.jar
+COPY --from=build --chown=javauser:javauser /app/target/${JAR_FILE_NAME} app.jar
+
+# Switch to the non-root user
+USER javauser
 
 # Expose the port your application runs on (default for Spring Boot is 8080)
 EXPOSE 8080

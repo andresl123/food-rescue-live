@@ -20,12 +20,19 @@ RUN mvn package -DskipTests
 
 # --- STAGE 2: Run ---
 FROM eclipse-temurin:17-jre-jammy
+
+# Create a system user and group to run as non-root
+RUN addgroup --system javauser && adduser --system --shell /usr/sbin/nologin --ingroup javauser javauser
+
 WORKDIR /app
 
 # Based on your POM
 ARG JAR_FILE_NAME=feedback-service-0.0.1-SNAPSHOT.jar
 
-COPY --from=build /app/target/${JAR_FILE_NAME} app.jar
+COPY --from=build --chown=javauser:javauser /app/target/${JAR_FILE_NAME} app.jar
+
+# Switch to the non-root user
+USER javauser
 
 # Port from your properties
 EXPOSE 8084

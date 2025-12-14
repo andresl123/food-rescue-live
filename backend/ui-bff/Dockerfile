@@ -19,12 +19,19 @@ RUN mvn package -DskipTests
 
 # --- STAGE 2: Run ---
 FROM eclipse-temurin:17-jre-jammy
+
+# Create a system user and group to run as non-root
+RUN addgroup --system javauser && adduser --system --shell /usr/sbin/nologin --ingroup javauser javauser
+
 WORKDIR /app
 
 # !! IMPORTANT: Update this with the name from your pom.xml !!
 ARG JAR_FILE_NAME=ui-bff-0.0.1-SNAPSHOT.jar
 
-COPY --from=build /app/target/${JAR_FILE_NAME} app.jar
+COPY --from=build --chown=javauser:javauser /app/target/${JAR_FILE_NAME} app.jar
+
+# Switch to the non-root user
+USER javauser
 
 # Expose the port your BFF runs on (I'm assuming 8090)
 EXPOSE 8090
